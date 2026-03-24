@@ -1,0 +1,1358 @@
+#+TITLE: Indue — Language Specification
+#+SUBTITLE: Markup Language for Outliners, Tasks, and Personal Knowledge Management
+#+AUTHOR: Draft
+#+DATE: March 2026
+#+STATUS: Pre-specification — exploratory design
+#+STARTUP: overview
+
+* Introduction
+
+Indue is a markup language designed from scratch for outliner, task management,
+and personal knowledge management (PKM) use cases. It draws inspiration from
+Typst's syntactic sensibility but is not a subset, superset, or dialect of
+Typst — it is an independent language that could transpile to Typst for typeset
+export when needed.
+
+The name "Indue" comes from the archaic English verb meaning "to put on as a
+garment" — to clothe or endow something with qualities it did not previously
+have. Plain text puts on Indue and gains structure, tasks, tags, references,
+and hierarchy. Remove the markup and the text is still there, perfectly
+readable. This metaphor of equipping text with power runs through the entire
+language and its vocabulary.
+
+Indue files are plain text. They are readable and writable in any editor
+without special tooling. The markup is lightweight enough that it does not
+obscure the content it describes.
+
+* Inspirations
+
+** Typst
+
+Typst is a modern typesetting language with a clean, consistent syntax. Indue
+borrows directly from it:
+
+- Bold (~*text*~) and the general aesthetic of lightweight paired delimiters.
+- List markers (~-~ for unordered, ~+~ for ordered).
+- Heading syntax (~=~ / ~==~ / ~===~).
+- Labels (~<label>~) and references (~@ref~).
+- The principle that functions and evaluation should have a clear, single
+  prefix character.
+
+Where Indue parts ways with Typst:
+
+- Typst reserves ~#~ for function calls. Tags — one of the most natural and
+  important constructs in PKM — require a function call like ~#tag("work")~.
+  Indue reclaims ~#~ for native tag syntax and moves functions to ~:~.
+- Typst has no built-in concept of tasks, checkboxes, or task states. These
+  must be added through packages and show rules. Indue makes them native.
+- Typst is a strict compiler: malformed input is an error. Indue follows an
+  HTML-style error recovery model where malformed markup renders as literal
+  text rather than failing.
+
+** Org-mode
+
+Org-mode is the most powerful plain-text outliner and task system in existence,
+but its spec and runtime are so entangled with Emacs that every non-Emacs
+implementation is permanently incomplete. Neovim and Helix users are
+permanently second-class citizens.
+
+Indue borrows the /idea/ that tasks, scheduling, and metadata belong in the
+markup itself. It does not inherit Org's property drawers, babel blocks, or
+export dispatcher. More importantly, Indue is deliberately designed to be fully
+and correctly implementable by anyone — a Rust reference CLI, a tree-sitter
+grammar, and a clean formal spec mean that any editor gets first-class support
+from day one, not as an afterthought.
+
+** CommonMark
+
+Indue is not trying to be CommonMark. CommonMark is purely presentational with
+no opinion about what content /means/. Indue is positioned between CommonMark
+and Org-mode: richer than CommonMark in semantic content (tasks, tags, entities,
+scheduling), simpler and more portable than Org-mode, and without Org's
+assumption of a specific runtime.
+
+** Everyday conventions
+
+- ~#~ as tag comes from social media and is universally understood.
+- ~:~ as function/evaluation is lightweight and familiar from emoji shortcodes,
+  YAML keys, and general programming conventions.
+
+* Vocabulary
+
+Indue uses a thematic vocabulary inspired by RPG and medieval conventions to
+name its syntactic concepts. These names are optional — the common markup
+names are always valid and appear alongside the Indue terms throughout this
+specification. The thematic vocabulary exists to make the concepts memorable,
+teachable, and distinct from other markup languages.
+
+The core metaphor: plain text is your base character. Indue is the gear system.
+You equip your text with markup and it gains new abilities. Strip the gear off
+and the character is still there, still whole.
+
+| Syntax        | Indue name | Common name                     |
+|---------------+------------+---------------------------------|
+| ~-~, ~+~, ~=~       | *Socket*     | Structural marker               |
+| Node created  | *Slot*       | Block / node                    |
+| ~*~, ~/~, ~_~, ~%~, ~^~ | *Glamour*    | Inline formatting               |
+| ~#~             | *Badge*      | Tag                             |
+| ~@~             | *Signet*     | Reference / mention             |
+| ~:fn~           | *Spell*      | Function                        |
+| ~::~            | *Cast*       | Scope / chain op                |
+| ~()~            | *Vessel*     | Value argument                  |
+| ~[]~            | *Scroll*     | Verbatim block, string argument |
+| ~{}~            | *Conduit*    | Rich content / evaluated block  |
+| ~<label>~       | *Waypoint*   | Label / anchor                  |
+| ~<< id >>~      | *Coordinate* | Block ID                        |
+| ~\~             | *Nick*       | Escape character                |
+| ~:::~           | *Cauldron*   | Spell block scope               |
+
+A one-sentence summary of the entire system: sockets create slots; glamours,
+badges, and spells equip the content sitting on those slots; casts direct
+spells at their targets and chain spells together; and vessels, scrolls, and
+conduits carry data between them.
+
+* Core Design Philosophy
+
+** Prefer unambiguous syntax
+
+Indue prefers syntax where every character's role is resolvable from local
+context. The parser should never need to look ahead through unbounded content
+or backtrack to determine meaning. Characters may appear in multiple roles
+(e.g. ~:~ opens a spell, terminates one, and participates in casts), but
+context always disambiguates which role applies.
+
+** Glamours are for frequent writing; spells are for transforms
+
+The bar for earning a dedicated glamour is high: the feature must appear
+frequently enough in everyday writing that the ergonomic cost of a spell
+(function call) is genuinely burdensome. Anything that transforms content into
+a different form belongs in the spell system (~:func~). The glamour table is
+for things you type constantly.
+
+** The line-start rule
+
+Any inline glamour appearing at the start of a line, followed by a space and
+without a closing delimiter, applies to the entire line. Multiple glamour
+characters can be stacked at line start:
+
+#+begin_example
+ * This whole line is bold
+/ This whole line is italic
+*/ This whole line is bold and italic
+_% This whole line is underlined and struck through
+# taggedline
+#+end_example
+
+This is especially useful inside lists where content length may change:
+
+#+begin_example
+- = Project Alpha
+  - * This important item is bold regardless of how long it gets
+  - */ This one is bold and italic
+  - Normal item
+#+end_example
+
+** The single-word rule
+
+A glamour touching the left side of a word (no space between glamour and
+first character) opens markup that terminates at the next whitespace. This
+is the same logic used by badges (~#tag~) and signets (~@alice~):
+
+#+begin_example
+This is *bold right here         — "bold" is bold, rest is normal
+She has /style in spades         — "style" is italic
+#+end_example
+
+To use a glamour character literally in this position, escape it with a
+nick: ~\*minute~ renders as a literal asterisk.
+
+** The paired rule
+
+If a matching closer exists on the same line, the glamour spans multiple
+words:
+
+#+begin_example
+This has *bold* in it           — paired, one word
+This has *bold words* in it     — paired, multi-word
+This is *bold right here        — no closer: single-word rule applies
+#+end_example
+
+The parser scans the current line for a closer. Found one? Paired mode.
+No closer? Single-word, terminate at whitespace.
+
+** The bracket rule
+
+Glamours can also scope their content using scrolls ~[]~ or conduits ~{}~:
+
+#+begin_example
+*[bold words]               — scroll defines scope
+*{bold with #tags inside}   — conduit: inner content is parsed
+#+end_example
+
+This is the only way to combine multiple glamours (stacking):
+
+#+begin_example
+*/[bold and italic]         — glamour stack + scroll
+_*{underline and bold}      — glamour stack + conduit
+%/[strikethrough and italic] — glamour stack + scroll
+#+end_example
+
+Adjacent glamour characters with no whitespace form a stack. The bracket
+immediately after the stack defines the scope. Order of glamours in the
+stack does not matter.
+
+** No symmetric nesting
+
+Glamours cannot be nested by wrapping them symmetrically. The outer glamour
+wins and inner glamour characters are treated as literal text:
+
+#+begin_example
+*_text_*     → just bold. Inner _ is literal.
+_*text*_     → just underline. Inner * is literal.
+#+end_example
+
+To combine glamours, always use the bracket form: ~*_[text]~.
+
+** The nick (~\~)
+
+~\~ is reserved as an escape character. Its primary use is rendering a
+literal glamour character that would otherwise be interpreted as markup:
+
+#+begin_example
+The price is 50\% off       — literal %, not strikethrough
+Use \*asterisks\* literally — literal *, not bold
+#+end_example
+
+~\~ before a non-glamour character renders as a literal backslash.
+
+** Parse, don't fail
+
+Indue parsers should never throw errors at the user for malformed markup.
+Unclosed glamour delimiters apply to the single word they touch (single-word
+rule), or render as literal text if not touching a word. Unknown spell names
+render their content as plain text. The no-errors philosophy follows HTML's
+error recovery model rather than Typst's strict compilation model.
+
+Strict validation belongs in the linter and export pipeline, not in the core
+parser that runs while someone is writing notes at midnight.
+
+* Syntax Table
+
+The complete set of confirmed core syntax. Characters marked as "Glamour"
+follow all four glamour rules (line-start, single-word, paired, bracket)
+described in the Glamours section.
+
+** Sockets (structural markers, line-start)
+
+| Syntax       | Role                                 |
+|--------------+--------------------------------------|
+| ~=~ / ~==~ / ~===~ | Heading (level by count or ancestry) |
+| ~-~            | Unordered list item                  |
+| ~+~            | Ordered list item                    |
+| ~- =~ / ~+ =~    | List item + heading promotion        |
+| ~--~ / ~---~     | Dash-mode depth (unordered)          |
+| ~-+~ / ~--+~     | Dash-mode depth (ordered)            |
+| ~-- =~ / ~--- =~ | Dash-mode heading                    |
+
+** Glamours (inline formatting)
+
+All glamours support line-start, single-word, paired, and bracket modes.
+They can be stacked (~*/~) and have spell equivalents (see Glamour-Spell
+Symmetry).
+
+| Character | Effect        | Spell equivalent |
+|-----------+---------------+------------------|
+| ~*~       | Bold          | ~:bold~          |
+| ~/~       | Italic        | ~:italic~        |
+| ~_~       | Underline     | ~:underline~     |
+| ~%~       | Strikethrough | ~:strike~        |
+| ~^~       | Superscript   | ~:super~         |
+
+** Badges, signets, and references
+
+| Syntax       | Role                 | Indue name |
+|--------------+----------------------+------------|
+| ~#tag~         | Tag (single word)    | Badge      |
+| ~#multi word#~ | Tag (multi-word)     | Badge      |
+| ~#~            | Tag whole line       | Badge      |
+| ~@name~        | Entity reference     | Signet     |
+| ~<label>~      | Human anchor         | Waypoint   |
+| ~<< id >>~     | Machine-generated ID | Coordinate |
+
+** Spells and containers
+
+| Syntax | Role                | Indue name |
+|--------+---------------------+------------|
+| ~:func~  | Function prefix     | Spell      |
+| ~::~     | Scope / chain op    | Cast       |
+| ~:::~    | Block spell scope   | Cauldron   |
+| ~()~     | Value argument      | Vessel     |
+| ~[]~     | Verbatim content    | Scroll     |
+| ~{}~     | Rich parsed content | Conduit    |
+
+** Other
+
+| Syntax | Role             | Indue name |
+|--------+------------------+------------|
+| ~\~      | Escape character | Nick       |
+
+** Reserved and available characters
+
+| Character | Status                                    |
+|-----------+-------------------------------------------|
+| ~>~       | Reserved — likely blockquote shorthand     |
+| ~~~       | Available                                  |
+| ~&~       | Available                                  |
+| ~$~       | Available — likely math mode               |
+| ~;~       | Available — prime keyboard real estate      |
+
+* Formatting Spells
+
+Indue provides standard formatting spells that work with any text content.
+These spells follow all standard cast and chaining rules.
+
+** Common formatting spells
+
+| Spell             | Effect                                   |
+|-------------------+------------------------------------------|
+| ~:bold~             | Bold (spell form of ~*~)                   |
+| ~:italic~           | Italic (spell form of ~/~)                 |
+| ~:underline~        | Underline (spell form of ~_~)              |
+| ~:strike~           | Strikethrough (spell form of ~%~)          |
+| ~:super~            | Superscript (spell form of ~^~)            |
+| ~:color(value)~     | Text color (named or hex)                |
+| ~:bgcolor(value)~   | Background/highlight color               |
+| ~:bgradius(value)~  | Highlight shape (rounded, pill, etc.)    |
+| ~:font(type)[name]~ | Font (vessel=fallback type, scroll=name) |
+| ~:grow(n)~          | Increase font size by n steps            |
+| ~:shrink(n)~        | Decrease font size by n steps            |
+| ~:mono~             | Monospace font                           |
+| ~:opacity(value)~   | Transparency (0.0 to 1.0)                |
+| ~:align(value)~     | Text alignment (left, center, right)     |
+
+These chain naturally with glamours and each other:
+
+#+begin_example
+:bold::color(red)::word             — bold + red, one word
+:italic::grow(1):: whole line       — italic + larger, line scope
+:color(blue)::bgcolor(#ffffcc)::[highlighted text]  — colored + highlighted
+#+end_example
+
+** Sigil configuration (~:char~)
+
+Every glamour and socket character has a corresponding configuration spell.
+The configuration spell uses the literal character as its name and follows
+all standard spell scoping rules.
+
+There are three distinct things per character and they should not be confused:
+
+| Thing | What it does               | Example        |
+|-------+----------------------------+----------------|
+| ~*~     | The glamour — applies bold | ~*word~, ~*text*~  |
+| ~:bold~ | The spell — applies bold   | ~:bold::word~    |
+| ~:*~    | The config — configures ~*~  | ~:*(red)~, ~:*:::~ |
+
+~:*~ does not apply bold. It configures what ~*~ does. ~*~ and ~:bold~ are
+the action; ~:*~ is the configuration for that action.
+
+Configuration follows all standard spell scoping rules:
+
+#+begin_example
+:*(red)                   — configure * to be red, globally from here on
+:*(red)::word             — configure * to be red, just for this word
+:*(red)::[this sentence]  — configure * to be red, just this scope
+:*(red):: this whole line — configure * to be red, for this line
+#+end_example
+
+Global configuration (self-terminating) persists until the same spell
+changes it:
+
+#+begin_example
+:*(red)
+All *bold from here* is red.
+More *bold still red* text.
+:*(blue)
+Now *bold is blue* instead.
+#+end_example
+
+The cauldron form handles multi-property configuration:
+
+#+begin_example
+:*:::
+:italic
+:color(red)
+:grow(1)
+
+Now all *bold text* is also italic, red, and larger automatically.
+Regular /italic text/ is unaffected — only * was configured.
+#+end_example
+
+This is the same pattern used for socket configuration:
+
+| Config target | Quick form | Cauldron form  |
+|---------------+------------+----------------|
+| ~+~ (ordered)   | ~:+[a)]~     | ~:+:::~ + spells |
+| ~-~ (unordered) | ~:-[*]~      | ~:-:::~ + spells |
+| ~=~ (heading)   | ~:=[I.]~     | ~:=:::~ + spells |
+| ~*~ (bold)      | ~:*(red)~    | ~:*:::~ + spells |
+| ~/~ (italic)    | ~:/(blue)~   | ~:/:::~ + spells |
+| ~_~ (underline) | ~:_(dotted)~ | ~:_:::~ + spells |
+
+* List Nesting: Two Modes
+
+Indue supports two modes for list nesting. Both produce the same AST. The
+writer chooses whichever suits their context.
+
+** Indented mode
+
+Nesting is determined by physical indentation (tabs or spaces). The parser
+normalizes both to indent levels. Tabs are recommended for proportional fonts
+because they render at a visible width.
+
+#+begin_example
+- Level 1 item
+  - Level 2 item
+    - Level 3 item
+      Content belongs to Level 3
+  + Level 2 ordered item
+- Another Level 1 item
+#+end_example
+
+Ownership rule: any line indented strictly deeper than a socket belongs to
+that socket. The exact number of spaces does not matter as long as it is
+deeper than the parent (Option C).
+
+** Dash-mode
+
+Nesting is determined by repeating the dash character. The final character
+in the sequence determines the list type.
+
+#+begin_example
+- Level 1 unordered
+-- Level 2 unordered
+--- Level 3 unordered
+-+ Level 2 ordered
+--+ Level 3 ordered
+#+end_example
+
+Dash-mode rules:
+
+- Count of leading dashes determines depth.
+- Final character determines type: ~-~ for unordered, ~+~ for ordered.
+- Non-socket lines (no leading dashes) belong to the most recent socket
+  above them. Period.
+- Leading whitespace on content lines is cosmetic and stripped by the parser.
+- A blank line ends the list.
+- Trailing child content is not supported. To return to a parent level,
+  create a new socket with fewer dashes.
+- Empty sockets are real empty items, not invisible or magic.
+
+The same content in both modes:
+
+#+begin_example
+Indented:                    Dash-mode:
+- Project Alpha              - Project Alpha
+  - Goals                    -- Goals
+    - Item A                 --- Item A
+    - Item B                 --- Item B
+  + Timeline                 -+ Timeline
+    + Q1                     --+ Q1
+    + Q2                     --+ Q2
+- Project Beta               - Project Beta
+#+end_example
+
+** Mixing modes
+
+Within a single list, one mode must be used consistently. Dash-mode and
+indented mode cannot be mixed at the same nesting level. Different lists
+in the same document may use different modes.
+
+* Heading Promotion
+
+Any list item in either mode can be promoted to a heading by appending
+~= ~ (equals space) after the socket characters. The ~=~ is separated from
+the socket by a space.
+
+#+begin_example
+Indented:                    Dash-mode:
+- = Project Alpha            - = Project Alpha
+  - = Goals                  -- = Goals
+    - Item A                 --- Item A
+    - Item B                 --- Item B
+  + = Timeline               -+ = Timeline
+    + Q1                     --+ Q1
+    + Q2                     --+ Q2
+- = Project Beta             - = Project Beta
+#+end_example
+
+** What heading promotion does
+
+A heading-promoted item:
+
+- Appears in the table of contents / outline.
+- Receives an auto-calculated heading level (see below).
+- Can be navigated to via the heading outline.
+- Is otherwise a normal list item — it follows list ownership rules.
+
+A non-promoted item:
+
+- Does not appear in the ToC or outline.
+- Is not assigned a heading level.
+- Is just content within the list.
+
+** Heading auto-leveling
+
+Heading levels are not derived from list depth. They are derived from the
+heading hierarchy above the current item. Each ~=~ promotion looks up the
+tree for the most recent heading and adds one to its level.
+
+#+begin_example
+= Document Title                        ← H1
+== Background                           ← H2
+- = Project Alpha                       ← H3 (parent heading is H2)
+  - Item A
+  - = Goals                             ← H4 (parent heading is H3)
+    - Item C
+    - = Stretch Goals                   ← H5 (parent heading is H4)
+  - = Timeline                          ← H4 (sibling of Goals)
+- = Project Beta                        ← H3 (sibling of Alpha)
+== Conclusion                           ← H2 (back to document level)
+#+end_example
+
+The writer never thinks about H-numbers. They just write ~- =~ and the
+hierarchy resolves itself from context.
+
+** Standalone headings
+
+For flat document-mode writing (no list structure), standalone headings use
+~=~ at line start with depth by repetition:
+
+#+begin_example
+= Heading 1
+== Heading 2
+=== Heading 3
+#+end_example
+
+Multiple ~=~ symbols only matter in flat files where all headings are at the
+same physical margin. In indented structures, a single ~=~ is sufficient
+because depth is calculated from ancestry.
+
+* Folding and Outline: Two Independent Features
+
+Indue separates physical structure from meaning structure. Folding controls
+what is visible. The heading outline controls how meaning is organized.
+
+** Standalone heading folding (legacy/document behavior)
+
+Standalone headings (~=~, ~==~, ~===~ at the document level, outside of any
+list) fold by heading hierarchy, consistent with the behavior users expect
+from Org-mode, Markdown editors, and word processors. A standalone heading
+folds everything until the next heading of equal or higher level.
+
+#+begin_example
+= Introduction                    ← folds until next =
+Some paragraph text.
+Another paragraph.
+
+== Background                     ← folds until next == or =
+More text here.
+
+== Methods                        ← folds until next == or =
+Even more here.
+
+= Conclusion                     ← folds until next =
+#+end_example
+
+A standalone heading's fold scope includes any lists beneath it — folding the
+heading hides the entire list and everything inside it, as a single unit.
+
+** List folding (physical structure)
+
+Inside a list, folding is controlled entirely by list structure. Every list
+item with children is foldable — fold it and its children hide. This is
+determined purely by indentation or dash depth. Heading promotions (~- =~)
+inside lists have *zero impact* on folding. A heading-promoted list item
+folds because it is a list item with children, not because it carries a
+heading.
+
+#+begin_example
+= Methods                        ← standalone heading, folds by hierarchy
+- = Data Collection               ← folds by LIST structure (has children)
+  - Item A                        ← list child
+  - Item B                        ← list child
+  - = Analysis                    ← folds by LIST structure (has children)
+    - Sub item                    ← list child
+- = Results                       ← folds by LIST structure (has children)
+  - Finding 1                     ← list child
+#+end_example
+
+In this example, folding "Methods" (a standalone heading) hides the entire
+list underneath it. But within the list, folding "Data Collection" hides
+only its children (Item A, Item B, and the Analysis section). The ~=~ on
+"Data Collection" and "Analysis" has no effect on folding — those items fold
+because they have child list items beneath them.
+
+** Heading outline (meaning structure)
+
+The heading outline is a separate navigational view showing only ~=~ promoted
+items. It provides a table of contents and jump-to navigation. The outline
+includes both standalone headings and heading-promoted list items. Headings
+can be folded independently within the outline view.
+
+The outline concerns itself with meaning: what the document is about, how
+ideas relate hierarchically. It does not control physical folding.
+
+** The handoff rule
+
+The recommended behavior for applications:
+
+1. Standalone headings fold by heading hierarchy (legacy behavior).
+2. The moment a list begins within a heading's scope, list structure takes
+   full control of folding.
+3. Heading promotions inside lists are visible in the outline/ToC but are
+   invisible to the folding system.
+4. Folding a standalone heading hides everything inside it, including any
+   lists, as a single unit.
+
+These features never conflict because they serve different purposes. A list
+fold says "hide this content." A heading outline says "show me the structure."
+
+A document without any ~=~ headings is still fully foldable — it is lists all
+the way down. A flat document with only standalone ~=~ headings still has a
+navigable outline. The two features are completely orthogonal.
+
+** Invisible markers for prose-style documents
+
+Using a schema declaration, list markers can be made invisible:
+
+#+begin_example
+:-[]
+- = Introduction
+  This looks like body text under a heading.
+  No visible bullet. Just indented prose.
+  - = Background
+    More body text.
+  - = Methods
+    And more here.
+- = Conclusion
+  Final thoughts.
+#+end_example
+
+Folds naturally from list structure. ToC comes from heading promotions. The
+source looks like a conventional document but has full outliner capabilities.
+
+* Content Ownership
+
+** The core rule
+
+Content belongs to the most recent socket above it. There is no trailing
+child content — you cannot "return" to a parent level with content. To
+place content at a parent level, create a new socket at that level.
+
+This rule applies in both indented mode and dash-mode. It eliminates an
+entire class of ambiguity that plagues Markdown, CommonMark, and Org-mode
+implementations.
+
+** The ~:of()~ escape hatch
+
+In rare cases where content genuinely needs to attach to an ancestor, the
+~:of~ spell explicitly reattaches content to a named waypoint:
+
+#+begin_example
+- = Project Alpha <alpha>
+  - = Goals
+    - Item A
+    - Item B
+  :of(<alpha>) This thought belongs to Project Alpha
+#+end_example
+
+This is rare, explicit, and uses existing spell/waypoint syntax. No new
+concepts required.
+
+** Multiline content shortcuts
+
+Scrolls ~[]~ and conduits ~{}~ act as escape hatches for quick multiline
+content that does not want to manage indentation line-by-line. The opening
+bracket at the correct indentation level signals ownership:
+
+#+begin_example
+- Level 1
+  - Level 2
+    [belongs to
+level 2 without worrying about indent]
+    - Level 3 {
+belongs to level 3 with *bold* and #tags}
+- Level 1
+#+end_example
+
+Scrolls preserve content verbatim. Conduits parse their content with the
+full Indue grammar.
+
+* Glamours: Inline Formatting
+
+| Syntax        | Result             | Notes                        |
+|---------------+--------------------+------------------------------|
+| ~*word~       | Bold               | Single-word (to whitespace)  |
+| ~*text*~      | Bold               | Paired                       |
+| ~*[text]~     | Bold               | Bracket form (scroll)        |
+| ~*{text}~     | Bold               | Bracket form (conduit)       |
+| ~*/[text]~    | Bold + italic      | Stacked glamours (bracket)   |
+| ~* line~      | Bold whole line    | Line-start rule              |
+| ~*/ line~     | Bold+italic line   | Line-start stacked           |
+
+Glamours operate in four ways:
+
+- *Line-start rule*: a glamour (or stack of glamours) at the start of a line
+  followed by a space, with no closer, applies to the entire line. Stacking
+  works at line start: ~*/~ makes the whole line bold and italic.
+- *Single-word rule*: a glamour touching the left side of a word, with no
+  closer on the line, applies until the next whitespace. Same logic as
+  badges (~#tag~) and signets (~@name~).
+- *Paired rule*: if a matching closer exists on the same line, the glamour
+  spans everything between opener and closer.
+- *Bracket rule*: a glamour (or stack) followed immediately by a scroll ~[]~
+  or conduit ~{}~ applies to the bracket's contents. Multiple glamours can
+  be stacked before the bracket to combine effects.
+
+Symmetric nesting is not supported. The outer glamour wins:
+
+#+begin_example
+*_text_*     → just bold, inner _ is literal
+_*text*_     → just underline, inner * is literal
+*_[text]     → bold + underline (the correct way)
+#+end_example
+
+Inside a conduit, additive glamours work but redundant ones are ignored:
+
+#+begin_example
+*/{this is bold+italic with ^[superscript bit] in it}
+#+end_example
+
+The ~^[superscript bit]~ adds superscript on top of the outer bold+italic.
+Writing ~/[italic]~ inside would be redundant (already italic from the outer
+stack) and is silently ignored.
+
+** Glamour-spell symmetry
+
+Each glamour character has a corresponding named spell that does the same
+thing. The glamour is shorthand for the spell+cast form:
+
+| Glamour            | Spell equivalent              | Scope       |
+|--------------------+-------------------------------+-------------|
+| ~*word~            | ~:bold::word~                 | Word        |
+| ~* whole line~     | ~:bold:: whole line~          | Line        |
+| ~*[text]~          | ~:bold::[text]~               | Bracket     |
+| ~*text*~           | ~:bold::[text]~               | Paired      |
+| ~*/[text]~         | ~:bold::italic::[text]~       | Chained     |
+| ~*/ whole line~    | ~:bold::italic:: whole line~  | Chained line|
+
+The full mapping of glamour characters to spell names:
+
+| Glamour | Spell        | Config spell |
+|---------+--------------+--------------|
+| ~*~     | ~:bold~      | ~:*~         |
+| ~/~     | ~:italic~    | ~:/~         |
+| ~_~     | ~:underline~ | ~:_~         |
+| ~%~     | ~:strike~    | ~:%~         |
+| ~^~     | ~:super~     | ~:^~         |
+
+Note the three distinct roles: the glamour character applies the effect,
+the named spell applies the same effect via spell syntax, and the config
+spell (using the literal character) configures how the glamour behaves.
+~*~ is what you type. ~:bold~ is what you chain. ~:*~ is what you configure.
+
+This means glamour stacking (~*/[text]~) is literally cast chaining
+(~:bold::italic::[text]~) expressed in shorthand. A toolset maker can
+implement glamours as a preprocessing step that expands them into spell+cast
+form, then run a single unified engine.
+
+For users, this creates a natural upgrade path: start with ~*bold*~ because
+it is familiar, discover ~*[bold]~ when brackets are needed, learn
+~*/[bold italic]~ when stacking is needed, and when color or sizing is
+required, the cast syntax is already the same pattern:
+~:bold::color(red)::[text]~. No conceptual leap — just more spells in the
+chain.
+
+* Badges: Tags
+
+Badges (tags) use ~#~, the universal tagging character:
+
+#+begin_example
+- Buy groceries #errand #personal
+- Read about #machine learning# approaches
+#+end_example
+
+- Single-word badge: ~#errand~
+- Multi-word badge: ~#machine learning#~ (closing ~#~ needed only for
+  multi-word badges)
+- Whole-line badge: ~#~ at line start badges the entire line
+
+Badges attach semantically to the block element they appear within. Badges
+and signets are similar by design — both attach meaning to a block. The only
+reason they have different syntax (~#~ vs ~@~) is so that tools can
+/optionally/ distinguish them. A simple renderer may treat them identically;
+a PKM app might treat ~@~ as a person and ~#~ as a category. Neither
+interpretation is required.
+
+* Signets: Entity References
+
+Signets (entity references) use ~@~:
+
+#+begin_example
+@alice mentioned this in the meeting.
+See @intro for background.
+#+end_example
+
+Signets can refer to people, documents, waypoints, or any named object in the
+system. Like badges, they may or may not resolve to a specific target — a
+signet without a matching waypoint is still valid and carries meaning.
+
+* Waypoints and Coordinates: Labels and Block IDs
+
+** Waypoints (~<label>~)
+
+Waypoints (labels) are human-readable anchors placed at the end of a heading
+or block element:
+
+#+begin_example
+- = Introduction <intro>
+See @intro for background.
+#+end_example
+
+A waypoint is a navigation target. Signets and badges can optionally resolve
+to waypoints, but do not need to.
+
+** Coordinates (~<<id>>~)
+
+Coordinates (block IDs) are opaque, machine-generated identifiers. They are
+stored as a property of the block node in the AST — not as part of the text
+content. They enable stable cross-references that survive renames and edits.
+
+#+begin_example
+- = Research phase <<n3b7c2>>
+  - Survey competitors <<n5f1a8>>
+#+end_example
+
+* Spells: Functions and Evaluation
+
+** The spell prefix (~:~)
+
+The ~:~ character is the spell (function) prefix. It replaces Typst's ~#~ for
+this role, freeing ~#~ for badges.
+
+A bare ~:~ by itself is shorthand for ~:()~ — an atomic null that renders
+nothing and immediately self-terminates. This means a line like
+~= : Project Title~ is safe; the bare colon terminates before the parser
+reaches the title text.
+
+** The cast operator (~::~)
+
+~::~ is the cast — it directs a spell's effect at a target. It serves two
+roles based on what follows:
+
+- *Chaining*: if followed by another spell, the cast pushes effect forward
+  to the next spell.
+- *Word-cast*: if followed by a word with no space, the spell applies to
+  that word only.
+- *Line-cast*: if followed by a space, the spell applies to the rest of
+  the line.
+
+#+begin_example
+:x::word               — word-cast: only "word" is affected
+:x:: entire line       — line-cast: everything after is affected
+:f1::f2::content       — chaining: f1 casts into f2, f2 casts into content
+#+end_example
+
+Every ~::~ is doing the same job: pushing effect forward. The parser sees ~::~
+and looks at what follows — if it is a spell name, it chains; if it is a word
+or space, it targets content.
+
+** Spell forms
+
+Indue deliberately keeps spell signatures simple. The design prefers more small
+spells over fewer complex ones.
+
+| Form              | Description                                       |
+|-------------------+---------------------------------------------------|
+| ~:fn~             | Switch — no arguments, self-terminating            |
+| ~:fn:~            | Explicit self-termination (equivalent to ~:fn~)    |
+| ~:fn()~           | Explicit empty vessel (equivalent to ~:fn~)        |
+| ~:fn(value)~      | Single value in a vessel                           |
+| ~:fn[text]~       | Verbatim text in a scroll — no parsing inside      |
+| ~:fn{text}~       | Rich text in a conduit — full Indue grammar inside |
+| ~:fn(val){text}~  | Vessel + conduit                                   |
+| ~:fn(v,"string")~ | Vessel with value + string literal                 |
+
+** Spell argument binding
+
+Arguments bind to a spell when there is no whitespace between them. All
+brackets and parentheses glued to the spell name are consumed by it:
+
+#+begin_example
+:fn(val)[text]{rich}   — all three bound to :fn (no whitespace)
+:fn(val) [text]        — only (val) bound; [text] is separate content
+#+end_example
+
+Vessels ~()~ are always evaluated first regardless of position.
+
+** Multiple adjacent scrolls
+
+When multiple scrolls ~[]~ appear adjacent to a spell (no whitespace between
+them), each scroll acts as a division hint. The spell decides how to interpret
+them:
+
+#+begin_example
+:table[Col1|Col2|Col3][Val1|Val2|Val3][Val1|Val2|Val3]
+#+end_example
+
+Each ~[]~ is a scroll. Pipes ~|~ separate values within a scroll. The ~:table~
+spell interprets each scroll as a row and each pipe-separated value as a cell.
+Another spell could interpret the divisions differently or ignore them.
+
+** Multiline spell binding (clump rule)
+
+After a spell, subsequent lines that begin with ~[~, ~(~, ~{~, or ~:~ (after
+stripping leading whitespace) continue the spell's argument clump. A blank
+line or a line starting with any other character ends the clump.
+
+#+begin_example
+:table[Col1|Col2|Col3]
+[Val1|Val2|Val3]
+[Val1|Val2|Val3]
+
+This line is outside the table — blank line broke the clump.
+#+end_example
+
+This works inside lists because the parser strips indentation before checking
+the first character:
+
+#+begin_example
+- Here's my data
+  :table[Col1|Col2|Col3]
+  [Val1|Val2|Val3]
+  [Val1|Val2|Val3]
+#+end_example
+
+** The cauldron (~:::~)
+
+When multiple spells need to cooperate on the same output, the cauldron ~:::~
+opens a spell block. Subsequent lines starting with ~:~ are part of the
+cauldron. A blank line or non-spell line ends it.
+
+#+begin_example
+:table:::
+:border(1)
+:th[Col1  | Col2  | Col3 ]
+:tr[Val1  | Val2  | Val3 ]
+:tr[Val1  | Val2  | Val3 ]
+
+Outside the cauldron.
+#+end_example
+
+All spells inside the cauldron are evaluated in order, top to bottom. There
+is no cascading or out-of-order configuration.
+
+** Vessels, scrolls, and conduits: bracket semantics
+
+- ~()~ — *Vessel*. Carries a single value to the spell. A URL, a date, a
+  number. The payload is consumed by the spell.
+- ~[]~ — *Scroll*. Verbatim content. The parser treats everything inside as a
+  literal string. No glamours, badges, or spells are recognized. What is
+  written is exactly what comes out.
+- ~{}~ — *Conduit*. Rich content. The parser steps inside, runs the full Indue
+  grammar, builds a sub-AST fragment, and returns it to the parent spell.
+  Glamours activate, badges resolve, nested spells fire.
+
+This distinction applies everywhere brackets appear, not just in spell
+arguments.
+
+#+begin_example
+:link(https://example.com){Read *this* #tagged}
+#+end_example
+
+** Fallback rendering
+
+If an app does not recognize a spell name, the parse-don't-fail philosophy
+applies: the spell wrapper is ignored and the content inside the conduit
+~{...}~ or scroll ~[...]~ is rendered as plain text.
+
+* Task States
+
+Task states are spells. They are not a separate syntax category — they follow
+all the standard spell scoping rules.
+
+** Core shorthands
+
+| Shorthand | Category | Symbol |
+|-----------+----------+--------|
+| ~:o~      | Open     | ☐      |
+| ~:x~      | Closed   | ☑      |
+| ~:>~      | Active   | ◐      |
+| ~:!~      | Blocked  | ⚠      |
+
+** Scoping behavior
+
+Task shorthands follow the same cast rules as any spell:
+
+| Form                  | Effect                                       |
+|-----------------------+----------------------------------------------|
+| ~:x~                  | Atomic — renders the ☑ symbol only            |
+| ~:x::word~            | Word-cast — strikes out one word              |
+| ~:x:: rest of line~   | Line-cast — strikes out the entire line       |
+| ~:x{multiple words}~  | Conduit — strikes out the enclosed content    |
+
+** Named states
+
+For finer-grained states beyond the four categories, named spells work the
+same way:
+
+#+begin_example
+- :todo: Buy groceries
+- :done: Fix the sink
+- :started: Rewrite the parser
+- :waiting: Hear back from contractor
+- :next: File taxes
+#+end_example
+
+Named states carry category metadata:
+
+| Named state  | Category |
+|--------------+----------|
+| ~:todo~      | Open     |
+| ~:next~      | Open     |
+| ~:started~   | Active   |
+| ~:waiting~   | Blocked  |
+| ~:done~      | Closed   |
+
+Custom states can be defined and mapped to any of the four categories.
+
+** Scheduling
+
+Scheduling uses spells attached to task items:
+
+#+begin_example
+- :o Buy groceries :due(2026-04-15)
+- :o Weekly review :scheduled(2026-03-10) :repeat(weekly)
+- :started: Rewrite parser :due(2026-04-01)
+#+end_example
+
+** Interaction with sockets
+
+Sockets are parsed before spells. Task spells apply to the content /after/
+the socket:
+
+#+begin_example
+- = :x:: Whole Heading        — heading slot, title struck out
+- :x::Whole Heading           — list slot, only "Whole" struck out
+:x:: - = Text                 — NOT a socket; - = is literal text
+#+end_example
+
+* List and Heading Schema Declarations
+
+List and heading marker styles are declared on standalone lines using the ~:+~,
+~:-~, and ~:=~ spell operators. This avoids "indentation explosion" from
+cramming metadata onto the first content line.
+
+#+begin_example
+:+[a)]          — ordered lists at this level use a), b), c)
+:-[*]           — unordered lists at this level use *
+:=[I.]          — headings at this level use I., II., III.
+:-[]            — invisible markers (no visible bullet)
+#+end_example
+
+Declarations can be grouped using a conduit:
+
+#+begin_example
+:{ :=[I.] :+[a)] :-[*] }
+#+end_example
+
+** Scope
+
+A declaration binds to the immediate next sibling and its entire subtree. It
+"evaporates" (resets to defaults) upon a physical outdent past the declaration's
+starting column.
+
+#+begin_example
+:{ :=[I.] :+[a)] :-[*] }
++ = Meeting Notes                     — renders as: I. Meeting Notes
+  :=[A.]
+  + = Action Items                    — renders as: A. Action Items
+  + = General Notes                   — renders as: B. General Notes
+    - = Ticket Audits                 — renders as: * Ticket Audits
+      - Common Scenario               — renders as:   * Common Scenario
+    - Uncommon Scenario               — renders as: * Uncommon Scenario
++ = Other Topics                      — renders as: II. Other Topics
+#+end_example
+
+** Pattern matching
+
+The template inside the scroll ~[...]~ is a literal example of the first
+marker. The parser uses it to auto-increment subsequent items. Users may also
+type the number/letter themselves for human readability — the parser treats the
+typed marker as a "hint" and corrects the sequence if needed.
+
+Supported patterns include ~[1.]~, ~[a)]~, ~[(1)]~, ~[I.]~, ~[A.]~, and
+similar alphabetic/numeric/roman variations.
+
+** User-typed ordered markers
+
+If a schema is declared (e.g. ~:+[a)]~), the user may also type the markers
+directly:
+
+#+begin_example
+:+[a)]
+a) hello
+b) what's up
+c) yeah
+#+end_example
+
+The parser matches these against the declared pattern at line start.
+
+* Block-Level Content
+
+** Tables
+
+Tables use the ~:table~ spell with scrolls for rows and pipes for columns:
+
+#+begin_example
+Simple table:
+:table[Col1|Col2|Col3]
+[Val1|Val2|Val3]
+[Val1|Val2|Val3]
+
+Configured table (cauldron):
+:table:::
+:border(1)
+:th[Col1  | Col2  | Col3 ]
+:tr[Val1  | Val2  | Val3 ]
+:tr[Val1  | Val2  | Val3 ]
+#+end_example
+
+The simple form uses adjacent scrolls — the parser infers rows from each
+scroll and columns from pipes. The cauldron form allows configuration spells
+like ~:border~ and distinguishes headers (~:th~) from rows (~:tr~).
+
+** Code blocks
+
+Code blocks use the ~:code~ spell:
+
+#+begin_example
+:code(rust)
+[fn main() {
+    println!("hello");
+}]
+#+end_example
+
+The scroll preserves content verbatim with no internal parsing.
+
+** Reference spells
+
+| Spell            | Behavior                                 |
+|------------------+------------------------------------------|
+| ~@name~          | Signet — summons entity by name          |
+| ~:embed(ref)~    | Transclusion — pulls content inline      |
+| ~:peek(ref)~     | Preview — shows content on hover/click   |
+| ~:query(expr)~   | Live query — filters matching blocks     |
+| ~:link(url){t}~  | Navigation — click to go there           |
+| ~:link::peek(r)~ | Chained — link with preview on hover     |
+| ~:of(<wp>)~      | Reattach content to ancestor waypoint    |
+
+Signets, waypoints, coordinates, and badges are all different addressing modes
+for the same underlying reference system. All reference spells accept any of
+them.
+
+* Full Example
+
+#+begin_example
+:{ :=[I.] :+[a)] }
+
++ = Project Notes <project> <<n8a1f>>
+
+  + = Research phase #work <<n3b7c2>>
+    - = Goals <<nd92e>>
+      Establish baseline metrics and survey prior work.
+    - :x Survey competitors <<n5f1a8>>
+    - :> Read foundational papers #research <<n7c3d4>>
+      Some are about :topic: approaches to #machine learning#
+    - :o Summarize findings :due(2026-04-01) <<n9k2m1>>
+
+  + = Implementation phase #work #engineering <<n2a9b7>>
+    - = Schema <<nf14c3>>
+      + :x Define tables
+      + :started: Build parser :due(2026-04-15)
+      + :o Write tests
+    - = Deployment <<n6d8e5>>
+      + :o Set up CI #devops
+      + :! Waiting on infrastructure team #blocked reason#
+
++ = Side Notes
+  - Remember to update @alice on progress
+  - Link to :link(https://example.com){the *docs*}
+#+end_example
+
+Dash-mode equivalent:
+
+#+begin_example
+:{ :=[I.] :+[a)] }
+
++ = Project Notes <project> <<n8a1f>>
+-+ = Research phase #work <<n3b7c2>>
+-- = Goals <<nd92e>>
+Establish baseline metrics and survey prior work.
+--- :x Survey competitors <<n5f1a8>>
+--- :> Read foundational papers #research <<n7c3d4>>
+Some are about :topic: approaches to #machine learning#
+--- :o Summarize findings :due(2026-04-01) <<n9k2m1>>
+-+ = Implementation phase #work #engineering <<n2a9b7>>
+-- = Schema <<nf14c3>>
+--+ :x Define tables
+--+ :started: Build parser :due(2026-04-15)
+--+ :o Write tests
+-- = Deployment <<n6d8e5>>
+--+ :o Set up CI #devops
+--+ :! Waiting on infrastructure team #blocked reason#
+
++ = Side Notes
+-- Remember to update @alice on progress
+-- Link to :link(https://example.com){the *docs*}
+#+end_example
+
+* Parser Architecture Notes
+
+** Three-layer grammar
+
+The formal grammar should be defined in three distinct layers:
+
+1. *Socket layer*: identifies list items, heading promotions, and
+   coordinates. This is line-start based. Sockets are parsed first.
+2. *Glamour layer*: identifies inline formatting (bold, italic, underline,
+   strikethrough, superscript). These follow the line-start, single-word,
+   paired, and bracket rules. Stacking and symmetric nesting rules apply.
+3. *Entity layer*: identifies signets (~@~), spells (~:~), badges (~#~), and
+   bracket content (vessels, scrolls, and conduits).
+
+** Indentation handling
+
+List nesting and content ownership in indented structures are determined by
+physical indentation. Both tabs and spaces are accepted; the parser normalizes
+to indent levels. The specific number of spaces per level does not need to be
+consistent — only the relative depth matters (Option C: strictly deeper than
+the parent socket).
+
+** Heading level logic
+
+Heading levels are derived from the heading hierarchy, not from list depth.
+Each ~=~ promotion looks up the tree for the most recent heading and adds one.
+In flat document mode, the count of ~=~ symbols determines level directly.
+
+** Stateful list parsing
+
+When the parser encounters a schema declaration (~:+[a)]~), it updates a style
+dictionary keyed by indentation depth and list type. When the indentation
+outdents past the declaration's column, that entry is popped from the stack.
+
+** Coordinates in the AST
+
+~<<id>>~ (coordinate) values are stored as a property of the block node, not
+as a child of the text content. This allows apps to look up ~node.id~ directly
+without traversing the text.
+
+** Error recovery
+
+- Unclosed glamours apply to the single word they touch, or render as
+  literal text if not adjacent to a word.
+- Unknown spell names render their conduit/scroll content as plain text.
+- The parser never throws errors to the user.
+- Strict validation belongs in the linter and export pipeline.
+
+* Relationship to Typst
+
+| Feature         | Typst                 | Indue                |
+|-----------------+-----------------------+----------------------|
+| Function prefix | ~#~                   | ~:~ (spell)          |
+| Tag syntax      | ~#tag("work")~ (func) | ~#work~ (badge)      |
+| Headings        | ~=~ / ~==~ / ~===~    | ~=~ / ~==~ / ~===~   |
+| Bold            | ~*text*~              | ~*text*~ (same)      |
+| Italic          | ~_text_~              | ~/text/~ (glamour)   |
+| Underline       | None built-in         | ~_text_~ (glamour)   |
+| Strikethrough   | None built-in         | ~%text%~ (glamour)   |
+| Checkboxes      | None (package/show)   | ~:o~ ~:x~ (spell)    |
+| Task states     | Convention            | Native spells        |
+| Lists           | ~-~ / ~+~             | ~-~ / ~+~ (same)     |
+| Labels          | ~<label>~             | ~<label>~ (waypoint) |
+| References      | ~@ref~                | ~@ref~ (signet)      |
+| Error handling  | Strict compiler       | Parse, don't fail    |
+
+** Transpilation to Typst
+
+- ~=~ headings pass through (same syntax).
+- ~:func(...)~ (spell) becomes ~#func(...)~.
+- ~#tag~ (badge) becomes ~#tag("tag")~ (via a Typst package).
+- ~:o~ / ~:x~ become ~#todo~ / ~#done~ (via a Typst package).
+- Bold and lists pass through unchanged.
+- ~/italic/~ becomes ~_italic_~.
+- ~_underline_~ becomes ~#underline[...]~.
+
+* Open Design Questions
+
+** Math notation
+
+~$~ is available and unused. Should Indue keep Typst's ~$...$~ math syntax
+or define its own subset?
+
+** Term/definition lists
+
+~/~ is used for italic, so Typst's ~/ term: definition~ is not available.
+Options include a spell like ~:def(term){definition}~ or a different sigil.
+
+** Blockquotes
+
+~>~ is reserved and likely for blockquotes (Markdown convention).
+
+** Typesetting scope
+
+Should Indue define its own page layout, or always delegate to Typst?
+
+** Metadata and frontmatter
+
+How should document-level metadata (title, author, date) be represented?
+
+** Scripting and logic
+
+Should Indue have scripting, or should logic live in host tooling?
+
+** Named spell arguments
+
+Currently positional only. Named arguments may be added if needed.
+
+** Escaping edge cases
+
+The nick (~\~) serves as a general escape character (e.g. ~\*~ for a literal
+asterisk, ~\#~ for a literal hash). The full set of characters that need
+escaping in various contexts should be specified precisely. In particular:
+which characters need escaping inside scrolls (probably none, since scrolls
+are verbatim), inside conduits, and in plain text at line start vs mid-line.
+
+** Code block syntax
+
+Should Indue also support backtick fences (```) alongside the ~:code~ spell
+for familiarity with CommonMark conventions?
+
+* Implementation Requirements
+
+Building Indue as a real language requires:
+
+- A formal grammar specification (likely PEG or context-free), defined in
+  three layers: socket, glamour, and entity.
+- A Rust reference CLI as the canonical implementation.
+- Error handling with clear diagnostics (for the linter/export pipeline;
+  the core parser follows parse-don't-fail).
+- A tree-sitter grammar for editor syntax highlighting and structural queries.
+- A transpiler to Typst for typeset PDF export.
+- Unicode handling (UTF-8 throughout).
+- A comprehensive test suite covering nesting, ambiguity, edge cases, and
+  round-trip fidelity.
+- Documentation of every syntactic interaction and edge case.
+- A Flutter/Dart application (OUST, name pending) consuming the Rust
+  implementation via Flutter Rust Bridge, targeting MechanixOS, Android,
+  iOS, and desktop Linux.
