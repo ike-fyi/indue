@@ -1,9 +1,13 @@
 #+TITLE: Indue — Language Specification
 #+SUBTITLE: Markup Language for Outliners, Tasks, and Personal Knowledge Management
-#+AUTHOR: Draft
+#+AUTHOR: ike ah-loe
 #+DATE: March 2026
 #+STATUS: Pre-specification — exploratory design
 #+STARTUP: overview
+
+* Status
+Pre-specification — exploratory design. Not usable at all and subject to any number of wild changes.
+
 
 * Introduction
 
@@ -89,27 +93,32 @@ The core metaphor: plain text is your base character. Indue is the gear system.
 You equip your text with markup and it gains new abilities. Strip the gear off
 and the character is still there, still whole.
 
-| Syntax        | Indue name | Common name                     |
-|---------------+------------+---------------------------------|
-| ~-~, ~+~, ~=~       | *Socket*     | Structural marker               |
-| Node created  | *Slot*       | Block / node                    |
-| ~*~, ~/~, ~_~, ~%~, ~^~ | *Glamour*    | Inline formatting               |
-| ~#~             | *Badge*      | Tag                             |
-| ~@~             | *Signet*     | Reference / mention             |
-| ~:fn~           | *Spell*      | Function                        |
-| ~::~            | *Cast*       | Scope / chain op                |
-| ~()~            | *Vessel*     | Value argument                  |
-| ~[]~            | *Scroll*     | Verbatim block, string argument |
-| ~{}~            | *Conduit*    | Rich content / evaluated block  |
-| ~<label>~       | *Waypoint*   | Label / anchor                  |
-| ~<< id >>~      | *Coordinate* | Block ID                        |
-| ~\~             | *Nick*       | Escape character                |
-| ~:::~           | *Cauldron*   | Spell block scope               |
+| Syntax                   | Indue name      | Common name          |
+|--------------------------+-----------------+----------------------|
+| ~-~, ~+~, ~=~           | *Socket*        | Structural marker    |
+| Node created             | *Slot*          | Block / node         |
+| — heading slot           |                 | Foldable, in ToC     |
+| — list slot              |                 | Not foldable, leaf   |
+| ~*~, ~/~, ~_~, ~%~, ~^~ | *Glamour*       | Inline formatting    |
+| ~#~                      | *Badge*         | Tag                  |
+| ~@~                      | *Signet*        | Reference / mention  |
+| ~:fn~                    | *Spell*         | Function             |
+| ~::~                     | *Cast*          | Scope / chain op     |
+| ~()~                     | *Vessel*        | Value argument       |
+| ~[]~                     | *Scroll*        | Verbatim block       |
+| ~{}~                     | *Conduit*       | Rich content block   |
+| ~<label>~                | *Waypoint*      | Label / anchor       |
+| ~<<id>>~                 | *Coordinate*    | Block ID             |
+| ~\~                      | *Nick*          | Escape character     |
+| ~:::~                    | *Cauldron*      | Spell block scope    |
+| ~\~~                     | *Satchel*       | Hoisted config block |
+| Config block             | *Codex*         | Inherited properties |
 
 A one-sentence summary of the entire system: sockets create slots; glamours,
 badges, and spells equip the content sitting on those slots; casts direct
 spells at their targets and chain spells together; and vessels, scrolls, and
-conduits carry data between them.
+conduits carry data between them. Codexes configure how glamours, sockets,
+and entities bestow their properties.
 
 * Core Design Philosophy
 
@@ -136,7 +145,7 @@ without a closing delimiter, applies to the entire line. Multiple glamour
 characters can be stacked at line start:
 
 #+begin_example
- * This whole line is bold
+* This whole line is bold
 / This whole line is italic
 */ This whole line is bold and italic
 _% This whole line is underlined and struck through
@@ -244,15 +253,15 @@ described in the Glamours section.
 
 ** Sockets (structural markers, line-start)
 
-| Syntax       | Role                                 |
-|--------------+--------------------------------------|
+| Syntax           | Role                        |
+|------------------+-----------------------------|
 | ~=~ / ~==~ / ~===~ | Heading (level by count or ancestry) |
-| ~-~            | Unordered list item                  |
-| ~+~            | Ordered list item                    |
-| ~- =~ / ~+ =~    | List item + heading promotion        |
-| ~--~ / ~---~     | Dash-mode depth (unordered)          |
-| ~-+~ / ~--+~     | Dash-mode depth (ordered)            |
-| ~-- =~ / ~--- =~ | Dash-mode heading                    |
+| ~-~              | Unordered list item         |
+| ~+~              | Ordered list item           |
+| ~- =~ / ~+ =~   | List item + heading promotion |
+| ~--~ / ~---~     | Dash-mode depth (unordered) |
+| ~-+~ / ~--+~    | Dash-mode depth (ordered)   |
+| ~-- =~ / ~--- =~ | Dash-mode heading          |
 
 ** Glamours (inline formatting)
 
@@ -270,38 +279,38 @@ Symmetry).
 
 ** Badges, signets, and references
 
-| Syntax       | Role                 | Indue name |
-|--------------+----------------------+------------|
-| ~#tag~         | Tag (single word)    | Badge      |
-| ~#multi word#~ | Tag (multi-word)     | Badge      |
-| ~#~            | Tag whole line       | Badge      |
-| ~@name~        | Entity reference     | Signet     |
-| ~<label>~      | Human anchor         | Waypoint   |
-| ~<< id >>~     | Machine-generated ID | Coordinate |
+| Syntax         | Role                 | Indue name   |
+|----------------+----------------------+--------------|
+| ~#tag~         | Tag (single word)    | Badge        |
+| ~#multi word#~ | Tag (multi-word)     | Badge        |
+| ~#~            | Tag whole line       | Badge        |
+| ~@name~        | Entity reference     | Signet       |
+| ~<label>~      | Human anchor         | Waypoint     |
+| ~<<id>>~       | Machine-generated ID | Coordinate   |
 
 ** Spells and containers
 
-| Syntax | Role                | Indue name |
-|--------+---------------------+------------|
-| ~:func~  | Function prefix     | Spell      |
-| ~::~     | Scope / chain op    | Cast       |
-| ~:::~    | Block spell scope   | Cauldron   |
-| ~()~     | Value argument      | Vessel     |
-| ~[]~     | Verbatim content    | Scroll     |
-| ~{}~     | Rich parsed content | Conduit    |
+| Syntax  | Role                 | Indue name |
+|---------+----------------------+------------|
+| ~:func~ | Function prefix      | Spell      |
+| ~::~    | Scope / chain op     | Cast       |
+| ~:::~   | Block spell scope    | Cauldron   |
+| ~()~    | Value argument       | Vessel     |
+| ~[]~    | Verbatim content     | Scroll     |
+| ~{}~    | Rich parsed content  | Conduit    |
 
 ** Other
 
-| Syntax | Role             | Indue name |
-|--------+------------------+------------|
-| ~\~      | Escape character | Nick       |
+| Syntax | Role                   | Indue name |
+|--------+------------------------+------------|
+| ~\~    | Escape character       | Nick       |
+| ~~~    | Hoisted config block   | Satchel    |
 
 ** Reserved and available characters
 
 | Character | Status                                    |
 |-----------+-------------------------------------------|
 | ~>~       | Reserved — likely blockquote shorthand     |
-| ~~~       | Available                                  |
 | ~&~       | Available                                  |
 | ~$~       | Available — likely math mode               |
 | ~;~       | Available — prime keyboard real estate      |
@@ -313,22 +322,22 @@ These spells follow all standard cast and chaining rules.
 
 ** Common formatting spells
 
-| Spell             | Effect                                   |
-|-------------------+------------------------------------------|
-| ~:bold~             | Bold (spell form of ~*~)                   |
-| ~:italic~           | Italic (spell form of ~/~)                 |
-| ~:underline~        | Underline (spell form of ~_~)              |
-| ~:strike~           | Strikethrough (spell form of ~%~)          |
-| ~:super~            | Superscript (spell form of ~^~)            |
-| ~:color(value)~     | Text color (named or hex)                |
-| ~:bgcolor(value)~   | Background/highlight color               |
-| ~:bgradius(value)~  | Highlight shape (rounded, pill, etc.)    |
-| ~:font(type)[name]~ | Font (vessel=fallback type, scroll=name) |
-| ~:grow(n)~          | Increase font size by n steps            |
-| ~:shrink(n)~        | Decrease font size by n steps            |
-| ~:mono~             | Monospace font                           |
-| ~:opacity(value)~   | Transparency (0.0 to 1.0)                |
-| ~:align(value)~     | Text alignment (left, center, right)     |
+| Spell                | Effect                                  |
+|----------------------+-----------------------------------------|
+| ~:bold~              | Bold (spell form of ~*~)                |
+| ~:italic~            | Italic (spell form of ~/~)              |
+| ~:underline~         | Underline (spell form of ~_~)           |
+| ~:strike~            | Strikethrough (spell form of ~%~)       |
+| ~:super~             | Superscript (spell form of ~^~)         |
+| ~:color(value)~      | Text color (named or hex)               |
+| ~:bgcolor(value)~    | Background/highlight color              |
+| ~:bgradius(value)~   | Highlight shape (rounded, pill, etc.)   |
+| ~:font(type)[name]~  | Font (vessel=fallback type, scroll=name)|
+| ~:grow(n)~           | Increase font size by n steps           |
+| ~:shrink(n)~         | Decrease font size by n steps           |
+| ~:mono~              | Monospace font                          |
+| ~:opacity(value)~    | Transparency (0.0 to 1.0)              |
+| ~:align(value)~      | Text alignment (left, center, right)    |
 
 These chain naturally with glamours and each other:
 
@@ -342,15 +351,17 @@ These chain naturally with glamours and each other:
 
 Every glamour and socket character has a corresponding configuration spell.
 The configuration spell uses the literal character as its name and follows
-all standard spell scoping rules.
+all standard spell scoping rules. The configuration block — whether a quick
+form or a cauldron — is called a *codex*. This is the same codex concept
+used for entity configuration (see Entity Configuration).
 
 There are three distinct things per character and they should not be confused:
 
-| Thing | What it does               | Example        |
-|-------+----------------------------+----------------|
-| ~*~     | The glamour — applies bold | ~*word~, ~*text*~  |
-| ~:bold~ | The spell — applies bold   | ~:bold::word~    |
-| ~:*~    | The config — configures ~*~  | ~:*(red)~, ~:*:::~ |
+| Thing    | What it does                  | Example               |
+|----------+-------------------------------+-----------------------|
+| ~*~      | The glamour — applies bold    | ~*word~, ~*text*~     |
+| ~:bold~  | The spell — applies bold      | ~:bold::word~         |
+| ~:*~     | The config — configures ~*~   | ~:*(red)~, ~:*:::~    |
 
 ~:*~ does not apply bold. It configures what ~*~ does. ~*~ and ~:bold~ are
 the action; ~:*~ is the configuration for that action.
@@ -375,7 +386,7 @@ More *bold still red* text.
 Now *bold is blue* instead.
 #+end_example
 
-The cauldron form handles multi-property configuration:
+The cauldron form handles multi-property codexes:
 
 #+begin_example
 :*:::
@@ -389,14 +400,103 @@ Regular /italic text/ is unaffected — only * was configured.
 
 This is the same pattern used for socket configuration:
 
-| Config target | Quick form | Cauldron form  |
-|---------------+------------+----------------|
-| ~+~ (ordered)   | ~:+[a)]~     | ~:+:::~ + spells |
-| ~-~ (unordered) | ~:-[*]~      | ~:-:::~ + spells |
-| ~=~ (heading)   | ~:=[I.]~     | ~:=:::~ + spells |
-| ~*~ (bold)      | ~:*(red)~    | ~:*:::~ + spells |
-| ~/~ (italic)    | ~:/(blue)~   | ~:/:::~ + spells |
-| ~_~ (underline) | ~:_(dotted)~ | ~:_:::~ + spells |
+| Config target  | Quick codex         | Cauldron codex      |
+|----------------+---------------------+---------------------|
+| ~+~ (ordered)  | ~:+[a)]~            | ~:+:::~ + spells    |
+| ~-~ (unordered)| ~:-[*]~             | ~:-:::~ + spells    |
+| ~=~ (heading)  | ~:=[I.]~            | ~:=:::~ + spells    |
+| ~*~ (bold)     | ~:*(red)~           | ~:*:::~ + spells    |
+| ~/~ (italic)   | ~:/(blue)~          | ~:/:::~ + spells    |
+| ~_~ (underline)| ~:_(dotted)~        | ~:_:::~ + spells    |
+
+All three configuration targets — glamours, sockets, and named entities —
+use the same codex system. See Entity Configuration for the full picture.
+
+** Block styling spells
+
+Indue is a writing tool, not a design tool. Block styling spells exist so
+you do not have to leave Indue for common formatting — a highlighted callout,
+a card-style container, a colored section. Anything beyond these basics is
+export territory (Typst, CSS, etc.).
+
+Block spells target a waypoint and style the containment (the box around
+the content), not the text itself. Inline/cast spells target text.
+
+#+begin_example
+Block targeting (styles the container):
+:bgcolor(#f5f5f5)<section>:
+:radius(6)<section>:
+:shadow(2,2,4)<section>:
+:border(1,solid,#ccc)<section>:
+:padding(1em)<section>:
+
+Text targeting (styles the content):
+:color(red)::word
+:bold::italic::word
+#+end_example
+
+*** Common block spells
+
+| Spell                       | Effect                            |
+|-----------------------------+-----------------------------------|
+| ~:bgcolor(value)<wp>:~      | Block background color            |
+| ~:radius(value)<wp>:~       | Corner rounding                   |
+| ~:shadow(args)<wp>:~        | Drop shadow on block              |
+| ~:border(args)<wp>:~        | Border style                      |
+| ~:padding(value)<wp>:~      | Inner spacing                     |
+| ~:textshadow(args)<wp>:~    | Shadow on text (not block)        |
+
+These compose via cauldrons when multiple properties are needed:
+
+#+begin_example
+:<section>:::
+:bgcolor(#f5f5f5)
+:radius(8)
+:shadow(2,2,4)
+:padding(1em)
+#+end_example
+
+*** Preset spells
+
+For common patterns, higher-level spells bundle properties together:
+
+| Spell              | Bundles                                     |
+|--------------------+---------------------------------------------|
+| ~:card<wp>:~       | radius, shadow, padding, border             |
+| ~:chip<wp>:~       | pill radius, bgcolor, small padding         |
+| ~:callout<wp>:~    | left border accent, bgcolor, padding        |
+| ~:highlight<wp>:~  | bgcolor, slight radius                      |
+
+These are convenience spells that expand into block spells. Override
+individual properties after the preset:
+
+#+begin_example
+:card<section>:
+:bgcolor(#fef3c7)<section>:    — override just the background
+#+end_example
+
+** Height context in layouts
+
+Numeric height values are interpreted differently depending on the layout
+context. The user types a bare number; the containing spell determines
+the unit:
+
+| Context        | Bare number means | Example                  |
+|----------------+-------------------+--------------------------|
+| ~:layout~      | em units          | ~:height(<wp>)(30)~ = 30em |
+| ~:pagelayout~  | percentage        | ~:height(<wp>)(30)~ = 30%  |
+
+To override the default unit, specify it explicitly:
+
+#+begin_example
+:height(<wp>)(30em)
+:height(<wp>)(30%)
+#+end_example
+
+In flow layouts (~:layout~), height sets a minimum — content that exceeds
+it simply grows. No overflow, no scrolling. In page layouts
+(~:pagelayout~), height is a hard constraint — content that exceeds it
+scrolls within its allocated space.
 
 * List Nesting: Two Modes
 
@@ -822,6 +922,104 @@ See @intro for background.
 A waypoint is a navigation target. Signets and badges can optionally resolve
 to waypoints, but do not need to.
 
+** Waypoint trails
+
+Waypoints in Indue are not static, isolated anchors. When multiple waypoints
+share the same name, the parser automatically networks them together to form
+navigational paths through the document.
+
+*** Undefined trails (the automatic loop)
+
+When the parser detects multiple identical waypoints, it links them into an
+undefined trail. Activating a waypoint jumps the user to the next one in
+document order. When the last waypoint is reached, it cycles back to the
+first, creating a navigational loop.
+
+#+begin_example
+- = Morning Routine <routine>
+  Wake up, coffee, journal.
+
+- = Afternoon Routine <routine>
+  Deep work, meetings.
+
+- = Evening Routine <routine>
+  Review, wind down.
+#+end_example
+
+Navigating ~<routine>~ cycles: Morning → Afternoon → Evening → Morning.
+
+*** Portals
+
+A portal is an undefined trail containing exactly two waypoints. It acts as
+a two-way mirror, letting the user jump back and forth between two specific
+points in the text:
+
+#+begin_example
+- = Budget Summary <budget>
+  See the detailed breakdown for numbers.
+
+- = Budget Breakdown <budget>
+  Detailed line items here.
+#+end_example
+
+Activating either ~<budget>~ jumps to the other. Portals are a natural
+alternative to inline links for connecting related content within the same
+document.
+
+*** Defined trails (the constellation)
+
+When you need to guide a reader through a specific, non-linear sequence,
+upgrade an undefined trail by explicitly enumerating waypoints using a pipe
+divider and an index:
+
+#+begin_example
+- = Conclusion <argument | 3>
+  Therefore we can see that...
+
+- = Evidence <argument | 2>
+  The data shows...
+
+- = Thesis <argument | 1>
+  We propose that...
+#+end_example
+
+Despite their document order (Conclusion, Evidence, Thesis), the trail
+follows the defined sequence: Thesis (1) → Evidence (2) → Conclusion (3).
+
+Syntax: ~<name | index>~. The parser trims all whitespace around the ~|~
+divider and index. ~<argument|1>~ and ~< argument | 1 >~ are identical.
+
+*** The trail terminator (~x~)
+
+To break the automatic cycle, replace the index with ~x~:
+
+#+begin_example
+<argument | 1>    — start
+<argument | 2>    — middle
+<argument | x>    — end (trail stops here, no cycling)
+#+end_example
+
+Without an ~x~ terminator, defined trails cycle like undefined ones. The
+terminator makes the trail a one-way journey.
+
+*** Resolution rules
+
+When a signet (~@name~) or reference spell points to a waypoint name that
+has multiple instances:
+
+- *Undefined trail*: the signet resolves to the next waypoint in document
+  order from the current position. This is natural for portals and
+  sequential navigation.
+- *Defined trail*: the signet resolves to index 1 (the start of the trail).
+- *Mixed defined and undefined*: if the same name has both indexed and
+  un-indexed waypoints, the defined trail is followed first in index order.
+  Undefined waypoints are appended after the defined sequence in document
+  order.
+- *Terminated trail with orphaned undefined waypoints*: if a defined trail
+  ends with ~x~, undefined waypoints with the same name are never linked
+  into the trail. They become standalone anchors. This is the user's
+  responsibility to manage.
+
 ** Coordinates (~<<id>>~)
 
 Coordinates (block IDs) are opaque, machine-generated identifiers. They are
@@ -832,6 +1030,9 @@ content. They enable stable cross-references that survive renames and edits.
 - = Research phase <<n3b7c2>>
   - Survey competitors <<n5f1a8>>
 #+end_example
+
+Coordinates do not participate in trails. They are always unique identifiers
+for a single block.
 
 * Spells: Functions and Evaluation
 
@@ -895,19 +1096,19 @@ brackets and parentheses glued to the spell name are consumed by it:
 
 Vessels ~()~ are always evaluated first regardless of position.
 
-** Multiple adjacent scrolls
+** Multiple adjacent brackets
 
-When multiple scrolls ~[]~ appear adjacent to a spell (no whitespace between
-them), each scroll acts as a division hint. The spell decides how to interpret
-them:
+When multiple scrolls ~[]~ or conduits ~{}~ appear adjacent to a spell (no
+whitespace between them), each bracket acts as a division hint. The spell
+decides how to interpret them:
 
 #+begin_example
-:table[Col1|Col2|Col3][Val1|Val2|Val3][Val1|Val2|Val3]
+:table{Col1|Col2|Col3}{Val1|Val2|Val3}{Val1|Val2|Val3}
 #+end_example
 
-Each ~[]~ is a scroll. Pipes ~|~ separate values within a scroll. The ~:table~
-spell interprets each scroll as a row and each pipe-separated value as a cell.
-Another spell could interpret the divisions differently or ignore them.
+Each ~{}~ is a conduit. Pipes ~|~ separate cells within each conduit (the
+~:table~ spell splits on them). Another spell could interpret the divisions
+differently or ignore them.
 
 ** Multiline spell binding (clump rule)
 
@@ -916,9 +1117,9 @@ stripping leading whitespace) continue the spell's argument clump. A blank
 line or a line starting with any other character ends the clump.
 
 #+begin_example
-:table[Col1|Col2|Col3]
-[Val1|Val2|Val3]
-[Val1|Val2|Val3]
+:table{Col1|Col2|Col3}
+{Val1|Val2|Val3}
+{Val1|Val2|Val3}
 
 This line is outside the table — blank line broke the clump.
 #+end_example
@@ -928,25 +1129,53 @@ the first character:
 
 #+begin_example
 - Here's my data
-  :table[Col1|Col2|Col3]
-  [Val1|Val2|Val3]
-  [Val1|Val2|Val3]
+  :table{Col1|Col2|Col3}
+  {Val1|Val2|Val3}
+  {Val1|Val2|Val3}
 #+end_example
 
 ** The cauldron (~:::~)
 
 When multiple spells need to cooperate on the same output, the cauldron ~:::~
 opens a spell block. Subsequent lines starting with ~:~ are part of the
-cauldron. A blank line or non-spell line ends it.
+cauldron.
+
+A cauldron terminates when:
+
+- A blank line is encountered.
+- A single ~:~ is encountered (explicit terminator, renders nothing).
+- A non-spell line is encountered.
+
+A cauldron can direct its combined output using ~::~ (cast) at the end:
 
 #+begin_example
+Simple cauldron (terminates at blank line):
 :table:::
 :border(1)
-:th[Col1  | Col2  | Col3 ]
-:tr[Val1  | Val2  | Val3 ]
-:tr[Val1  | Val2  | Val3 ]
+:th{Col1  | Col2  | Col3 }
+:tr{Val1  | Val2  | Val3 }
 
 Outside the cauldron.
+
+Explicitly terminated cauldron:
+:table:::
+:border(1)
+:th{Col1  | Col2  | Col3 }
+:tr{Val1  | Val2  | Val3 }
+:
+
+Outside — the bare : ended the cauldron.
+
+Cauldron with cast (directs output):
+:color(red):::
+:bold
+:grow(1)
+::This entire line gets the combined effect.
+
+Cauldron cast to a bracket:
+:color(red):::
+:bold
+::[specific words get the combined effect]
 #+end_example
 
 All spells inside the cauldron are evaluated in order, top to bottom. There
@@ -963,11 +1192,51 @@ is no cascading or out-of-order configuration.
   grammar, builds a sub-AST fragment, and returns it to the parent spell.
   Glamours activate, badges resolve, nested spells fire.
 
-This distinction applies everywhere brackets appear, not just in spell
-arguments.
+*Use conduits by default.* The common recommendation is to use conduits ~{}~
+unless you specifically need content stripped of all meaning — code snippets,
+raw data, or literal text where glamour characters should not be interpreted.
+Conduits preserve the full power of Indue inside them; scrolls deliberately
+suppress it.
 
 #+begin_example
-:link(https://example.com){Read *this* #tagged}
+:link(https://example.com){Read *this* #tagged}  — conduit: bold and tag work
+:code(rust)[fn main() { println!("hello"); }]    — scroll: content is literal
+#+end_example
+
+** Pipe convention
+
+The pipe character ~|~ has no special meaning at the container level. It is
+simply a character that appears inside scrolls or conduits like any other.
+
+However, certain spells — particularly ~:table~ and ~:layout~ — interpret
+pipes as cell or column dividers in their inputs. This is a spell convention,
+not a parser rule. The spell documentation specifies whether it recognizes
+pipes.
+
+When using pipes inside a conduit, the Indue parser runs on each cell's
+content independently. When using pipes inside a scroll, the content is
+verbatim and pipes are just literal characters that the spell splits on.
+
+#+begin_example
+Conduit (cells are parsed — use for formatted content):
+:table{*Name*|Role|Status}
+{Alice|Engineer|:> Active}
+
+Scroll (cells are verbatim — use for raw data):
+:data[1.0|2.5|3.7]
+[4.2|5.1|6.8]
+#+end_example
+
+** The cast as input/target divider
+
+In any spell, everything before ~::~ is input to the spell. Everything after
+~::~ is what the spell acts on. Spells choose which sides they use:
+
+#+begin_example
+:color(red)::word                     — input: red. target: word
+:bold::italic::word                   — chained casts
+:table{Col1|Col2}::{formatted rows}  — input: header. target: content
+:link(url)::{*click here*}            — input: url. target: rich label
 #+end_example
 
 ** Fallback rendering
@@ -1028,11 +1297,14 @@ Custom states can be defined and mapped to any of the four categories.
 
 ** Scheduling
 
-Scheduling uses spells attached to task items:
+Scheduling uses spells attached to task items. See the Scheduling and
+Recurrence section for the comprehensive syntax including recurrence
+patterns, ordinal dates, exceptions, and completion modes.
 
 #+begin_example
 - :o Buy groceries :due(2026-04-15)
-- :o Weekly review :scheduled(2026-03-10) :repeat(weekly)
+- :o Weekly review :on(2026-03-10) :repeat[weekly]
+- :o Book club :on(2026-04-20) :repeat[3rd saturday]
 - :started: Rewrite parser :due(2026-04-01)
 #+end_example
 
@@ -1112,25 +1384,136 @@ The parser matches these against the declared pattern at line start.
 
 ** Tables
 
-Tables use the ~:table~ spell with scrolls for rows and pipes for columns:
+Tables use the ~:table~ spell. The ~:table~ spell interprets pipes ~|~ as
+cell dividers in its inputs. Use conduits by default so cell content can
+include glamours, badges, and spells. Use scrolls for raw data where no
+parsing is needed.
 
 #+begin_example
-Simple table:
-:table[Col1|Col2|Col3]
-[Val1|Val2|Val3]
-[Val1|Val2|Val3]
+Simple table (conduits, cells are parsed):
+:table{Col1|Col2|Col3}
+{*Alice*|Engineer|:> Active}
+{Bob|Designer|:o Open}
+
+Raw data table (scrolls, cells are verbatim):
+:data[x|y|z]
+[1.0|2.5|3.7]
+[4.2|5.1|6.8]
 
 Configured table (cauldron):
 :table:::
 :border(1)
-:th[Col1  | Col2  | Col3 ]
-:tr[Val1  | Val2  | Val3 ]
-:tr[Val1  | Val2  | Val3 ]
+:th{Col1  | Col2  | Col3 }
+:tr{*Alice*  | Engineer  | :> Active }
+:tr{Bob  | Designer  | :o Open }
 #+end_example
 
-The simple form uses adjacent scrolls — the parser infers rows from each
-scroll and columns from pipes. The cauldron form allows configuration spells
+The simple form uses adjacent conduits — the spell infers rows from each
+conduit and columns from pipes. The cauldron form allows configuration spells
 like ~:border~ and distinguishes headers (~:th~) from rows (~:tr~).
+
+** Layout
+
+The ~:layout~ spell arranges content blocks into columns. Content is written
+linearly with waypoints; the layout spell maps those waypoints into a spatial
+arrangement. In plain text you read sections top to bottom. In a renderer
+they flow into their assigned positions.
+
+Layout handles horizontal columns only. Vertical stacking is natural content
+flow. If one column has more content than another, the shorter columns divide
+their space equally among their waypoints.
+
+#+begin_example
+:layout{<analysis>|<numbers>}:
+
+- = Market Analysis <analysis>
+  The market is growing rapidly.
+  Revenue increased 40% year over year.
+  Key competitors include several startups.
+
+- = Financial Summary <numbers>
+  Q1: $2.3M
+  Q2: $2.8M
+  Q3: $3.1M
+  Q4: projected $3.5M
+#+end_example
+
+The conduit is used because ~<waypoints>~ are parsed Indue syntax. Pipes
+divide columns. Adjacent waypoints within a column stack vertically:
+
+#+begin_example
+:layout{<nav>|<content>}:                — 2 columns
+:layout{<a>|<b>|<c>}:                   — 3 columns
+:layout{<top><bottom>|<side>}:          — left col split, right col full
+:layout{<a><b>|<c><d>}:                 — 2x2 grid
+#+end_example
+
+Column sizing targets the waypoint directly:
+
+#+begin_example
+:width(<nav>)[30]
+:layout{<nav>|<content>}:
+#+end_example
+
+The ~:width~ spell sets a percentage. Columns without a width declaration
+share the remainder equally. The last column never needs a width.
+
+For more control, use a cauldron:
+
+#+begin_example
+:layout:::
+:width(<nav>)[30]
+:overflow(<content>)[scroll]
+:gap[1em]
+{<nav>|<content>}
+#+end_example
+
+** Page-constrained layout (~:pagelayout~)
+
+For dashboards, slides, and reports where content must fit within a defined
+page boundary, use ~:pagelayout~ instead of ~:layout~. Heights are
+percentages of the page. Content that exceeds its allocation scrolls.
+
+#+begin_example
+:pagelayout:::
+:height(<summary>)(40)
+:height(<details>)(60)
+{<summary><details>|<sidebar>}
+#+end_example
+
+| Feature    | ~:layout~ (flow)      | ~:pagelayout~ (constrained)   |
+|------------+-----------------------+-------------------------------|
+| Height     | Content-driven (em)   | Percentage of page            |
+| Overflow   | Never — grows to fit  | Scrolls                       |
+| Page break | Content spans pages   | Confined to current page      |
+| Use case   | Documents, notes      | Dashboards, slides, reports   |
+
+** Page configuration (~:page~)
+
+~:page~ configures the page itself — size, margins, headers, footers. This
+is document-level setup, not content layout. Configuration persists until
+changed.
+
+#+begin_example
+:page(a4):
+:page(letter):
+:page:::
+:orientation(landscape)
+:margin(2cm)
+:header{Document Title}:
+:footer{Page :pagenum:}:
+:columns(2)
+#+end_example
+
+** Page and element spells
+
+#+begin_example
+:break(page):                  — force a new page
+:align(center)<wp>:            — center a waypoint's content
+#+end_example
+
+Deleting any layout or page line causes content to render linearly — nothing
+breaks. Layout is a rendering instruction, not a structural dependency.
 
 ** Code blocks
 
@@ -1145,21 +1528,276 @@ Code blocks use the ~:code~ spell:
 
 The scroll preserves content verbatim with no internal parsing.
 
-** Reference spells
+** Reference and transclusion spells
 
-| Spell            | Behavior                                 |
-|------------------+------------------------------------------|
-| ~@name~          | Signet — summons entity by name          |
-| ~:embed(ref)~    | Transclusion — pulls content inline      |
-| ~:peek(ref)~     | Preview — shows content on hover/click   |
-| ~:query(expr)~   | Live query — filters matching blocks     |
-| ~:link(url){t}~  | Navigation — click to go there           |
-| ~:link::peek(r)~ | Chained — link with preview on hover     |
-| ~:of(<wp>)~      | Reattach content to ancestor waypoint    |
+| Spell              | Behavior                                 |
+|--------------------+------------------------------------------|
+| ~@name~            | Signet — summons entity by name          |
+| ~:link(url){t}~    | Navigation — click to go there           |
+| ~:of(<wp>)~        | Reattach content to ancestor waypoint    |
+| ~:embed(<wp>):~    | Transclusion — pulls content inline      |
+| ~:popover(<wp>):~  | Popup — hover/click to show content      |
+| ~:query(expr)~     | Live query — filters matching blocks     |
 
 Signets, waypoints, coordinates, and badges are all different addressing modes
 for the same underlying reference system. All reference spells accept any of
 them.
+
+*** Transclusion (~:embed~)
+
+Transclusion pulls referenced content inline at the point where the spell
+appears. The source content appears as if it were written here.
+
+#+begin_example
+:embed(<intro>):                — transclude block with waypoint <intro>
+:embed(<<n3b7c2>>):            — transclude by coordinate
+:embed(#work):                 — transclude all blocks badged #work
+:embed(@alice):                — transclude entity content
+#+end_example
+
+Whether transclusion is one-way (read-only mirror) or two-way (editable in
+place) is an application decision, not a language requirement. The spec
+defines only that the referenced content appears at the transclusion point.
+
+*** Popover (~:popover~)
+
+Popovers display referenced content in a floating panel on hover or click,
+without leaving the current context. An optional scroll provides a display
+label:
+
+#+begin_example
+:popover(<wp>):                — shows block content on hover/click
+:popover(<wp>)[Details]:       — with custom label
+:popover(@alice):              — entity info card
+:popover(:query(#work :>)):    — query results in a panel
+:popover[Tooltip text]:        — static text, no reference needed
+#+end_example
+
+*** Chaining references
+
+Reference spells chain with casts like any other spell:
+
+#+begin_example
+:link(url)::embed(<wp>):       — link with inline transclusion
+:link::popover(<wp>):          — link with hover preview
+:link(url)::{*click here*}     — link with formatted label
+#+end_example
+
+* Entity Configuration: The Indue Spell
+
+The namesake feature of the language. The ~:indue~ spell — and its shorthand
+forms — configures named entities (waypoints, badges, signets) so that any
+block where the entity appears automatically inherits the configured spells.
+This is Indue's answer to "supertags": a badge like ~#project~ can carry
+formatting, task defaults, or any other spell to every block it touches.
+
+** The core metaphor
+
+Plain text puts on Indue and gains power. The ~:indue~ spell defines /what/
+that power is for a given entity name. Every block that wears the entity
+inherits its properties — indued with the qualities it did not previously
+have.
+
+** Syntax
+
+The ~:indue~ spell follows the standard configuration pattern. There are
+three levels:
+
+#+begin_example
+Type configuration (all waypoints, all badges, etc.):
+:<>:::              — configure how all waypoints look/behave
+:#:::               — configure how all badges look/behave
+:@:::               — configure how all signets look/behave
+
+Entity configuration (specific named entity):
+:<project>:::       — configure the "project" entity (shorthand)
+:indue(<project>):::— same thing (longhand)
+
+Inside the cauldron, standard spells define the inherited properties:
+:<project>:::
+:bgcolor(#f0f0f0)
+:border(1, solid, #ccc)
+:padding(0.5em)
+#+end_example
+
+Any block that carries ~<project>~, ~#project~, or ~@project~ automatically
+inherits the configured bgcolor, border, and padding. The entity name is the
+identity — the sigil type (~#~, ~@~, ~<>~) is just how you reference it.
+
+** Codex
+
+A *codex* is any configuration block in Indue — the set of spells that
+define how a glamour, socket, or named entity behaves. The term applies
+uniformly across the entire configuration system:
+
+| Codex target       | Quick codex      | Cauldron codex              |
+|--------------------+------------------+-----------------------------|
+| ~*~ (glamour)      | ~:*(red)~        | ~:*:::~ + spells            |
+| ~+~ (socket)       | ~:+[a)]~         | ~:+:::~ + spells            |
+| ~<project>~ (entity)| —               | ~:<project>:::~ + spells    |
+| ~<>~ (type)        | —                | ~:<>:::~ + spells           |
+
+A glamour codex configures how a formatting character renders. A socket
+codex configures how a list or heading marker renders. An entity codex
+configures inherited properties that are bestowed on every block where
+that entity appears. All three use the same cauldron syntax and the same
+scoping rules.
+
+#+begin_example
+:<meeting>:::
+:bgcolor(#e8f4fd)
+:callout
+:+[1.]
+
+This codex makes every block tagged #meeting or anchored <meeting>
+automatically appear as a numbered callout with a light blue background.
+#+end_example
+
+** Scope and persistence
+
+Codex effects are applied to the current block and forward. If a codex
+appears in the middle of a document, blocks above it are not affected.
+
+#+begin_example
+- Regular block #project             — no codex yet, default styling
+
+:<project>:::
+:bgcolor(#f0f0f0)
+
+- Styled block #project              — inherits bgcolor from codex
+- Another styled block #project      — also inherits
+#+end_example
+
+A later codex for the same entity overrides the previous one:
+
+#+begin_example
+:<project>:::
+:bgcolor(#f0f0f0)
+
+- Block A #project                   — light gray
+
+:<project>:::
+:bgcolor(#ffffcc)
+
+- Block B #project                   — light yellow (overridden)
+#+end_example
+
+** The satchel (~)
+
+To hoist configuration to the top of the document (like HTML's ~<head>~ or
+a CSS style block), use a *satchel*. A satchel is a block delimited by ~
+characters that is evaluated before the body text, regardless of its
+physical position in the file.
+
+*** Satchel syntax
+
+Any sequence of one or more ~~ characters acts as a satchel delimiter.
+Multiple ~~ characters in a row are treated as a single delimiter —
+~\~\~\~\~\~~ is the same as ~~~. This allows visual decoration:
+
+#+begin_example
+~~~~~~~~~~
+:<project>:::
+:bgcolor(#f0f0f0)
+:border(1)
+
+:<meeting>:::
+:bgcolor(#e8f4fd)
+:callout
+~~~~~~~~~~
+
+= Project Alpha <project>
+Content here automatically gets the project styling.
+
+- Team sync #meeting
+  This gets the meeting styling.
+#+end_example
+
+*** Header, middle, and footer satchels
+
+Satchels can appear anywhere in the document. Common patterns:
+
+#+begin_example
+Header satchel (best practice — clean start):
+~~~~~~~~~~
+Configuration here
+~~~~~~~~~~
+= Title
+Content begins immediately.
+
+Middle satchel (configuration change mid-document):
+= Part One
+Content...
+~~~~~
+New configuration
+~~~~~
+= Part Two
+Content with updated config...
+
+Footer satchel (no closing needed — terminates at end of file):
+= Content
+More content...
+~~~~~~~~~~
+Configuration here — no closing ~ required at end of document.
+#+end_example
+
+The footer form is especially useful: type ~~~~~~~~~~  as a visual divider
+near the bottom and put all your codexes below it. Best practice is to keep
+the top of the document clean, going straight into a title or heading, and
+putting configuration in a footer satchel.
+
+*** Satchel evaluation order
+
+1. Applications scan all files in the vault scope and auto-import
+   configurations.
+2. Satchel contents from all files are hoisted and evaluated first.
+3. The body is then parsed with full knowledge of all codexes.
+4. Inline codexes (not in satchels) override hoisted ones when encountered
+   in document order.
+
+This means a codex defined in one file's satchel can affect blocks in
+another file — the vault is a single configuration namespace. Application
+developers should document their vault scanning behavior.
+
+** Codex for waypoints
+
+A waypoint codex defines how a specific waypoint and its associated entity
+affect the blocks where they appear. You can place a waypoint above its
+codex to make the codex itself navigable:
+
+#+begin_example
+<project>
+:<project>:::
+:bgcolor(#f0f0f0)
+:card
+#+end_example
+
+Now ~@project~ in a signet jumps to the codex definition. The codex is its
+own documentation.
+
+** Interaction with configuration hierarchy
+
+All codexes compose in a predictable order:
+
+- *Glamour/socket codex* (~:*:::~, ~:+[a)]~) affects how a character
+  renders globally.
+- *Entity codex* (~:<project>:::~) affects blocks where that entity appears.
+- *Inline spells* (~:bgcolor(red)::~) affect specific content in place.
+
+When multiple codexes apply, inline spells override entity codexes, which
+override glamour/socket codexes. Explicit always wins over inherited.
+
+** Open questions for entity configuration
+
+- Should the codex affect blocks that reference the entity via ANY form
+  (~#name~, ~@name~, ~<name>~), or only when a waypoint is physically
+  present? Current design: all forms share the entity namespace and the
+  codex applies to all.
+- Should codex properties be composable? If a block has ~#project~ and
+  ~#urgent~, do both codexes apply? If so, what order? (Likely: applied in
+  the order the entities appear on the block, last wins for conflicts.)
+- Should there be a way to define a codex that only applies to blocks with
+  a specific combination of entities (intersection)?
 
 * Full Example
 
@@ -1292,6 +1930,341 @@ without traversing the text.
 - Bold and lists pass through unchanged.
 - ~/italic/~ becomes ~_italic_~.
 - ~_underline_~ becomes ~#underline[...]~.
+
+* Scheduling and Recurrence
+
+Indue provides a comprehensive scheduling system through spells. Scheduling
+is critical to the PKM and task management use case — it must be part of the
+core spec, not an afterthought.
+
+** Date spells
+
+| Spell                          | Purpose                        |
+|--------------------------------+--------------------------------|
+| ~:due(date)~                   | Task deadline                  |
+| ~:on(date)~                    | Event/calendar date            |
+| ~:scheduled(date)~             | Planned start date             |
+| ~:start(date)~                 | Date range start               |
+| ~:end(date)~                   | Date range end                 |
+
+Dates use ISO 8601 format by default: ~2026-04-15~, ~2026-04-15T14:00~.
+Natural-language dates are an application feature, not a spec requirement.
+
+** Recurrence syntax
+
+Recurrence is specified via the ~:repeat~ spell. The design draws from
+iCalendar RRULE concepts but uses a human-readable syntax rather than the
+RRULE key-value format. Recurrence patterns use scrolls because the pattern
+is a literal string — no Indue syntax needs to be parsed inside.
+
+The anchor date for recurrence comes from the sibling date spell (~:on~,
+~:due~, or ~:scheduled~) on the same item. If no date spell is present,
+the application may use today as the implicit anchor.
+
+*** Simple intervals
+
+#+begin_example
+:repeat[daily]
+:repeat[weekly]
+:repeat[monthly]
+:repeat[yearly]
+:repeat[3 days]                 — every 3 days
+:repeat[2 weeks]                — every 2 weeks
+:repeat[6 months]               — every 6 months
+#+end_example
+
+*** Day-of-week patterns
+
+#+begin_example
+:repeat[weekdays]               — Monday through Friday
+:repeat[weekends]               — Saturday and Sunday
+:repeat[mon, wed, fri]          — specific days
+:repeat[tue, thu]               — specific days
+#+end_example
+
+*** Ordinal patterns (irregular dates)
+
+This is where most systems fail. Indue uses a readable ordinal syntax:
+
+#+begin_example
+:repeat[1st friday]             — first Friday of every month
+:repeat[last saturday]          — last Saturday of every month
+:repeat[3rd tuesday]            — third Tuesday of every month
+:repeat[2nd weekday]            — second weekday of every month
+:repeat[last day]               — last day of every month
+:repeat[1st monday of march]    — first Monday of March (yearly)
+:repeat[last friday of quarter] — last Friday of each quarter
+#+end_example
+
+Ordinal keywords: ~1st~, ~2nd~, ~3rd~, ~4th~, ~5th~, ~last~.
+
+Day keywords: ~monday~ / ~mon~, ~tuesday~ / ~tue~, ~wednesday~ / ~wed~,
+~thursday~ / ~thu~, ~friday~ / ~fri~, ~saturday~ / ~sat~, ~sunday~ / ~sun~,
+~day~, ~weekday~, ~weekend-day~.
+
+Period keywords: ~month~ (default), ~quarter~, ~year~, and specific month
+names (~january~ / ~jan~ through ~december~ / ~dec~).
+
+*** Interval + ordinal combinations
+
+#+begin_example
+:repeat[1st friday of 2 months] — first Friday, every other month
+:repeat[last day of 3 months]   — last day, every 3 months
+#+end_example
+
+*** Bounds
+
+Recurrence start and end are controlled by the existing date spells on the
+same item:
+
+#+begin_example
+- :o Team meeting :on(2026-04-07) :repeat[weekly] :end(2026-12-31)
+- :o Quarterly review :on(2026-01-15) :repeat[last friday of quarter]
+- :o Sprint planning :scheduled(2026-04-01) :repeat[2 weeks]
+#+end_example
+
+~:end~ terminates the recurrence. Without an ~:end~, the recurrence
+continues indefinitely. ~:on~ or ~:scheduled~ provides the anchor date from
+which the pattern begins.
+
+*** Exceptions
+
+Specific occurrences can be skipped:
+
+#+begin_example
+:skip(2026-07-04)               — skip this date
+:skip(2026-12-25, 2026-12-26)   — skip multiple dates
+#+end_example
+
+*** Completion behavior
+
+Two modes for how the next date is calculated after completion:
+
+#+begin_example
+:repeat[weekly]                 — next date from the scheduled date
+:repeat![weekly]                — next date from the completion date
+#+end_example
+
+~:repeat~ schedules from the original anchor (task recurs on the same day
+each week regardless of when you complete it). ~:repeat!~ schedules from
+when you actually finished (useful for habits where regularity from last
+completion matters).
+
+*** Full examples
+
+#+begin_example
+- :o Pay rent :due(2026-04-01) :repeat[monthly]
+- :o Team standup :on(2026-04-07T09:00) :repeat[weekdays]
+- :o Haircut :scheduled(2026-04-15) :repeat![6 weeks]
+- :o Book club :on(2026-04-20) :repeat[3rd saturday]
+- :o Tax prep :due(2026-03-15) :repeat[yearly]
+- :o Sprint review :on(2026-04-12) :repeat[last friday of 2 weeks]
+- :o Board meeting :on(2026-01-20) :repeat[3rd monday of quarter]
+#+end_example
+
+*** RRULE interoperability
+
+For CalDAV/iCalendar export, each ~:repeat~ pattern has a deterministic
+mapping to an RRULE string. Applications that export to calendar systems
+should perform this conversion. The Indue syntax is the authoring format;
+RRULE is the interchange format.
+
+* Query System
+
+Indue defines a minimal portable query system. The goal is that basic
+queries produce consistent results across compliant applications. Advanced
+querying is left to application developers.
+
+** Design principles
+
+- Queries are spells — they follow all standard spell rules.
+- Query results are AST fragments, the same as transclusion (~:embed~).
+- By default, matching blocks are inserted inline, like ~:embed~.
+- Applications may extend the query language but must support the core
+  syntax.
+
+** Core query syntax
+
+The ~:query~ spell accepts a filter expression:
+
+#+begin_example
+:query(#work):                  — all blocks badged #work
+:query(:o):                     — all open tasks
+:query(:x):                     — all closed tasks
+:query(:>):                     — all active tasks
+:query(:!):                     — all blocked tasks
+:query(@alice):                 — all blocks mentioning @alice
+:query(#work :o):               — open tasks badged #work (AND)
+:query(#work | #personal):      — badged work OR personal
+:query(:due < 2026-04-15):      — due before April 15
+:query(:due = today):           — due today
+:query(:due < +7d):             — due within the next 7 days
+#+end_example
+
+*** Filter operators
+
+| Operator | Meaning             | Example                     |
+|----------+---------------------+-----------------------------|
+| (space)  | AND                 | ~#work :o~ = work AND open  |
+| ~\vert~  | OR                  | ~#work \vert #personal~     |
+| ~<~      | Before / less than  | ~:due < 2026-04-15~         |
+| ~>~      | After / greater than| ~:due > 2026-01-01~         |
+| ~=~      | Equals              | ~:due = today~              |
+| ~!~      | NOT                 | ~!#archived~                |
+
+*** Relative dates in queries
+
+| Token    | Meaning            |
+|----------+--------------------|
+| ~today~  | Current date       |
+| ~+7d~    | 7 days from now    |
+| ~-3d~    | 3 days ago         |
+| ~+1w~    | 1 week from now    |
+| ~+1m~    | 1 month from now   |
+
+*** Query display
+
+By default, query results render as a flow of matching blocks (like
+~:embed~). Applications may provide alternative views:
+
+#+begin_example
+:query(:o #work):                       — inline block list (default)
+:query(:o #work)::table:                — render as table
+:popover(:query(#work :>)):             — show in popover panel
+#+end_example
+
+*** Scope
+
+Queries search the current document by default. Applications may extend
+scope to the entire vault, specific files, or across linked documents.
+The spec does not mandate vault-wide search — that is an application
+feature built on top of the core query syntax.
+
+* Compliance Tiers
+
+Indue is designed to be implementable at different levels of capability.
+Not every application needs to support every feature. The compliance tier
+system ensures that less ambitious apps can still participate in the Indue
+ecosystem while encouraging adoption of the features that make Indue
+distinct.
+
+** Partial compliance (recognized, not full Indue)
+
+Applications that implement basic sockets, glamours, badges, signets,
+scrolls, conduits, and parse-don't-fail error recovery — but not tasks,
+scheduling, or structural features — are recognized as "Indue-aware" but
+are not considered compliant Indue implementations. This level exists as
+a stepping stone, not a destination. Many Markdown renderers could reach
+this level with minimal effort, but it does not represent what makes Indue
+distinct.
+
+** Tier 1: Core (required)
+
+The minimum for calling something an "Indue-compatible" application.
+
+- Sockets: ~-~, ~+~, ~=~ and indentation-based nesting
+- Glamours: all five (~*~/~_~%~^~) with line-start, single-word, paired,
+  and bracket rules
+- Badges: ~#tag~
+- Signets: ~@ref~
+- Waypoints: ~<label>~ and coordinates ~<<id>>~
+- Scrolls and conduits: ~[...]~ and ~{...}~
+- Basic spells: ~:fn~, ~:fn()~, ~:fn[]~, ~:fn{}~
+- Cast: ~::~ for word and line scope
+- Nick: ~\~ escaping
+- Parse-don't-fail error recovery
+- Task state spells: ~:o~, ~:x~, ~:>~, ~:!~
+- Named task states: ~:todo~, ~:done~, ~:started~, ~:waiting~, ~:next~
+- Scheduling: ~:due~, ~:on~, ~:scheduled~
+- Basic recurrence: ~:repeat~ with simple intervals (~daily~, ~weekly~,
+  ~monthly~, ~2 weeks~)
+- Heading promotion: ~- =~ / ~+ =~
+- Schema declarations: ~:+~, ~:-~, ~:=~
+- Tables: ~:table~ with conduit rows and pipe columns
+- Layout: ~:layout~ for basic column arrangements
+- Link spell: ~:link~
+
+** Tier 2: Knowledge (recommended for PKM)
+
+Features that enable the knowledge management use case.
+
+- Transclusion: ~:embed~
+- Popovers: ~:popover~
+- Basic queries: ~:query~ with badge, signet, and task state filters
+- Spell chaining: ~::~ as chain operator
+- Cauldron: ~:::~ for multi-spell cooperation
+- Advanced recurrence: ordinal patterns, exceptions, completion modes
+- Dash-mode lists
+
+** Tier 3: Presentation (optional)
+
+Formatting and layout features for polished output.
+
+- Formatting spells: ~:color~, ~:bgcolor~, ~:font~, ~:grow~, ~:shrink~
+- Block styling: ~:radius~, ~:shadow~, ~:border~, ~:padding~
+- Preset spells: ~:card~, ~:chip~, ~:callout~
+- Page-constrained layout: ~:pagelayout~
+- Page configuration: ~:page~, ~:break~
+- Sigil configuration: ~:*~, ~:/~, etc.
+
+** Tier labeling
+
+Applications should declare their compliance tier. A Tier 2 app implements
+everything in Tier 1 and Tier 2. Tiers are cumulative.
+
+The tier system explicitly discourages building Indue apps that only handle
+basic formatting. There are plenty of Markdown renderers for that. Indue
+exists because tasks, scheduling, and linking/graphs deserve first-class
+treatment. Tier 1 apps that never progress to Tier 2 are missing the point.
+
+* Custom Spell Extensions
+
+Applications may define their own spells beyond those in the core spec.
+Custom spells must follow all standard spell syntax rules — they use the
+same ~:name~ prefix, the same vessel/scroll/conduit arguments, and the same
+cast/chaining behavior.
+
+** The ~:ext~ namespace (recommended)
+
+To avoid name collisions between applications, custom spells should use a
+namespace prefix:
+
+#+begin_example
+:ext.myapp.kanban{...}          — app-specific kanban board
+:ext.myapp.timeline{...}        — app-specific timeline view
+:ext.obsidian.dataview{...}     — Obsidian-specific dataview
+#+end_example
+
+Applications may also register short names that omit the namespace for
+convenience within their own ecosystem:
+
+#+begin_example
+:kanban{...}                    — works in MyApp, unknown elsewhere
+#+end_example
+
+** Graceful degradation
+
+When an application encounters an unknown spell — whether from another app's
+extension or a future version of the spec — the parse-don't-fail philosophy
+applies:
+
+- The spell name is preserved in the AST as an unknown spell node.
+- Content inside conduits ~{...}~ is rendered as formatted text.
+- Content inside scrolls ~[...]~ is rendered as plain text.
+- Vessel values ~(...)~ are preserved but not interpreted.
+- Applications should visually indicate that a spell is unrecognized (e.g.
+  subtle highlight, hover tooltip showing the spell name).
+
+This means an Indue file with app-specific spells is always readable in
+any other Indue application. The custom features degrade to visible content
+rather than disappearing or causing errors.
+
+** Custom spell discovery
+
+Applications may include a spell registry in their vault configuration
+(e.g. the ~.indue~ vault marker file) that declares custom spells with
+descriptions, so other applications can provide better fallback rendering
+or migration tools.
 
 * Open Design Questions
 
