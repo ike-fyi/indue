@@ -1,13 +1,11 @@
 #+TITLE: Indue — Language Specification
 #+SUBTITLE: Markup Language for Outliners, Tasks, and Personal Knowledge Management
-#+AUTHOR: ike ah-loe
+#+AUTHOR: Ike Ah-Loe
 #+DATE: March 2026
 #+STATUS: Pre-specification — exploratory design
-#+STARTUP: overview
 
-* Status
-Pre-specification — exploratory design. Not usable at all and subject to any number of wild changes.
-
+* Project Status
+Basically no status. This is a just a thought experiment at this point. There is nothing usable here but feel free to share ideas to me at ike@ike.fyi if this topic interests you. 
 
 * Introduction
 
@@ -349,11 +347,10 @@ These chain naturally with glamours and each other:
 
 ** Sigil configuration (~:char~)
 
-Every glamour and socket character has a corresponding configuration spell.
-The configuration spell uses the literal character as its name and follows
-all standard spell scoping rules. The configuration block — whether a quick
-form or a cauldron — is called a *codex*. This is the same codex concept
-used for entity configuration (see Entity Configuration).
+Every glamour and socket character has a corresponding configuration spell
+that uses the literal character as its name. The configuration block is
+called a *codex*. See Entity Configuration for the full codex system,
+which covers glamour, socket, and entity configuration uniformly.
 
 There are three distinct things per character and they should not be confused:
 
@@ -365,52 +362,6 @@ There are three distinct things per character and they should not be confused:
 
 ~:*~ does not apply bold. It configures what ~*~ does. ~*~ and ~:bold~ are
 the action; ~:*~ is the configuration for that action.
-
-Configuration follows all standard spell scoping rules:
-
-#+begin_example
-:*(red)                   — configure * to be red, globally from here on
-:*(red)::word             — configure * to be red, just for this word
-:*(red)::[this sentence]  — configure * to be red, just this scope
-:*(red):: this whole line — configure * to be red, for this line
-#+end_example
-
-Global configuration (self-terminating) persists until the same spell
-changes it:
-
-#+begin_example
-:*(red)
-All *bold from here* is red.
-More *bold still red* text.
-:*(blue)
-Now *bold is blue* instead.
-#+end_example
-
-The cauldron form handles multi-property codexes:
-
-#+begin_example
-:*:::
-:italic
-:color(red)
-:grow(1)
-
-Now all *bold text* is also italic, red, and larger automatically.
-Regular /italic text/ is unaffected — only * was configured.
-#+end_example
-
-This is the same pattern used for socket configuration:
-
-| Config target  | Quick codex         | Cauldron codex      |
-|----------------+---------------------+---------------------|
-| ~+~ (ordered)  | ~:+[a)]~            | ~:+:::~ + spells    |
-| ~-~ (unordered)| ~:-[*]~             | ~:-:::~ + spells    |
-| ~=~ (heading)  | ~:=[I.]~            | ~:=:::~ + spells    |
-| ~*~ (bold)     | ~:*(red)~           | ~:*:::~ + spells    |
-| ~/~ (italic)   | ~:/(blue)~          | ~:/:::~ + spells    |
-| ~_~ (underline)| ~:_(dotted)~        | ~:_:::~ + spells    |
-
-All three configuration targets — glamours, sockets, and named entities —
-use the same codex system. See Entity Configuration for the full picture.
 
 ** Block styling spells
 
@@ -1338,11 +1289,10 @@ Declarations can be grouped using a conduit:
 :{ :=[I.] :+[a)] :-[*] }
 #+end_example
 
-** Scope
-
-A declaration binds to the immediate next sibling and its entire subtree. It
-"evaporates" (resets to defaults) upon a physical outdent past the declaration's
-starting column.
+These are socket codexes — they follow the same scoping rules as all codexes
+(see Entity Configuration). A declaration binds to the immediate next sibling
+and its entire subtree. It "evaporates" (resets to defaults) upon a physical
+outdent past the declaration's starting column.
 
 #+begin_example
 :{ :=[I.] :+[a)] :-[*] }
@@ -1630,12 +1580,12 @@ A *codex* is any configuration block in Indue — the set of spells that
 define how a glamour, socket, or named entity behaves. The term applies
 uniformly across the entire configuration system:
 
-| Codex target       | Quick codex      | Cauldron codex              |
-|--------------------+------------------+-----------------------------|
-| ~*~ (glamour)      | ~:*(red)~        | ~:*:::~ + spells            |
-| ~+~ (socket)       | ~:+[a)]~         | ~:+:::~ + spells            |
-| ~<project>~ (entity)| —               | ~:<project>:::~ + spells    |
-| ~<>~ (type)        | —                | ~:<>:::~ + spells           |
+| Codex target        | Quick codex      | Cauldron codex              |
+|---------------------+------------------+-----------------------------|
+| ~*~ (glamour)       | ~:*(red)~        | ~:*:::~ + spells            |
+| ~+~ (socket)        | ~:+[a)]~         | ~:+:::~ + spells            |
+| ~<project>~ (entity)| —                | ~:<project>:::~ + spells    |
+| ~<>~ (type)         | —                | ~:<>:::~ + spells           |
 
 A glamour codex configures how a formatting character renders. A socket
 codex configures how a list or heading marker renders. An entity codex
@@ -1652,6 +1602,63 @@ scoping rules.
 This codex makes every block tagged #meeting or anchored <meeting>
 automatically appear as a numbered callout with a light blue background.
 #+end_example
+
+*** Glamour codex examples
+
+Configuration follows all standard spell scoping rules:
+
+#+begin_example
+:*(red)                   — configure * to be red, globally from here on
+:*(red)::word             — configure * to be red, just for this word
+:*(red)::[this sentence]  — configure * to be red, just this scope
+:*(red):: this whole line — configure * to be red, for this line
+#+end_example
+
+Global configuration (self-terminating) persists until the same spell
+changes it:
+
+#+begin_example
+:*(red)
+All *bold from here* is red.
+More *bold still red* text.
+:*(blue)
+Now *bold is blue* instead.
+#+end_example
+
+The cauldron form handles multi-property codexes:
+
+#+begin_example
+:*:::
+:italic
+:color(red)
+:grow(1)
+
+Now all *bold text* is also italic, red, and larger automatically.
+Regular /italic text/ is unaffected — only * was configured.
+#+end_example
+
+*** Socket codex examples
+
+#+begin_example
+:+[a)]          — ordered lists use a), b), c)
+:-[*]           — unordered lists use *
+:=[I.]          — headings use I., II., III.
+:-[]            — invisible markers (no visible bullet)
+#+end_example
+
+*** Configuration target reference
+
+All three configuration targets — glamours, sockets, and named entities —
+use the same codex system:
+
+| Config target   | Quick codex  | Cauldron codex  |
+|-----------------+--------------+-----------------|
+| ~+~ (ordered)   | ~:+[a)]~     | ~:+:::~ + spells|
+| ~-~ (unordered) | ~:-[*]~      | ~:-:::~ + spells|
+| ~=~ (heading)   | ~:=[I.]~     | ~:=:::~ + spells|
+| ~*~ (bold)      | ~:*(red)~    | ~:*:::~ + spells|
+| ~/~ (italic)    | ~:/(blue)~   | ~:/:::~ + spells|
+| ~_~ (underline) | ~:_(dotted)~ | ~:_:::~ + spells|
 
 ** Scope and persistence
 
