@@ -1,7 +1,6 @@
 #+TITLE: Indue — Language Specification
 #+SUBTITLE: Markup Language for Outliners, Tasks, and Personal Knowledge Management
 #+AUTHOR: Ike Ah-Loe
-#+DATE: March 2026
 #+STATUS: Pre-specification — exploratory design
 
 * Project Status
@@ -11,9 +10,7 @@ Basically no status. This is a just a thought experiment at this point. There is
 
 Indue is a markup language designed from scratch for outliner, task management,
 and personal knowledge management (PKM) use cases. It draws inspiration from
-Typst's syntactic sensibility but is not a subset, superset, or dialect of
-Typst — it is an independent language that could transpile to Typst for typeset
-export when needed.
+Typst's syntactic sensibility and org-mode's productivity features.
 
 The name "Indue" comes from the archaic English verb meaning "to put on as a
 garment" — to clothe or endow something with qualities it did not previously
@@ -91,32 +88,38 @@ The core metaphor: plain text is your base character. Indue is the gear system.
 You equip your text with markup and it gains new abilities. Strip the gear off
 and the character is still there, still whole.
 
-| Syntax                   | Indue name      | Common name          |
-|--------------------------+-----------------+----------------------|
-| ~-~, ~+~, ~=~           | *Socket*        | Structural marker    |
-| Node created             | *Slot*          | Block / node         |
-| — heading slot           |                 | Foldable, in ToC     |
-| — list slot              |                 | Not foldable, leaf   |
-| ~*~, ~/~, ~_~, ~%~, ~^~ | *Glamour*       | Inline formatting    |
-| ~#~                      | *Badge*         | Tag                  |
-| ~@~                      | *Signet*        | Reference / mention  |
-| ~:fn~                    | *Spell*         | Function             |
-| ~::~                     | *Cast*          | Scope / chain op     |
-| ~()~                     | *Vessel*        | Value argument       |
-| ~[]~                     | *Scroll*        | Verbatim block       |
-| ~{}~                     | *Conduit*       | Rich content block   |
-| ~<label>~                | *Waypoint*      | Label / anchor       |
-| ~<<id>>~                 | *Coordinate*    | Block ID             |
-| ~\~                      | *Nick*          | Escape character     |
-| ~:::~                    | *Cauldron*      | Spell block scope    |
-| ~\~~                     | *Satchel*       | Hoisted config block |
-| Config block             | *Codex*         | Inherited properties |
+| Syntax         | Indue name | Common name          |
+|----------------+------------+----------------------|
+| ~-~, ~+~, ~=~        | *Socket*     | Structural marker    |
+| Node created   | *Slot*       | Block / node         |
+| — heading slot |            | Foldable, in ToC     |
+| — list slot    |            | Not foldable, leaf   |
+| ~*~, ~/~, ~_~, ~%~, ~^~  | *Glamour*    | Inline formatting    |
+| ~#~              | *Sigil*      | Tag                  |
+| ~@~              | *Signet*     | Reference / mention  |
+| ~:fn~            | *Spell*      | Function             |
+| ~.~              | *Bond*       | Spell chain operator |
+| ~::~             | *Shell*      | Paired scope / independent termination |
+| ~:::target:::~   | *Cauldron*   | Precision targeting pot |
+| ~()~             | *Vessel*     | Value argument       |
+| ~[]~             | *Scroll*     | Verbatim block       |
+| ~{}~             | *Conduit*    | Rich content block   |
+| ~<label>~        | *Waypoint*   | Label / anchor       |
+| ~<>~             |            | Self-ref current block |
+| ~<< id >>~       | *Coordinate* | Block ID             |
+| ~\~              | *Nick*       | Escape character     |
+| ~\~~             | *Satchel*    | Hoisted config block |
+| Config block   | *Codex*      | Inherited properties |
+| ~!~              | *Beacon*     | Public marker        |
 
 A one-sentence summary of the entire system: sockets create slots; glamours,
-badges, and spells equip the content sitting on those slots; casts direct
-spells at their targets and chain spells together; and vessels, scrolls, and
-conduits carry data between them. Codexes configure how glamours, sockets,
-and entities bestow their properties.
+sigils, signets, and spells equip the content sitting on those slots; bonds
+chain spells together; shells open paired scopes with independent
+termination; cauldrons target entities with accumulated spells; vessels,
+scrolls, and conduits carry data between them; and beacons promote private
+codexes into a vault's public layer. Codexes configure how glamours,
+sockets, and entities bestow their properties — sigils bestow on the block
+they ride, signets bestow on the inline token itself.
 
 * Core Design Philosophy
 
@@ -125,8 +128,8 @@ and entities bestow their properties.
 Indue prefers syntax where every character's role is resolvable from local
 context. The parser should never need to look ahead through unbounded content
 or backtrack to determine meaning. Characters may appear in multiple roles
-(e.g. ~:~ opens a spell, terminates one, and participates in casts), but
-context always disambiguates which role applies.
+(e.g. ~:~ opens a spell and terminates one), but context always disambiguates
+which role applies.
 
 ** Glamours are for frequent writing; spells are for transforms
 
@@ -135,6 +138,71 @@ frequently enough in everyday writing that the ergonomic cost of a spell
 (function call) is genuinely burdensome. Anything that transforms content into
 a different form belongs in the spell system (~:func~). The glamour table is
 for things you type constantly.
+
+** Bracket types replace quoting
+
+No string literals with quote delimiters exist anywhere in Indue. Text is
+passed to spells using the appropriate bracket type: vessels ~()~ for values,
+scrolls ~[]~ for verbatim text, and conduits ~{}~ for rich parsed content.
+Quotes inside any bracket type are just literal characters.
+
+** Every spell is useful in isolation
+
+A spell that only makes sense composed with one specific other spell is a
+design smell. Those should be redesigned as a single spell with multiple
+ports. Each spell should carry clear meaning on its own.
+
+** Same spell overwrites, different spells compose
+
+When the same spell appears twice in a chain, the later instance wins. When
+different spells appear in a chain, they are additive:
+
+#+begin_example
+:color(red).color(blue):word    — blue wins (same spell, later overwrites)
+:bold.italic:word               — both apply (different spells, additive)
+#+end_example
+
+** Spells are renderer-agnostic at core tier
+
+Core formatting spells must have clear meaning regardless of rendering target
+(screen, print, plain text, accessibility). CSS-specific behavior belongs in
+the ~:ext.css~ extension namespace, not in core spells.
+
+** Explicit targeting over implicit
+
+Every scope level in Indue has an unambiguous syntactic form. Block targeting
+uses waypoints or ~<>~ self-reference. Text targeting uses spell scoping.
+Paired scopes use shells. Entity targeting uses cauldrons. There is never
+ambiguity about /what/ a spell applies to.
+
+** Scrolls and conduits are the default carriers
+
+Most content flows through scrolls ~[]~ (verbatim) or conduits ~{}~ (rich
+parsed content). Vessels ~()~ are reserved for values a spell computes
+with — a number, a date, a color, a setting. When designing a spell,
+reach for scrolls or conduits first; use vessels only when the input is a
+specific ingredient the spell needs to evaluate. Since ~[~ and ~{~ share
+the same physical key, muscle memory stays simple.
+
+** Names public, behavior private
+
+Indue's visibility defaults follow a single principle: *names need to be
+findable, behavior needs to be opt-in*. Entities (sigils, signets,
+waypoints) are vault-public by default because a name that cannot be
+resolved is useless. Configuration (codexes, schemas, satchel-hosted
+spells) is file-local by default because shared styling is a deliberate
+choice — silent cross-file styling is a debugging nightmare. The beacon
+(~!~) is the single mechanism that promotes a private codex to the
+vault's public layer; everything else follows from these two defaults.
+
+** Logical scope, OS-enforced security
+
+Indue declares /logical/ scope — what is visible to what, where names
+resolve, how the public layer composes. It does not enforce access
+control. Filesystem permissions, ACLs, encryption, and sandboxing are
+the OS's domain and operate on Indue files as on any plain text. Tools
+should be permission-aware (handle failures gracefully, surface them
+clearly) but never attempt to duplicate security in markup.
 
 ** The line-start rule
 
@@ -163,7 +231,7 @@ This is especially useful inside lists where content length may change:
 
 A glamour touching the left side of a word (no space between glamour and
 first character) opens markup that terminates at the next whitespace. This
-is the same logic used by badges (~#tag~) and signets (~@alice~):
+is the same logic used by sigils (~#tag~) and signets (~@alice~):
 
 #+begin_example
 This is *bold right here         — "bold" is bold, rest is normal
@@ -251,15 +319,15 @@ described in the Glamours section.
 
 ** Sockets (structural markers, line-start)
 
-| Syntax           | Role                        |
-|------------------+-----------------------------|
+| Syntax       | Role                                 |
+|--------------+--------------------------------------|
 | ~=~ / ~==~ / ~===~ | Heading (level by count or ancestry) |
-| ~-~              | Unordered list item         |
-| ~+~              | Ordered list item           |
-| ~- =~ / ~+ =~   | List item + heading promotion |
-| ~--~ / ~---~     | Dash-mode depth (unordered) |
-| ~-+~ / ~--+~    | Dash-mode depth (ordered)   |
-| ~-- =~ / ~--- =~ | Dash-mode heading          |
+| ~-~            | Unordered list item                  |
+| ~+~            | Ordered list item                    |
+| ~- =~ / ~+ =~    | List item + heading promotion        |
+| ~--~ / ~---~     | Dash-mode depth (unordered)          |
+| ~-+~ / ~--+~     | Dash-mode depth (ordered)            |
+| ~-- =~ / ~--- =~ | Dash-mode heading                    |
 
 ** Glamours (inline formatting)
 
@@ -269,83 +337,84 @@ Symmetry).
 
 | Character | Effect        | Spell equivalent |
 |-----------+---------------+------------------|
-| ~*~       | Bold          | ~:bold~          |
-| ~/~       | Italic        | ~:italic~        |
-| ~_~       | Underline     | ~:underline~     |
-| ~%~       | Strikethrough | ~:strike~        |
-| ~^~       | Superscript   | ~:super~         |
+| ~*~         | Bold          | ~:bold~            |
+| ~/~         | Italic        | ~:italic~          |
+| ~_~         | Underline     | ~:underline~       |
+| ~%~         | Strikethrough | ~:strike~          |
+| ~^~         | Superscript   | ~:super~           |
 
-** Badges, signets, and references
+** Sigils, signets, and references
 
 | Syntax         | Role                 | Indue name   |
 |----------------+----------------------+--------------|
-| ~#tag~         | Tag (single word)    | Badge        |
-| ~#multi word#~ | Tag (multi-word)     | Badge        |
-| ~#~            | Tag whole line       | Badge        |
+| ~#tag~         | Tag (single word)    | Sigil        |
+| ~#multi word#~ | Tag (multi-word)     | Sigil        |
+| ~#~            | Tag whole line       | Sigil        |
 | ~@name~        | Entity reference     | Signet       |
 | ~<label>~      | Human anchor         | Waypoint     |
+| ~<>~           | Self-ref current block | —          |
 | ~<<id>>~       | Machine-generated ID | Coordinate   |
 
 ** Spells and containers
 
-| Syntax  | Role                 | Indue name |
-|---------+----------------------+------------|
-| ~:func~ | Function prefix      | Spell      |
-| ~::~    | Scope / chain op     | Cast       |
-| ~:::~   | Block spell scope    | Cauldron   |
-| ~()~    | Value argument       | Vessel     |
-| ~[]~    | Verbatim content     | Scroll     |
-| ~{}~    | Rich parsed content  | Conduit    |
+| Syntax | Role                | Indue name |
+|--------+---------------------+------------|
+| ~:func~  | Function prefix     | Spell      |
+| ~.~      | Spell chain op      | Bond       |
+| ~::~     | Paired scope / independent termination | Shell |
+| ~:::target:::~ | Precision targeting pot | Cauldron |
+| ~()~     | Value argument      | Vessel     |
+| ~[]~     | Verbatim content    | Scroll     |
+| ~{}~     | Rich parsed content | Conduit    |
 
 ** Other
 
-| Syntax | Role                   | Indue name |
-|--------+------------------------+------------|
-| ~\~    | Escape character       | Nick       |
-| ~~~    | Hoisted config block   | Satchel    |
+| Syntax | Role                 | Indue name |
+|--------+----------------------+------------|
+| ~\~      | Escape character     | Nick       |
+| ~~~      | Hoisted config block | Satchel    |
+| ~!~      | Public marker        | Beacon     |
 
 ** Reserved and available characters
 
-| Character | Status                                    |
-|-----------+-------------------------------------------|
-| ~>~       | Reserved — likely blockquote shorthand     |
-| ~&~       | Available                                  |
-| ~$~       | Available — likely math mode               |
-| ~;~       | Available — prime keyboard real estate      |
+| Character | Status                                 |
+|-----------+----------------------------------------|
+| ~>~         | Reserved — likely blockquote shorthand |
+| ~&~         | Available                              |
+| ~$~         | Available — likely math mode           |
+| ~;~         | Available — prime keyboard real estate |
 
 * Formatting Spells
 
 Indue provides standard formatting spells that work with any text content.
-These spells follow all standard cast and chaining rules.
+These spells follow all standard scoping and chaining rules.
 
 ** Common formatting spells
 
-| Spell                | Effect                                  |
-|----------------------+-----------------------------------------|
-| ~:bold~              | Bold (spell form of ~*~)                |
-| ~:italic~            | Italic (spell form of ~/~)              |
-| ~:underline~         | Underline (spell form of ~_~)           |
-| ~:strike~            | Strikethrough (spell form of ~%~)       |
-| ~:super~             | Superscript (spell form of ~^~)         |
-| ~:color(value)~      | Text color (named or hex)               |
-| ~:bgcolor(value)~    | Background/highlight color              |
-| ~:bgradius(value)~   | Highlight shape (rounded, pill, etc.)   |
-| ~:font(type)[name]~  | Font (vessel=fallback type, scroll=name)|
-| ~:grow(n)~           | Increase font size by n steps           |
-| ~:shrink(n)~         | Decrease font size by n steps           |
-| ~:mono~              | Monospace font                          |
-| ~:opacity(value)~    | Transparency (0.0 to 1.0)              |
-| ~:align(value)~      | Text alignment (left, center, right)    |
+| Spell             | Effect                                   |
+|-------------------+------------------------------------------|
+| ~:bold~             | Bold (spell form of ~*~)                   |
+| ~:italic~           | Italic (spell form of ~/~)                 |
+| ~:underline~        | Underline (spell form of ~_~)              |
+| ~:strike~           | Strikethrough (spell form of ~%~)          |
+| ~:super~            | Superscript (spell form of ~^~)            |
+| ~:fg(value)~ / ~:color(value)~ | Text/foreground color (aliases)|
+| ~:bg(value)~        | Background/fill color                    |
+| ~:font[name]~ / ~:font(fallback)[name]~ | Font (scroll=name, optional vessel=generic fallback family) |
+| ~:grow(n)~          | Increase font size by n steps            |
+| ~:shrink(n)~        | Decrease font size by n steps            |
+| ~:align(value)~     | Text alignment (left, center, right)     |
+| ~:case(value)~      | Text case (upper, lower, title, sentence)|
 
 These chain naturally with glamours and each other:
 
 #+begin_example
-:bold::color(red)::word             — bold + red, one word
-:italic::grow(1):: whole line       — italic + larger, line scope
-:color(blue)::bgcolor(#ffffcc)::[highlighted text]  — colored + highlighted
+:bold.color(red):word             — bold + red, one word
+:italic.grow(1): whole line       — italic + larger, line scope
+:color(blue).bg(#ffffcc):[highlighted text]  — colored + highlighted
 #+end_example
 
-** Sigil configuration (~:char~)
+** Glamour and socket configuration (~:char~)
 
 Every glamour and socket character has a corresponding configuration spell
 that uses the literal character as its name. The configuration block is
@@ -357,8 +426,8 @@ There are three distinct things per character and they should not be confused:
 | Thing    | What it does                  | Example               |
 |----------+-------------------------------+-----------------------|
 | ~*~      | The glamour — applies bold    | ~*word~, ~*text*~     |
-| ~:bold~  | The spell — applies bold      | ~:bold::word~         |
-| ~:*~     | The config — configures ~*~   | ~:*(red)~, ~:*:::~    |
+| ~:bold~  | The spell — applies bold      | ~:bold:word~          |
+| ~:*~     | The config — configures ~*~   | ~:*(red)~, ~:*.italic:~ |
 
 ~:*~ does not apply bold. It configures what ~*~ does. ~*~ and ~:bold~ are
 the action; ~:*~ is the configuration for that action.
@@ -370,60 +439,84 @@ you do not have to leave Indue for common formatting — a highlighted callout,
 a card-style container, a colored section. Anything beyond these basics is
 export territory (Typst, CSS, etc.).
 
-Block spells target a waypoint and style the containment (the box around
-the content), not the text itself. Inline/cast spells target text.
+Block spells target a waypoint (~<wp>~) or the current block (~<>~) and
+style the containment (the box around the content), not the text itself.
+Inline spells and shells target text. Container geometry (grid, flex,
+dimensions) belongs in ~:ext.css~, not core.
 
 #+begin_example
 Block targeting (styles the container):
-:bgcolor(#f5f5f5)<section>:
+:bg(#f5f5f5)<section>:
 :radius(6)<section>:
-:shadow(2,2,4)<section>:
-:border(1,solid,#ccc)<section>:
-:padding(1em)<section>:
+:shadow(2,2,4)<>:            — <> targets current block
+:stroke(1)<>:                — border width
 
 Text targeting (styles the content):
-:color(red)::word
-:bold::italic::word
+:color(red):word
+:bold.italic:word
+:bg(#ffffcc)::highlighted text::   — shell for text-level highlight
 #+end_example
 
 *** Common block spells
 
-| Spell                       | Effect                            |
-|-----------------------------+-----------------------------------|
-| ~:bgcolor(value)<wp>:~      | Block background color            |
-| ~:radius(value)<wp>:~       | Corner rounding                   |
-| ~:shadow(args)<wp>:~        | Drop shadow on block              |
-| ~:border(args)<wp>:~        | Border style                      |
-| ~:padding(value)<wp>:~      | Inner spacing                     |
-| ~:textshadow(args)<wp>:~    | Shadow on text (not block)        |
+| Spell                  | Effect                     |
+|------------------------+----------------------------|
+| ~:bg(value)<wp>:~        | Block background color     |
+| ~:radius(value)<wp>:~    | Corner rounding            |
+| ~:shadow(args)<wp>:~     | Drop shadow on block       |
+| ~:padding(value)<wp>:~   | Inner spacing              |
 
-These compose via cauldrons when multiple properties are needed:
+*** Border spells
+
+Borders are composed from four spells so that each aspect can be configured
+independently and overridden without affecting the others:
+
+| Spell                          | Effect                               |
+|--------------------------------+--------------------------------------|
+| ~:stroke(width)<wp>:~            | Border width                         |
+| ~:pattern(style)[spacing]<wp>:~  | Border pattern (solid/dashed/dotted) |
+| ~:tint(color)<wp>:~              | Border color                         |
+| ~:style[name]~                 | Named border style (current block)   |
+| ~:style[name]<wp>~             | Named border style (waypoint target) |
+
+~:pattern~ takes a pattern value and an optional scroll with integer
+spacing. ~:style~ takes an open-ended named border style (e.g. ~[celtic]~,
+~[wave]~, ~[double]~) and degrades gracefully to a corresponding ~:pattern~
+value when the renderer does not support the named style. ~:style~ targets
+the current block by default, accepts a ~<wp>~ waypoint port for explicit
+targeting, and composes cleanly inside a cauldron (~:::<wp>::: .style[celtic] :~)
+when multiple border spells are being applied to the same target.
+
+These compose via chaining when multiple properties are needed:
 
 #+begin_example
-:<section>:::
-:bgcolor(#f5f5f5)
-:radius(8)
-:shadow(2,2,4)
-:padding(1em)
+:::section:::
+.bg(#f5f5f5)
+.radius(8)
+.shadow(2,2,4)
+.padding(1em)
+.stroke(1)
+.tint(#ccc)
+.pattern(solid):
 #+end_example
 
 *** Preset spells
 
 For common patterns, higher-level spells bundle properties together:
 
-| Spell              | Bundles                                     |
-|--------------------+---------------------------------------------|
-| ~:card<wp>:~       | radius, shadow, padding, border             |
-| ~:chip<wp>:~       | pill radius, bgcolor, small padding         |
-| ~:callout<wp>:~    | left border accent, bgcolor, padding        |
-| ~:highlight<wp>:~  | bgcolor, slight radius                      |
+| Spell           | Bundles                              |
+|-----------------+--------------------------------------|
+| ~:card<wp>:~      | radius, shadow, padding, stroke      |
+| ~:chip<wp>:~      | pill radius, bg, small padding       |
+| ~:callout<wp>:~   | left border accent, bg, padding      |
+| ~:highlight<wp>:~ | bg, slight radius                    |
 
 These are convenience spells that expand into block spells. Override
 individual properties after the preset:
 
 #+begin_example
 :card<section>:
-:bgcolor(#fef3c7)<section>:    — override just the background
+:bg(#fef3c7)<section>:    — override just the background
 #+end_example
 
 ** Height context in layouts
@@ -432,16 +525,16 @@ Numeric height values are interpreted differently depending on the layout
 context. The user types a bare number; the containing spell determines
 the unit:
 
-| Context        | Bare number means | Example                  |
-|----------------+-------------------+--------------------------|
-| ~:layout~      | em units          | ~:height(<wp>)(30)~ = 30em |
-| ~:pagelayout~  | percentage        | ~:height(<wp>)(30)~ = 30%  |
+| Context     | Bare number means | Example                  |
+|-------------+-------------------+--------------------------|
+| ~:layout~     | em units          | ~:height<wp>(30)~ = 30em |
+| ~:pagelayout~ | percentage        | ~:height<wp>(30)~ = 30%  |
 
 To override the default unit, specify it explicitly:
 
 #+begin_example
-:height(<wp>)(30em)
-:height(<wp>)(30%)
+:height<wp>(30em)
+:height<wp>(30%)
 #+end_example
 
 In flow layouts (~:layout~), height sets a minimum — content that exceeds
@@ -714,7 +807,7 @@ In rare cases where content genuinely needs to attach to an ancestor, the
   - = Goals
     - Item A
     - Item B
-  :of(<alpha>) This thought belongs to Project Alpha
+  :of<alpha> This thought belongs to Project Alpha
 #+end_example
 
 This is rare, explicit, and uses existing spell/waypoint syntax. No new
@@ -741,15 +834,15 @@ full Indue grammar.
 
 * Glamours: Inline Formatting
 
-| Syntax        | Result             | Notes                        |
-|---------------+--------------------+------------------------------|
-| ~*word~       | Bold               | Single-word (to whitespace)  |
-| ~*text*~      | Bold               | Paired                       |
-| ~*[text]~     | Bold               | Bracket form (scroll)        |
-| ~*{text}~     | Bold               | Bracket form (conduit)       |
-| ~*/[text]~    | Bold + italic      | Stacked glamours (bracket)   |
-| ~* line~      | Bold whole line    | Line-start rule              |
-| ~*/ line~     | Bold+italic line   | Line-start stacked           |
+| Syntax   | Result           | Notes                       |
+|----------+------------------+-----------------------------|
+| ~*word~    | Bold             | Single-word (to whitespace) |
+| ~*text*~   | Bold             | Paired                      |
+| ~*[text]~  | Bold             | Bracket form (scroll)       |
+| ~*{text}~  | Bold             | Bracket form (conduit)      |
+| ~*/[text]~ | Bold + italic    | Stacked glamours (bracket)  |
+| ~* line~   | Bold whole line  | Line-start rule             |
+| ~*/ line~  | Bold+italic line | Line-start stacked          |
 
 Glamours operate in four ways:
 
@@ -758,7 +851,7 @@ Glamours operate in four ways:
   works at line start: ~*/~ makes the whole line bold and italic.
 - *Single-word rule*: a glamour touching the left side of a word, with no
   closer on the line, applies until the next whitespace. Same logic as
-  badges (~#tag~) and signets (~@name~).
+  sigils (~#tag~) and signets (~@name~).
 - *Paired rule*: if a matching closer exists on the same line, the glamour
   spans everything between opener and closer.
 - *Bracket rule*: a glamour (or stack) followed immediately by a scroll ~[]~
@@ -786,64 +879,84 @@ stack) and is silently ignored.
 ** Glamour-spell symmetry
 
 Each glamour character has a corresponding named spell that does the same
-thing. The glamour is shorthand for the spell+cast form:
+thing. The glamour is shorthand for the equivalent spell form:
 
-| Glamour            | Spell equivalent              | Scope       |
-|--------------------+-------------------------------+-------------|
-| ~*word~            | ~:bold::word~                 | Word        |
-| ~* whole line~     | ~:bold:: whole line~          | Line        |
-| ~*[text]~          | ~:bold::[text]~               | Bracket     |
-| ~*text*~           | ~:bold::[text]~               | Paired      |
-| ~*/[text]~         | ~:bold::italic::[text]~       | Chained     |
-| ~*/ whole line~    | ~:bold::italic:: whole line~  | Chained line|
+| Glamour       | Spell equivalent           | Scope        |
+|---------------+----------------------------+--------------|
+| ~*word~         | ~:bold:word~                | Word         |
+| ~* whole line~  | ~:bold: whole line~         | Line         |
+| ~*[text]~       | ~:bold:[text]~              | Bracket      |
+| ~*text*~        | ~:bold:[text]~              | Paired       |
+| ~*/[text]~      | ~:bold.italic:[text]~       | Chained      |
+| ~*/ whole line~ | ~:bold.italic: whole line~  | Chained line |
 
 The full mapping of glamour characters to spell names:
 
-| Glamour | Spell        | Config spell |
-|---------+--------------+--------------|
-| ~*~     | ~:bold~      | ~:*~         |
-| ~/~     | ~:italic~    | ~:/~         |
-| ~_~     | ~:underline~ | ~:_~         |
-| ~%~     | ~:strike~    | ~:%~         |
-| ~^~     | ~:super~     | ~:^~         |
+| Glamour | Spell      | Config spell |
+|---------+------------+--------------|
+| ~*~       | ~:bold~      | ~:*~           |
+| ~/~       | ~:italic~    | ~:/~           |
+| ~_~       | ~:underline~ | ~:_~           |
+| ~%~       | ~:strike~    | ~:%~           |
+| ~^~       | ~:super~     | ~:^~           |
 
 Note the three distinct roles: the glamour character applies the effect,
 the named spell applies the same effect via spell syntax, and the config
 spell (using the literal character) configures how the glamour behaves.
 ~*~ is what you type. ~:bold~ is what you chain. ~:*~ is what you configure.
 
-This means glamour stacking (~*/[text]~) is literally cast chaining
-(~:bold::italic::[text]~) expressed in shorthand. A toolset maker can
-implement glamours as a preprocessing step that expands them into spell+cast
+This means glamour stacking (~*/[text]~) is literally spell chaining
+(~:bold.italic:[text]~) expressed in shorthand. A toolset maker can
+implement glamours as a preprocessing step that expands them into spell+bond
 form, then run a single unified engine.
 
 For users, this creates a natural upgrade path: start with ~*bold*~ because
 it is familiar, discover ~*[bold]~ when brackets are needed, learn
 ~*/[bold italic]~ when stacking is needed, and when color or sizing is
-required, the cast syntax is already the same pattern:
-~:bold::color(red)::[text]~. No conceptual leap — just more spells in the
+required, the chain syntax is already the same pattern:
+~:bold.color(red):[text]~. No conceptual leap — just more spells in the
 chain.
 
-* Badges: Tags
+** Glamour-spell boundary
 
-Badges (tags) use ~#~, the universal tagging character:
+Glamours must precede spells. The first ~:~ character is the hard boundary
+between glamour territory and spell territory:
+
+#+begin_example
+*/:bold.color(red):[text]     — valid: glamours first, then spells
+:bold*/:[text]                — INVALID: glamours cannot follow spells
+*:color(red):[text]           — valid: single glamour then spells
+#+end_example
+
+Invalid glamour placement is handled by parse-don't-fail — the glamour
+characters are treated as literal text.
+
+* Sigils: Tags
+
+Sigils (tags) use ~#~, the universal tagging character:
 
 #+begin_example
 - Buy groceries #errand #personal
 - Read about #machine learning# approaches
 #+end_example
 
-- Single-word badge: ~#errand~
-- Multi-word badge: ~#machine learning#~ (closing ~#~ needed only for
-  multi-word badges)
-- Whole-line badge: ~#~ at line start badges the entire line
+- Single-word sigil: ~#errand~
+- Multi-word sigil: ~#machine learning#~ (closing ~#~ needed only for
+  multi-word sigils)
+- Whole-line sigil: ~#~ at line start sigils the entire line
 
-Badges attach semantically to the block element they appear within. Badges
-and signets are similar by design — both attach meaning to a block. The only
-reason they have different syntax (~#~ vs ~@~) is so that tools can
-/optionally/ distinguish them. A simple renderer may treat them identically;
-a PKM app might treat ~@~ as a person and ~#~ as a category. Neither
-interpretation is required.
+A sigil attaches semantically to the *block* it appears within. When a
+sigil's entity has a codex, the codex's spells are bestowed on the
+surrounding block — the container that holds the sigil, not the sigil
+token itself. A block tagged ~#meeting~ inherits whatever the ~meeting~
+codex defines, applied to the entire block.
+
+Sigils and signets are no longer interchangeable. They share a single
+entity namespace (a codex defined for ~alice~ knows about all forms of
+alice) but their /scope/ is structurally different: sigils paint the
+block, signets paint the inline token. See "Sigil and signet scope" in
+the Entity Configuration section for the full picture, including the
+multi-entity case and how it powers contact cards and entity libraries.
 
 * Signets: Entity References
 
@@ -855,8 +968,20 @@ See @intro for background.
 #+end_example
 
 Signets can refer to people, documents, waypoints, or any named object in the
-system. Like badges, they may or may not resolve to a specific target — a
+system. Like sigils, they may or may not resolve to a specific target — a
 signet without a matching waypoint is still valid and carries meaning.
+
+Where signets differ structurally from sigils is /scope/: a signet
+indues its codex spells onto the *signet token itself*, not the surrounding
+block. Two signets in the same block render as two independently-styled
+inline tokens, and the block remains untouched by either entity's codex.
+This is what lets ~@alice and @bob met yesterday~ render alice and bob as
+two separately-styled chips inline — the surrounding block stays plain.
+
+Sigils and signets share an entity namespace (a codex on ~alice~ covers
+all forms) but the sigil form determines whether spells land on the block
+or the token. See "Sigil and signet scope" in the Entity Configuration
+section for the full distinction and use cases.
 
 * Waypoints and Coordinates: Labels and Block IDs
 
@@ -870,8 +995,10 @@ or block element:
 See @intro for background.
 #+end_example
 
-A waypoint is a navigation target. Signets and badges can optionally resolve
-to waypoints, but do not need to.
+A waypoint is a navigation target. Signets and sigils can optionally resolve
+to waypoints, but do not need to. Like sigils, waypoints are block-level —
+when a waypoint's entity has a codex, its spells are bestowed on the block
+the waypoint anchors, not on the waypoint marker itself.
 
 ** Waypoint trails
 
@@ -990,50 +1117,324 @@ for a single block.
 ** The spell prefix (~:~)
 
 The ~:~ character is the spell (function) prefix. It replaces Typst's ~#~ for
-this role, freeing ~#~ for badges.
+this role, freeing ~#~ for sigils.
 
 A bare ~:~ by itself is shorthand for ~:()~ — an atomic null that renders
 nothing and immediately self-terminates. This means a line like
 ~= : Project Title~ is safe; the bare colon terminates before the parser
 reaches the title text.
 
-** The cast operator (~::~)
+** The spell wall (~:~) and scoping
 
-~::~ is the cast — it directs a spell's effect at a target. It serves two
-roles based on what follows:
+~:~ serves as the spell wall — it both opens and closes spell scope. Spaces
+and brackets are the doors that determine what the spell applies to.
 
-- *Chaining*: if followed by another spell, the cast pushes effect forward
-  to the next spell.
-- *Word-cast*: if followed by a word with no space, the spell applies to
-  that word only.
-- *Line-cast*: if followed by a space, the spell applies to the rest of
-  the line.
+*** Forward scoping
 
 #+begin_example
-:x::word               — word-cast: only "word" is affected
-:x:: entire line       — line-cast: everything after is affected
-:f1::f2::content       — chaining: f1 casts into f2, f2 casts into content
+:bold:word              — word scope (adjacent, no space after :)
+:bold: whole line       — line scope (space after :, first position only)
+:bold:[bracket scope]   — bracket scope (scroll or conduit)
+:bold:                  — block scope (self-terminating, applies forward)
 #+end_example
 
-Every ~::~ is doing the same job: pushing effect forward. The parser sees ~::~
-and looks at what follows — if it is a spell name, it chains; if it is a word
-or space, it targets content.
+The line-scope form (~:bold: whole line~) only applies when the spell is at
+the first position on the line. Mid-line, ~:bold:~ is a self-terminating
+block-scope spell.
+
+*** Backward scoping
+
+Spells can apply retroactively to content that precedes them within the
+current block:
+
+#+begin_example
+::bold:                 — backward to block start
+hey dude ::bold:        — backward to line start
+#+end_example
+
+The ~::~ at the start (or mid-line) signals a backward application. The
+spell reaches back and applies to everything from the beginning of the
+block (or line) to the point where the spell appears.
+
+** The shell (~::~) — paired scope with independent termination
+
+The shell opens a paired scope where content between the opening ~::~ and a
+closing ~::~ receives the spell's effect. Shells earn their place
+specifically for order-independent scope termination that conduits cannot
+provide.
+
+Shells are block-bounded — they never cross structural markers (sockets).
+
+#+begin_example
+:bold:: hey dude ::              — "hey dude" is bold
+:bold.underline:: hey dude ::    — "hey dude" is bold + underline
+#+end_example
+
+*** Closing rules
+
+- ~::~ alone closes ALL currently open shells.
+- ~::spell:~ pops only the named spell from the stack.
+- End of line does NOT close a shell within a block.
+- End of block closes everything implicitly.
+
+#+begin_example
+:bold.underline.italic:: hey dude ::italic: what's up :: man
+#+end_example
+
+In this example:
+- "hey dude" — bold, underline, italic
+- "what's up" — bold, underline (italic popped by ~::italic:~)
+- "man" — plain (all remaining shells closed by ~::~)
+
+** The bond (~.~) — spell chaining
+
+The ~.~ character chains spells together. Each spell in the chain adds its
+effect. The chain terminates at the final ~:~ which determines the scope.
+
+#+begin_example
+:bold.underline:word              — bold + underline, word scope
+:bold.color(red): whole line      — bold + red, line scope
+:color(red).bg(#000).bold:word — three spells chained
+:bold.italic:[bracketed content]  — bold + italic, bracket scope
+#+end_example
+
+Bonds connect spell names only. Ports (brackets) bind to the spell they
+touch — no ~.~ between a spell and its ports:
+
+#+begin_example
+:link[https://example.com]{click *here*}:    — scroll + conduit, both bound to :link
+:font(serif)[Georgia]:                       — vessel + scroll bound to :font
+:color(red).bold:word                         — .bold chains to :color, not to (red)
+#+end_example
+
+** Port types
+
+Every spell accepts zero or more port inputs. The bracket type identifies
+what is being passed:
+
+| Port     | Syntax  | Delivers                           |
+|----------+---------+------------------------------------|
+| Vessel   | ~()~    | A value: URL, date, number, setting|
+| Scroll   | ~[]~    | Verbatim text, no parsing          |
+| Conduit  | ~{}~    | Rich parsed Indue content          |
+| Waypoint | ~<>~    | A reference, anchor, or named entity|
+| Bond     | ~.spell~| Another spell in the chain         |
+
+Adjacent brackets after a spell name are consumed greedily with no separator:
+
+#+begin_example
+:link[https://example.com]{click *here*}:
+:font(serif)[Times New Roman]:
+:table{Col1|Col2}{Val1|Val2}:
+:embed<intro>:
+#+end_example
+
+*** Ports vs. entity references
+
+Only the five bracket/bond forms above are ports. Sigils (~#name~), signets
+(~@name~), and coordinates (~<<id>>~) are *entity references*, not ports.
+When a spell needs to receive one as input, it arrives either through a
+vessel (~:embed(#work):~, ~:popover(@alice):~, ~:embed(<<n3b7c2>>):~) or
+as a cauldron target (~:::#::: .bold :~ configures all sigils;
+~:::project::: .bg(#f0f0f0) :~ configures every form of the ~project~
+entity). The waypoint port ~<>~ is the one reference form that has its own
+bracket syntax because angle brackets are never ambiguous next to a spell
+name.
+
+** The cauldron (~:::target:::~) — precision targeting
+
+The cauldron is the core mechanism for equipping named entities with
+inherited properties. Spells accumulate and fire onto the target as a single
+unit. The cauldron with an entity target IS the "indue" concept — the
+namesake feature of the language, promoted from a named spell to core syntax.
+
+The word "indue" still names the language and the act of bestowing properties
+on entities. What was once ~:indue(<target>)~ is now ~:::target:::~ —
+a promotion, not a retirement.
+
+*** Backward/configuration form (target first)
+
+The target appears first, then spells accumulate below it:
+
+#+begin_example
+:::meeting:::
+.bold
+.color(red)
+.bg(#e8f4fd):
+#+end_example
+
+Every block that carries ~<meeting>~ or ~#meeting~ now inherits bold, red
+text, and a light blue background, because both forms are block-level.
+Inline ~@meeting~ tokens, by contrast, receive these spells on the token
+itself — they appear as bold, red, light-blue chips inline in whatever
+block contains them. The entity name is the identity; the sigil form
+determines /where/ the spells land.
+
+*** Forward form (spells first)
+
+The spells lead, then the cauldron targets:
+
+#+begin_example
+:bold.color(red):::meeting:::
+#+end_example
+
+*** Inline form
+
+For simple configurations, the cauldron can be a single line. The
+terminator is ~:~ (the standard spell wall), not ~:::~:
+
+#+begin_example
+:::meeting::: .bold.color(red) :
+#+end_example
+
+*** Upside-down multiline form
+
+Because the cauldron is symmetric, the terminating ~:~ can appear at
+the top instead:
+
+#+begin_example
+:
+.o
+.bold
+:::meeting:::
+#+end_example
+
+This is equivalent to the backward form with the ~:~ placed first.
+
+*** Leading-dot forgiveness
+
+In multiline cauldrons, the parser ignores a leading ~.~ when there is no
+preceding spell to bond to. This means the first spell line below a
+cauldron target does not need special treatment:
+
+#+begin_example
+:::meeting:::
+.bold            — leading . is ignored (no spell before it)
+.color(red):     — .color bonds to :bold normally
+#+end_example
+
+*** Cauldron whitespace trimming
+
+The parser strips whitespace from the target content, checks for a
+recognized entity name, and ignores gracefully if the entity is not found
+(parse-don't-fail).
+
+*** The two-axis targeting matrix
+
+A cauldron target is built from two independent axes: the *entity name*
+(specific name, or wildcard for any name) and the *sigil form* (~#~, ~@~,
+~<>~, or unspecified for all forms). These compose freely:
+
+#+begin_example
+Entity name only — cascades to every form of that entity:
+:::alice:::                — all forms of alice (#alice, @alice, <alice>)
+
+Form + entity name — narrows to one form of one entity:
+:::#alice:::               — only sigil uses of alice (block-level)
+:::@alice:::               — only signet mentions of alice (inline)
+:::<alice>:::              — only waypoint anchors named alice
+
+Form only — every entity that uses that form:
+:::#:::                    — all sigils regardless of entity
+:::@:::                    — all signets regardless of entity
+:::<>:::                   — all waypoints regardless of entity
+#+end_example
+
+The full matrix:
+
+| Cauldron target  | Axis: name      | Axis: form   | Effect                                       |
+|------------------+-----------------+--------------+----------------------------------------------|
+| ~:::alice:::~    | ~alice~         | any form     | All references to alice (block + inline)     |
+| ~:::#alice:::~   | ~alice~         | sigil only   | ~#alice~ — block-level, alice as category    |
+| ~:::@alice:::~   | ~alice~         | signet only  | ~@alice~ — inline token styling              |
+| ~:::<alice>:::~  | ~alice~         | waypoint only| ~<alice>~ — block-level anchor styling       |
+| ~:::#:::~        | any name        | sigil only   | Every sigil in the document                  |
+| ~:::@:::~        | any name        | signet only  | Every signet in the document                 |
+| ~:::<>:::~       | any name        | waypoint only| Every waypoint in the document               |
+
+The unscoped entity-name target (~:::alice:::~) is the *identity layer*: it
+defines what alice means across every place she appears. Form-scoped
+targets layer specifics on top — alice-as-signet might want a chip-style
+inline rendering, while alice-as-sigil styles the whole block.
+
+*** Task states as codex spells
+
+Cauldrons can bestow any spell, including task states. This was a primary
+design goal — the cauldron exists to equip entities with inherited
+functionality, not just presentation:
+
+#+begin_example
+:::-:::
+.o:
+
+Every - item is now an open task by default.
+
+:::#x:::
+.x:
+
+Any block carrying #x inherits closed-task status.
+#+end_example
+
+When both codexes apply to the same block, entity codexes override socket
+codexes (explicit wins over inherited). A list item tagged ~#x~ gets ~:x~
+from the entity codex, overriding the ~:o~ from the socket codex.
+
+*** Cauldron for glamour and socket codexes
+
+The cauldron handles all codex configuration uniformly:
+
+#+begin_example
+Glamour codex (configure what bold does):
+:::*:::
+.italic
+.color(red)
+.grow(1):
+
+Socket codex (configure ordered list style):
+:::+::: .style[a)] :
+
+Entity codex — identity layer (covers all forms of project):
+:::project:::
+.bg(#f0f0f0)
+.stroke(1)
+.tint(#ccc):
+
+Entity codex — form-specific (only the signet form of project):
+:::@project::: .chip :
+#+end_example
+
+** Self-reference (~<>~) for current block
+
+An empty waypoint ~<>~ refers to the current block's container. This is
+disambiguated from the waypoint type configurator by parser position — ~<>~
+appearing after a spell name or value is a target; ~:<>:::~ as a cauldron
+target configures all waypoints as a type.
+
+#+begin_example
+:bg(#f5f5f5)<>:      — current block container
+:bg(#f5f5f5)<name>:  — named block container
+:bg(#f5f5f5)::       — text/highlight level via shell
+#+end_example
+
+Self-reference lets block-level spells target the current block without
+requiring an explicit waypoint name. This is the primary form for one-off
+styling where naming the block would be unnecessary overhead.
 
 ** Spell forms
 
 Indue deliberately keeps spell signatures simple. The design prefers more small
 spells over fewer complex ones.
 
-| Form              | Description                                       |
-|-------------------+---------------------------------------------------|
+| Form            | Description                                        |
+|-----------------+----------------------------------------------------|
 | ~:fn~             | Switch — no arguments, self-terminating            |
-| ~:fn:~            | Explicit self-termination (equivalent to ~:fn~)    |
-| ~:fn()~           | Explicit empty vessel (equivalent to ~:fn~)        |
+| ~:fn:~            | Explicit self-termination (equivalent to ~:fn~)      |
+| ~:fn()~           | Explicit empty vessel (equivalent to ~:fn~)          |
 | ~:fn(value)~      | Single value in a vessel                           |
 | ~:fn[text]~       | Verbatim text in a scroll — no parsing inside      |
 | ~:fn{text}~       | Rich text in a conduit — full Indue grammar inside |
 | ~:fn(val){text}~  | Vessel + conduit                                   |
-| ~:fn(v,"string")~ | Vessel with value + string literal                 |
+| ~:fn<wp>~         | Waypoint port — entity reference as input          |
 
 ** Spell argument binding
 
@@ -1061,22 +1462,37 @@ Each ~{}~ is a conduit. Pipes ~|~ separate cells within each conduit (the
 ~:table~ spell splits on them). Another spell could interpret the divisions
 differently or ignore them.
 
-** Multiline spell binding (clump rule)
+** Multiline spell chaining
 
-After a spell, subsequent lines that begin with ~[~, ~(~, ~{~, or ~:~ (after
-stripping leading whitespace) continue the spell's argument clump. A blank
-line or a line starting with any other character ends the clump.
+Spells can chain across multiple lines. A line beginning with ~.~ (after
+stripping leading whitespace) continues the previous spell's chain. The
+chain terminates with ~:~ on the last line, or at a blank line.
 
 #+begin_example
-:table{Col1|Col2|Col3}
-{Val1|Val2|Val3}
-{Val1|Val2|Val3}
+:table
+.stroke(1)
+.th{Col1  | Col2  | Col3}
+.tr{*Alice*  | Engineer  | :> Active}
+.tr{Bob  | Designer  | :o Open}:
 
-This line is outside the table — blank line broke the clump.
+This is outside the table.
 #+end_example
 
-This works inside lists because the parser strips indentation before checking
-the first character:
+Multiline chaining is used for any spell that needs to accumulate multiple
+properties. Entity codexes use the cauldron form (see Entity Configuration)
+for the same purpose but with an explicit entity target. Page configuration
+uses plain multiline chaining:
+
+#+begin_example
+:page
+.orientation(landscape)
+.margin(2cm)
+.header{Document Title}
+.footer{Page :pagenum:}:
+#+end_example
+
+Multiline chaining works inside lists because the parser strips indentation
+before checking the first character:
 
 #+begin_example
 - Here's my data
@@ -1085,63 +1501,16 @@ the first character:
   {Val1|Val2|Val3}
 #+end_example
 
-** The cauldron (~:::~)
-
-When multiple spells need to cooperate on the same output, the cauldron ~:::~
-opens a spell block. Subsequent lines starting with ~:~ are part of the
-cauldron.
-
-A cauldron terminates when:
-
-- A blank line is encountered.
-- A single ~:~ is encountered (explicit terminator, renders nothing).
-- A non-spell line is encountered.
-
-A cauldron can direct its combined output using ~::~ (cast) at the end:
-
-#+begin_example
-Simple cauldron (terminates at blank line):
-:table:::
-:border(1)
-:th{Col1  | Col2  | Col3 }
-:tr{Val1  | Val2  | Val3 }
-
-Outside the cauldron.
-
-Explicitly terminated cauldron:
-:table:::
-:border(1)
-:th{Col1  | Col2  | Col3 }
-:tr{Val1  | Val2  | Val3 }
-:
-
-Outside — the bare : ended the cauldron.
-
-Cauldron with cast (directs output):
-:color(red):::
-:bold
-:grow(1)
-::This entire line gets the combined effect.
-
-Cauldron cast to a bracket:
-:color(red):::
-:bold
-::[specific words get the combined effect]
-#+end_example
-
-All spells inside the cauldron are evaluated in order, top to bottom. There
-is no cascading or out-of-order configuration.
-
 ** Vessels, scrolls, and conduits: bracket semantics
 
 - ~()~ — *Vessel*. Carries a single value to the spell. A URL, a date, a
   number. The payload is consumed by the spell.
 - ~[]~ — *Scroll*. Verbatim content. The parser treats everything inside as a
-  literal string. No glamours, badges, or spells are recognized. What is
+  literal string. No glamours, sigils, or spells are recognized. What is
   written is exactly what comes out.
 - ~{}~ — *Conduit*. Rich content. The parser steps inside, runs the full Indue
   grammar, builds a sub-AST fragment, and returns it to the parent spell.
-  Glamours activate, badges resolve, nested spells fire.
+  Glamours activate, sigils resolve, nested spells fire.
 
 *Use conduits by default.* The common recommendation is to use conduits ~{}~
 unless you specifically need content stripped of all meaning — code snippets,
@@ -1150,8 +1519,8 @@ Conduits preserve the full power of Indue inside them; scrolls deliberately
 suppress it.
 
 #+begin_example
-:link(https://example.com){Read *this* #tagged}  — conduit: bold and tag work
-:code(rust)[fn main() { println!("hello"); }]    — scroll: content is literal
+:link[https://example.com]{Read *this* #tagged}  — scroll: URL verbatim, conduit: rich label
+:code(rust)[fn main() { println!("hello"); }]    — vessel: language, scroll: content is literal
 #+end_example
 
 ** Pipe convention
@@ -1178,18 +1547,6 @@ Scroll (cells are verbatim — use for raw data):
 [4.2|5.1|6.8]
 #+end_example
 
-** The cast as input/target divider
-
-In any spell, everything before ~::~ is input to the spell. Everything after
-~::~ is what the spell acts on. Spells choose which sides they use:
-
-#+begin_example
-:color(red)::word                     — input: red. target: word
-:bold::italic::word                   — chained casts
-:table{Col1|Col2}::{formatted rows}  — input: header. target: content
-:link(url)::{*click here*}            — input: url. target: rich label
-#+end_example
-
 ** Fallback rendering
 
 If an app does not recognize a spell name, the parse-don't-fail philosophy
@@ -1205,21 +1562,21 @@ all the standard spell scoping rules.
 
 | Shorthand | Category | Symbol |
 |-----------+----------+--------|
-| ~:o~      | Open     | ☐      |
-| ~:x~      | Closed   | ☑      |
-| ~:>~      | Active   | ◐      |
-| ~:!~      | Blocked  | ⚠      |
+| ~:o~        | Open     | ☐     |
+| ~:x~        | Closed   | ☑     |
+| ~:>~        | Active   | ◐     |
+| ~:!~        | Blocked  | ⚠     |
 
 ** Scoping behavior
 
-Task shorthands follow the same cast rules as any spell:
+Task shorthands follow the same scoping rules as any spell:
 
-| Form                  | Effect                                       |
-|-----------------------+----------------------------------------------|
-| ~:x~                  | Atomic — renders the ☑ symbol only            |
-| ~:x::word~            | Word-cast — strikes out one word              |
-| ~:x:: rest of line~   | Line-cast — strikes out the entire line       |
-| ~:x{multiple words}~  | Conduit — strikes out the enclosed content    |
+| Form               | Effect                                     |
+|--------------------+--------------------------------------------|
+| ~:x~                 | Atomic — renders the ☑ symbol only        |
+| ~:x:word~            | Word scope — strikes out one word          |
+| ~:x: rest of line~   | Line scope — strikes out the entire line   |
+| ~:x{multiple words}~ | Conduit — strikes out the enclosed content |
 
 ** Named states
 
@@ -1236,13 +1593,13 @@ same way:
 
 Named states carry category metadata:
 
-| Named state  | Category |
-|--------------+----------|
-| ~:todo~      | Open     |
-| ~:next~      | Open     |
-| ~:started~   | Active   |
-| ~:waiting~   | Blocked  |
-| ~:done~      | Closed   |
+| Named state | Category |
+|-------------+----------|
+| ~:todo~       | Open     |
+| ~:next~       | Open     |
+| ~:started~    | Active   |
+| ~:waiting~    | Blocked  |
+| ~:done~       | Closed   |
 
 Custom states can be defined and mapped to any of the four categories.
 
@@ -1265,9 +1622,9 @@ Sockets are parsed before spells. Task spells apply to the content /after/
 the socket:
 
 #+begin_example
-- = :x:: Whole Heading        — heading slot, title struck out
-- :x::Whole Heading           — list slot, only "Whole" struck out
-:x:: - = Text                 — NOT a socket; - = is literal text
+- = :x: Whole Heading         — heading slot, title struck out
+- :x:Whole Heading            — list slot, only "Whole" struck out
+:x: - = Text                  — NOT a socket; - = is literal text
 #+end_example
 
 * List and Heading Schema Declarations
@@ -1336,7 +1693,7 @@ The parser matches these against the declared pattern at line start.
 
 Tables use the ~:table~ spell. The ~:table~ spell interprets pipes ~|~ as
 cell dividers in its inputs. Use conduits by default so cell content can
-include glamours, badges, and spells. Use scrolls for raw data where no
+include glamours, sigils, and spells. Use scrolls for raw data where no
 parsing is needed.
 
 #+begin_example
@@ -1350,17 +1707,17 @@ Raw data table (scrolls, cells are verbatim):
 [1.0|2.5|3.7]
 [4.2|5.1|6.8]
 
-Configured table (cauldron):
-:table:::
-:border(1)
-:th{Col1  | Col2  | Col3 }
-:tr{*Alice*  | Engineer  | :> Active }
-:tr{Bob  | Designer  | :o Open }
+Configured table (multiline chain):
+:table
+.border(1)
+.th{Col1  | Col2  | Col3 }
+.tr{*Alice*  | Engineer  | :> Active }
+.tr{Bob  | Designer  | :o Open }:
 #+end_example
 
 The simple form uses adjacent conduits — the spell infers rows from each
-conduit and columns from pipes. The cauldron form allows configuration spells
-like ~:border~ and distinguishes headers (~:th~) from rows (~:tr~).
+conduit and columns from pipes. The multiline chain form allows configuration
+spells like ~.border~ and distinguishes headers (~.th~) from rows (~.tr~).
 
 ** Layout
 
@@ -1401,21 +1758,21 @@ divide columns. Adjacent waypoints within a column stack vertically:
 Column sizing targets the waypoint directly:
 
 #+begin_example
-:width(<nav>)[30]
+:width<nav>[30]
 :layout{<nav>|<content>}:
 #+end_example
 
 The ~:width~ spell sets a percentage. Columns without a width declaration
 share the remainder equally. The last column never needs a width.
 
-For more control, use a cauldron:
+For more control, use multiline chaining:
 
 #+begin_example
-:layout:::
-:width(<nav>)[30]
-:overflow(<content>)[scroll]
-:gap[1em]
-{<nav>|<content>}
+:layout
+.width<nav>[30]
+.overflow<content>[scroll]
+.gap[1em]
+{<nav>|<content>}:
 #+end_example
 
 ** Page-constrained layout (~:pagelayout~)
@@ -1425,10 +1782,10 @@ page boundary, use ~:pagelayout~ instead of ~:layout~. Heights are
 percentages of the page. Content that exceeds its allocation scrolls.
 
 #+begin_example
-:pagelayout:::
-:height(<summary>)(40)
-:height(<details>)(60)
-{<summary><details>|<sidebar>}
+:pagelayout
+.height<summary>(40)
+.height<details>(60)
+{<summary><details>|<sidebar>}:
 #+end_example
 
 | Feature    | ~:layout~ (flow)      | ~:pagelayout~ (constrained)   |
@@ -1447,12 +1804,12 @@ changed.
 #+begin_example
 :page(a4):
 :page(letter):
-:page:::
-:orientation(landscape)
-:margin(2cm)
-:header{Document Title}:
-:footer{Page :pagenum:}:
-:columns(2)
+:page
+.orientation(landscape)
+.margin(2cm)
+.header{Document Title}
+.footer{Page :pagenum:}
+.columns(2):
 #+end_example
 
 ** Page and element spells
@@ -1480,16 +1837,16 @@ The scroll preserves content verbatim with no internal parsing.
 
 ** Reference and transclusion spells
 
-| Spell              | Behavior                                 |
-|--------------------+------------------------------------------|
-| ~@name~            | Signet — summons entity by name          |
-| ~:link(url){t}~    | Navigation — click to go there           |
-| ~:of(<wp>)~        | Reattach content to ancestor waypoint    |
-| ~:embed(<wp>):~    | Transclusion — pulls content inline      |
-| ~:popover(<wp>):~  | Popup — hover/click to show content      |
-| ~:query(expr)~     | Live query — filters matching blocks     |
+| Spell           | Behavior                              |
+|-----------------+---------------------------------------|
+| ~@name~           | Signet — summons entity by name       |
+| ~:link[url]{label}~ | Navigation — click to go there        |
+| ~:of<wp>~       | Reattach content to ancestor waypoint |
+| ~:embed<wp>:~   | Transclusion — pulls content inline   |
+| ~:popover<wp>:~ | Popup — hover/click to show content   |
+| ~:query(expr)~    | Live query — filters matching blocks  |
 
-Signets, waypoints, coordinates, and badges are all different addressing modes
+Signets, waypoints, coordinates, and sigils are all different addressing modes
 for the same underlying reference system. All reference spells accept any of
 them.
 
@@ -1499,9 +1856,9 @@ Transclusion pulls referenced content inline at the point where the spell
 appears. The source content appears as if it were written here.
 
 #+begin_example
-:embed(<intro>):                — transclude block with waypoint <intro>
+:embed<intro>:                — transclude block with waypoint <intro>
 :embed(<<n3b7c2>>):            — transclude by coordinate
-:embed(#work):                 — transclude all blocks badged #work
+:embed(#work):                 — transclude all blocks sigiled #work
 :embed(@alice):                — transclude entity content
 #+end_example
 
@@ -1512,12 +1869,12 @@ defines only that the referenced content appears at the transclusion point.
 *** Popover (~:popover~)
 
 Popovers display referenced content in a floating panel on hover or click,
-without leaving the current context. An optional scroll provides a display
-label:
+without leaving the current context. An optional conduit provides a rich
+display label, or a scroll for plain text:
 
 #+begin_example
-:popover(<wp>):                — shows block content on hover/click
-:popover(<wp>)[Details]:       — with custom label
+:popover<wp>:                — shows block content on hover/click
+:popover<wp>[Details]:       — with custom label
 :popover(@alice):              — entity info card
 :popover(:query(#work :>)):    — query results in a panel
 :popover[Tooltip text]:        — static text, no reference needed
@@ -1525,93 +1882,204 @@ label:
 
 *** Chaining references
 
-Reference spells chain with casts like any other spell:
+Reference spells chain with bonds like any other spell:
 
 #+begin_example
-:link(url)::embed(<wp>):       — link with inline transclusion
-:link::popover(<wp>):          — link with hover preview
-:link(url)::{*click here*}     — link with formatted label
+:link[url].embed<wp>:            — link with inline transclusion
+:link.popover<wp>:               — link with hover preview
+:link[url]{*click here*}:        — link with formatted label
 #+end_example
 
-* Entity Configuration: The Indue Spell
+* Entity Configuration: The Cauldron
 
-The namesake feature of the language. The ~:indue~ spell — and its shorthand
-forms — configures named entities (waypoints, badges, signets) so that any
-block where the entity appears automatically inherits the configured spells.
-This is Indue's answer to "supertags": a badge like ~#project~ can carry
-formatting, task defaults, or any other spell to every block it touches.
+The namesake feature of the language. The cauldron (~:::target:::~) configures
+named entities (waypoints, sigils, signets) so that any block where the entity
+appears — or any inline signet token bearing the entity name — automatically
+inherits the configured spells. This is Indue's answer to "supertags": a sigil
+like ~#project~ can carry formatting, task defaults, or any other spell to
+every block it touches, while ~@alice~ can carry chip styling and a popover
+to every inline mention.
+
+The "indue" concept — equipping plain text with inherited properties — was
+promoted from a named spell to core syntax. It is not retired; it became the
+cauldron. The word "indue" still names the language and the act of bestowing
+properties on entities.
+
+By default, codexes are *file-local* — a cauldron defined in one file
+configures only that file. To make a codex available to other files in the
+vault, prefix the cauldron with a beacon (~!~). See "Beacons and the
+public layer" later in this section, and the Public/Private Visibility
+section for the full visibility model.
 
 ** The core metaphor
 
-Plain text puts on Indue and gains power. The ~:indue~ spell defines /what/
-that power is for a given entity name. Every block that wears the entity
-inherits its properties — indued with the qualities it did not previously
-have.
+Plain text puts on Indue and gains power. The cauldron defines /what/ that
+power is for a given entity name, and the sigil form on the page determines
+/where/ that power lands — on the block, or on the inline token. Every
+reference that wears the entity is indued with the qualities it did not
+previously have.
+
+** Sigil and signet scope
+
+The choice of sigil form is no longer a stylistic preference for tools to
+"optionally distinguish." It is structurally definitional. The sigil form
+controls the *target of bestowal*:
+
+- A *sigil* (~#project~) indues its codex spells onto the *block* that
+  carries it. The container — the list item, the heading, the paragraph —
+  inherits the entity's properties as a whole.
+- A *signet* (~@alice~) indues its codex spells onto the *signet token
+  itself*, not the surrounding block. The token becomes a styled inline
+  fragment; the rest of the block is untouched.
+- A *waypoint* (~<project>~) is block-level like a sigil. It is a structural
+  anchor, and its codex properties land on the block it anchors.
+
+The mnemonic: ~#~ and ~<>~ both attach to /blocks/. ~@~ attaches to /tokens/.
+
+*** Multiple entities on one block
+
+This distinction matters most when multiple entities appear on the same
+block. Consider:
+
+#+begin_example
+- @alice and @bob met yesterday to discuss #planning
+#+end_example
+
+With sigil/signet scope:
+
+- ~@alice~ renders styled by alice's codex (a chip, a color, a popover) —
+  applied to that single inline token.
+- ~@bob~ renders styled by bob's codex — independently, on its own token.
+- ~#planning~ applies the planning codex to the *block* (the list item).
+- Neither alice nor bob's codex touches the block itself. Two named
+  entities can coexist on the same line as independently-styled inline
+  artifacts without fighting over block-level real estate.
+
+Without this split, two ~@~ entities on one block would have to either
+arbitrate which one "wins" the block, or merge their codexes in some
+order — both unsatisfying. Token-scope signets resolve this cleanly.
+
+*** Contact cards and entity libraries
+
+The token-scope of signets enables a powerful pattern: an *entity library*.
+A vault file might hold definitions for every person, project, and concept,
+each with its own visual identity:
+
+#+begin_example
+~~~~~~~~~~
+:::alice:::
+.color(#4a90d9)
+.font[Inter]:
+
+:::@alice:::
+.chip
+.popover<alice>:
+
+:::bob:::
+.color(#d97757):
+
+:::@bob:::
+.chip
+.popover<bob>:
+~~~~~~~~~~
+
+= Alice <alice>
+Engineering lead, joined 2024. Reach via #email or #slack.
+
+= Bob <bob>
+Designer, lives in Tokyo. Best contacted #async.
+
+- Need to follow up with @alice and @bob about the launch.
+#+end_example
+
+In the last line, ~@alice~ and ~@bob~ render as two distinct chips, each
+with its own color and a popover that pulls in the corresponding heading's
+content. The block stays clean. Visiting either chip can open a card view
+of the person — a contact-list interaction that falls naturally out of the
+language semantics.
+
+The same name used as ~#alice~ would instead style the entire block —
+useful for tagging which person a note is /about/ rather than /mentioning/.
 
 ** Syntax
 
-The ~:indue~ spell follows the standard configuration pattern. There are
-three levels:
+Cauldron targets compose along two axes: the entity name and the sigil
+form. See "The two-axis targeting matrix" in the Spells section for the
+complete table. Briefly:
 
 #+begin_example
-Type configuration (all waypoints, all badges, etc.):
-:<>:::              — configure how all waypoints look/behave
-:#:::               — configure how all badges look/behave
-:@:::               — configure how all signets look/behave
+Form-only — every reference of that form, regardless of name:
+:::<>::: .color(blue) :     — every waypoint
+:::#::: .bold :             — every sigil
+:::@::: .italic :           — every signet
 
-Entity configuration (specific named entity):
-:<project>:::       — configure the "project" entity (shorthand)
-:indue(<project>):::— same thing (longhand)
+Identity layer — every form of one named entity:
+:::project:::
+.bg(#f0f0f0)
+.stroke(1)
+.tint(#ccc)
+.padding(0.5em):
 
-Inside the cauldron, standard spells define the inherited properties:
-:<project>:::
-:bgcolor(#f0f0f0)
-:border(1, solid, #ccc)
-:padding(0.5em)
+Form-specific — only one form of one named entity:
+:::#project::: .card :       — only #project (block-level)
+:::@project::: .chip :       — only @project (inline token)
+:::<project>::: .grow(1) :   — only <project> waypoint anchors
+
+Forward form (spells first):
+:bold.color(red):::project:::
+
+Inline form (single line):
+:::project::: .bg(#f0f0f0).card :
 #+end_example
 
-Any block that carries ~<project>~, ~#project~, or ~@project~ automatically
-inherits the configured bgcolor, border, and padding. The entity name is the
-identity — the sigil type (~#~, ~@~, ~<>~) is just how you reference it.
+The entity-name target ~:::project:::~ is the *identity layer*. It defines
+properties shared by every reference to project. Form-specific targets
+layer additional spells on top, scoped to one form.
 
 ** Codex
 
-A *codex* is any configuration block in Indue — the set of spells that
+A *codex* is any configuration block in Indue — the accumulated spells that
 define how a glamour, socket, or named entity behaves. The term applies
 uniformly across the entire configuration system:
 
-| Codex target        | Quick codex      | Cauldron codex              |
-|---------------------+------------------+-----------------------------|
-| ~*~ (glamour)       | ~:*(red)~        | ~:*:::~ + spells            |
-| ~+~ (socket)        | ~:+[a)]~         | ~:+:::~ + spells            |
-| ~<project>~ (entity)| —                | ~:<project>:::~ + spells    |
-| ~<>~ (type)         | —                | ~:<>:::~ + spells           |
+| Codex target               | Quick codex  | Cauldron codex                 |
+|----------------------------+--------------+--------------------------------|
+| ~*~ (glamour)              | ~:*(red)~    | ~:::*::: .italic.color(red) :~ |
+| ~+~ (socket)               | ~:+[a)]~     | ~:::+::: .color(blue) :~       |
+| ~project~ (entity identity)| —            | ~:::project::: .bg(#f0f0f0) :~ |
+| ~#project~ (form-specific) | —            | ~:::#project::: .card :~       |
+| ~@project~ (form-specific) | —            | ~:::@project::: .chip :~       |
+| ~<project>~ (form-specific)| —            | ~:::<project>::: .grow(1) :~   |
+| ~#~ / ~@~ / ~<>~ (form-only) | —          | ~:::#::: .bold :~              |
 
 A glamour codex configures how a formatting character renders. A socket
 codex configures how a list or heading marker renders. An entity codex
-configures inherited properties that are bestowed on every block where
-that entity appears. All three use the same cauldron syntax and the same
-scoping rules.
+configures inherited properties bestowed on every reference to that
+entity — on the block for sigils and waypoints, on the token for signets.
+All forms use the same cauldron syntax and the same scoping rules.
 
 #+begin_example
-:<meeting>:::
-:bgcolor(#e8f4fd)
-:callout
-:+[1.]
+:::meeting:::
+.bg(#e8f4fd)
+.callout
+.+[1.]:
 
 This codex makes every block tagged #meeting or anchored <meeting>
 automatically appear as a numbered callout with a light blue background.
+Inline @meeting tokens, on the other hand, would receive these spells on
+the token only — they'd render as small inline callouts.
 #+end_example
 
 *** Glamour codex examples
 
-Configuration follows all standard spell scoping rules:
+Configuration follows all standard spell scoping rules. Quick codexes use
+the spell form directly:
 
 #+begin_example
 :*(red)                   — configure * to be red, globally from here on
-:*(red)::word             — configure * to be red, just for this word
-:*(red)::[this sentence]  — configure * to be red, just this scope
-:*(red):: this whole line — configure * to be red, for this line
+:*(red):word              — configure * to be red, just for this word
+:*(red):[this sentence]   — configure * to be red, just this scope
+:*(red): this whole line  — configure * to be red, for this line
 #+end_example
 
 Global configuration (self-terminating) persists until the same spell
@@ -1628,10 +2096,10 @@ Now *bold is blue* instead.
 The cauldron form handles multi-property codexes:
 
 #+begin_example
-:*:::
-:italic
-:color(red)
-:grow(1)
+:::*:::
+.italic
+.color(red)
+.grow(1):
 
 Now all *bold text* is also italic, red, and larger automatically.
 Regular /italic text/ is unaffected — only * was configured.
@@ -1648,17 +2116,89 @@ Regular /italic text/ is unaffected — only * was configured.
 
 *** Configuration target reference
 
-All three configuration targets — glamours, sockets, and named entities —
-use the same codex system:
+The full matrix of codex targets — glamours, sockets, type-only entity
+forms, named entities, and form-specific entity targets — all use the
+same cauldron syntax:
 
-| Config target   | Quick codex  | Cauldron codex  |
-|-----------------+--------------+-----------------|
-| ~+~ (ordered)   | ~:+[a)]~     | ~:+:::~ + spells|
-| ~-~ (unordered) | ~:-[*]~      | ~:-:::~ + spells|
-| ~=~ (heading)   | ~:=[I.]~     | ~:=:::~ + spells|
-| ~*~ (bold)      | ~:*(red)~    | ~:*:::~ + spells|
-| ~/~ (italic)    | ~:/(blue)~   | ~:/:::~ + spells|
-| ~_~ (underline) | ~:_(dotted)~ | ~:_:::~ + spells|
+| Config target           | Quick codex  | Cauldron codex                |
+|-------------------------+--------------+-------------------------------|
+| ~+~ (ordered)           | ~:+[a)]~     | ~:::+::: .color(blue) :~      |
+| ~-~ (unordered)         | ~:-[*]~      | ~:::-::: .indent(2) :~        |
+| ~=~ (heading)           | ~:=[I.]~     | ~:::=::: .bold :~             |
+| ~*~ (bold)              | ~:*(red)~    | ~:::*::: .italic.grow(1) :~   |
+| ~/~ (italic)            | ~:/(blue)~   | ~:::/::: .underline :~        |
+| ~_~ (underline)         | ~:_(dotted)~ | ~:::_::: .color(red) :~       |
+| ~#~ (any sigil)         | —            | ~:::#::: .bold :~             |
+| ~@~ (any signet)        | —            | ~:::@::: .chip :~             |
+| ~<>~ (any waypoint)     | —            | ~:::<>::: .color(blue) :~     |
+| ~alice~ (identity)      | —            | ~:::alice::: .color(red) :~   |
+| ~#alice~ (form-spec.)   | —            | ~:::#alice::: .card :~        |
+| ~@alice~ (form-spec.)   | —            | ~:::@alice::: .chip :~        |
+| ~<alice>~ (form-spec.)  | —            | ~:::<alice>::: .grow(1) :~    |
+
+** Entity codex cascade
+
+When multiple cauldron targets apply to the same entity reference, they
+resolve in a four-layer cascade. Last wins for conflicting properties;
+non-conflicting properties accumulate.
+
+The cascade order, from base to override:
+
+1. *Form-only base* (~:::@:::~, ~:::#:::~, ~:::<>:::~) — base type
+   styling for the form itself, applied to every reference of that form.
+2. *Identity layer* (~:::alice:::~) — properties shared by all forms
+   of the entity. Defines what alice means everywhere she appears.
+3. *Form-specific* (~:::@alice:::~, ~:::#alice:::~, ~:::<alice>:::~) —
+   refinements scoped to one form of one entity.
+4. *Inline spells* — one-off overrides written at the reference site.
+
+The first three layers compose the same way the rest of the codex system
+already does: explicit wins over inherited, last spell to set a property
+wins, non-conflicting spells accumulate. The cascade is just this same
+override rule applied across the targeting matrix.
+
+A complete four-layer example for a single entity:
+
+#+begin_example
+:::@:::
+.italic:                       — every signet renders italic by default
+
+:::alice:::
+.color(#4a90d9)
+.font[Inter]:                  — alice's identity: blue, Inter font
+
+:::@alice:::
+.chip
+.popover<alice>:               — only @alice gets the chip + popover
+
+:::#alice:::
+.bg(#eef4fb)
+.stroke(1):                    — only #alice gets the block tinting
+
+:::<alice>:::
+.bold
+.grow(1):                      — only <alice> anchors get bold + size
+#+end_example
+
+Resolution at each reference:
+
+- ~@alice~ in a block → italic (from ~:::@:::~) + blue + Inter
+  (from ~:::alice:::~) + chip + popover (from ~:::@alice:::~), all
+  applied to the inline token.
+- ~#alice~ at the start of a block → blue + Inter (from
+  ~:::alice:::~) + light-blue background + 1px stroke (from
+  ~:::#alice:::~), all applied to the block.
+- ~<alice>~ anchoring a block → blue + Inter (from ~:::alice:::~) +
+  bold + grown font size (from ~:::<alice>:::~), applied to the
+  block.
+- ~:bg(red):#alice~ — inline ~:bg~ overrides the cascaded background;
+  everything else from the cascade still applies.
+
+The identity layer is the natural place to define what an entity /is/:
+its color, its font, its conceptual presence. Form-specific layers describe
+what changes when the entity is /used/ a certain way. Most entities only
+need an identity layer; signet-as-chip and sigil-as-card patterns are
+common enough to warrant their own form-specific cauldrons.
 
 ** Scope and persistence
 
@@ -1668,26 +2208,69 @@ appears in the middle of a document, blocks above it are not affected.
 #+begin_example
 - Regular block #project             — no codex yet, default styling
 
-:<project>:::
-:bgcolor(#f0f0f0)
+:::project::: .bg(#f0f0f0) :
 
-- Styled block #project              — inherits bgcolor from codex
+- Styled block #project              — inherits bg from codex
 - Another styled block #project      — also inherits
 #+end_example
 
 A later codex for the same entity overrides the previous one:
 
 #+begin_example
-:<project>:::
-:bgcolor(#f0f0f0)
+:::project::: .bg(#f0f0f0) :
 
 - Block A #project                   — light gray
 
-:<project>:::
-:bgcolor(#ffffcc)
+:::project::: .bg(#ffffcc) :
 
 - Block B #project                   — light yellow (overridden)
 #+end_example
+
+** Beacons and the public layer (~!~)
+
+By default, a codex configures only the file it appears in. The *beacon*
+(~!~) prefix promotes a codex into the vault's *public layer* — the shared
+namespace visible to every other file in the same vault.
+
+#+begin_example
+:::project::: .bg(#f0f0f0) :        — file-local: only this file sees it
+
+!:::project::: .bg(#f0f0f0) :       — vault-public: every file in the vault sees it
+#+end_example
+
+The beacon attaches to the cauldron as a whole. Inline (~!:::project::: .bg(#f0f0f0).card :~)
+and multiline (~!:::project:::~ followed by spell lines and a terminator)
+forms both accept the prefix.
+
+There is no inline form that beacons a single property /inside/ a cauldron.
+A cauldron is the unit of beaconing — its accumulated spells are either
+public together or private together. To beacon a single spell as its own
+public unit, write it as its own (small) cauldron with its own beacon, or
+beacon the satchel that contains it.
+
+*** What beacons promote, and what they don't
+
+Beacons govern *codex* visibility — cauldron definitions, schema
+declarations, and configuration-shaped spells. They do not affect:
+
+- *Entities* (sigils, signets, waypoints) — these are vault-public by
+  default, regardless of where they appear. The beacon is irrelevant to
+  them.
+- *Inline content* — paragraphs, list items, body text. Content is
+  always file-local; beacons do not export content into other files.
+- *Spell invocations at content sites* — calling ~:bold:word~ in a file
+  has no public/private distinction; it just renders inline.
+
+The mental model: codexes describe /how things behave/, and that's the
+thing whose visibility scope is opt-in. Names (entities) and uses (content,
+invocations) are not subject to the public/private split.
+
+*** Beacons and satchels compose
+
+A common pattern: one beacon-prefixed satchel at the top of a file
+publishes everything inside it as vault-wide configuration. A second,
+non-beaconed satchel below it carries file-local configuration. Both
+forms are documented in the Satchel section below.
 
 ** The satchel (~)
 
@@ -1700,17 +2283,17 @@ physical position in the file.
 
 Any sequence of one or more ~~ characters acts as a satchel delimiter.
 Multiple ~~ characters in a row are treated as a single delimiter —
-~\~\~\~\~\~~ is the same as ~~~. This allows visual decoration:
+~\~\~~~~~ is the same as ~~~. This allows visual decoration:
 
 #+begin_example
 ~~~~~~~~~~
-:<project>:::
-:bgcolor(#f0f0f0)
-:border(1)
+:::project:::
+.bg(#f0f0f0)
+.stroke(1):
 
-:<meeting>:::
-:bgcolor(#e8f4fd)
-:callout
+:::meeting:::
+.bg(#e8f4fd)
+.callout:
 ~~~~~~~~~~
 
 = Project Alpha <project>
@@ -1755,16 +2338,60 @@ putting configuration in a footer satchel.
 
 *** Satchel evaluation order
 
-1. Applications scan all files in the vault scope and auto-import
-   configurations.
-2. Satchel contents from all files are hoisted and evaluated first.
+1. Applications scan all files in the vault scope.
+2. Satchel contents are hoisted and evaluated before body parsing within
+   each file.
 3. The body is then parsed with full knowledge of all codexes.
 4. Inline codexes (not in satchels) override hoisted ones when encountered
    in document order.
 
-This means a codex defined in one file's satchel can affect blocks in
-another file — the vault is a single configuration namespace. Application
-developers should document their vault scanning behavior.
+By default, satchel contents are *file-local* — they configure only the
+file that contains them. To make a satchel's codexes available to the rest
+of the vault, mark it with a beacon (~!~) — see "Beacons and the public
+layer" below, and the Public/Private Visibility section for the full
+visibility model. Application developers should document their vault
+scanning behavior, including how cross-file public layers are surfaced.
+
+*** Beacons on satchels (~!~)
+
+A satchel prefixed with ~!~ is a *beacon satchel* — its contents join the
+vault's public layer and are available to every other file in the vault
+(modulo vault scope and import/export rules; see Vaults). This is the
+common pattern for vault-wide configuration:
+
+#+begin_example
+!~~~~~~~~~~
+:::project:::
+.bg(#f0f0f0)
+.card:
+
+:::meeting:::
+.bg(#e8f4fd)
+.callout:
+~~~~~~~~~~
+#+end_example
+
+The leading ~!~ before the opening delimiter promotes the entire satchel
+to the public layer. Without ~!~, the same satchel would configure only
+the file it lives in.
+
+Inside any satchel — beaconed or not — individual cauldrons may also
+carry their own beacon. A non-beacon satchel can still expose specific
+codexes by beaconing them individually:
+
+#+begin_example
+~~~~~~~~~~
+:::private-style:::
+.bg(#fff):                   — file-local
+
+!:::project:::
+.bg(#f0f0f0)
+.card:                       — public, despite the satchel being private
+~~~~~~~~~~
+#+end_example
+
+Per-codex beacons inside a beacon satchel are redundant but harmless —
+the satchel-level beacon already promotes everything inside.
 
 ** Codex for waypoints
 
@@ -1774,9 +2401,9 @@ codex to make the codex itself navigable:
 
 #+begin_example
 <project>
-:<project>:::
-:bgcolor(#f0f0f0)
-:card
+:::project:::
+.bg(#f0f0f0)
+.card:
 #+end_example
 
 Now ~@project~ in a signet jumps to the codex definition. The codex is its
@@ -1784,27 +2411,400 @@ own documentation.
 
 ** Interaction with configuration hierarchy
 
-All codexes compose in a predictable order:
+All codexes compose in a predictable order. Combining the global codex
+hierarchy with the entity cascade yields:
 
-- *Glamour/socket codex* (~:*:::~, ~:+[a)]~) affects how a character
-  renders globally.
-- *Entity codex* (~:<project>:::~) affects blocks where that entity appears.
-- *Inline spells* (~:bgcolor(red)::~) affect specific content in place.
+- *Glamour/socket codex* (~:::*::: .italic :~, ~:+[a)]~) — affects how a
+  character renders globally.
+- *Form-only codex* (~:::@:::~, ~:::#:::~, ~:::<>:::~) — base styling for
+  every reference of that form.
+- *Identity codex* (~:::alice:::~) — properties shared across every form
+  of one named entity.
+- *Form-specific codex* (~:::@alice:::~, ~:::#alice:::~, ~:::<alice>:::~) —
+  refinements scoped to one form of one entity.
+- *Inline spells* (~:bg(red):~) — affect specific content in place.
 
 When multiple codexes apply, inline spells override entity codexes, which
-override glamour/socket codexes. Explicit always wins over inherited.
+override glamour/socket codexes. Within the entity layers, form-specific
+overrides identity, which overrides form-only. Explicit always wins over
+inherited.
+
+** Entity namespace
+
+All forms of reference to the same name — ~#name~, ~@name~, ~<name>~ — share
+a single entity namespace for *identity*. A codex defined for ~name~ via
+~:::name:::~ applies to every reference, regardless of form. The sigil
+form does not change which entity a reference points to.
+
+What the sigil form /does/ control is the *scope of bestowal*: sigils and
+waypoints paint the block, signets paint the token. Identity and scope
+are independent axes — alice is alice everywhere, but ~#alice~ paints a
+block while ~@alice~ paints a chip.
+
+The entity namespace is *per-vault*. Entities defined in one vault are
+visible to other vaults only through the vault scope and explicit
+import/export rules described in Public/Private Visibility and Vaults.
+Within a single vault, all public entities share one namespace
+regardless of which file or folder they were defined in.
 
 ** Open questions for entity configuration
 
-- Should the codex affect blocks that reference the entity via ANY form
-  (~#name~, ~@name~, ~<name>~), or only when a waypoint is physically
-  present? Current design: all forms share the entity namespace and the
-  codex applies to all.
-- Should codex properties be composable? If a block has ~#project~ and
-  ~#urgent~, do both codexes apply? If so, what order? (Likely: applied in
-  the order the entities appear on the block, last wins for conflicts.)
-- Should there be a way to define a codex that only applies to blocks with
-  a specific combination of entities (intersection)?
+- Should codex properties be composable across multiple entities on the
+  same target? If a block has ~#project~ and ~#urgent~, do both codexes
+  apply? If so, what order? (Likely: applied in the order the entities
+  appear on the block, last wins for conflicts.)
+- Should there be a way to define a codex that only applies to references
+  with a specific combination of entities (intersection)? For example, a
+  codex that fires only when both ~#project~ and ~#urgent~ are present.
+- Note: per-entity-instance metadata (e.g., distinct styling for ~@alice~
+  vs ~@bob~ on the same block) is *resolved* by the sigil/signet scope
+  split — each signet token carries its own codex independently.
+
+* Public/Private Visibility
+
+Indue distinguishes between *content* (text, blocks, list items, headings),
+*entities* (sigils, signets, waypoints, coordinates), and *configuration*
+(codexes, schema declarations, satchel-hosted spells). These three things
+have different default visibility, and understanding the rules is
+essential for working across multiple files.
+
+** The four rules
+
+The complete visibility model in four rules:
+
+1. *Content is private by default.* Body text, list items, headings, and
+   inline content live in the file that contains them. Content does not
+   leave its file unless something explicitly references it (e.g., via
+   ~:embed~ or ~:popover~ from another file).
+2. *Entities are public by default.* Sigils (~#name~), signets (~@name~),
+   waypoints (~<name>~), and coordinates (~<<id>>~) declared anywhere in
+   a file automatically join the vault's *public layer* and become
+   resolvable from every other file in the same vault. Names need to be
+   findable for the language to be useful, so this is the default with no
+   opt-in required.
+3. *Configuration is private by default.* Codex definitions
+   (~:::project::: ... :~), schema declarations (~:+[a)]~), satchels, and
+   any other configuration-shaped spell are file-local unless promoted
+   with a beacon (~!~). The beacon prefix on a cauldron or satchel
+   promotes it to the vault's public layer.
+4. *Within a vault, the public layer is shared by all files.* Folder
+   structure inside a vault is purely organizational — it does not create
+   scope boundaries. A public entity or beacon-promoted codex is visible
+   to every file in the vault regardless of where each lives in the
+   directory tree.
+
+** What this means in practice
+
+A user organizing a personal knowledge base into folders for people,
+projects, places, etc., does not need to think about scope at all. Any
+~@alice~ defined anywhere is alice everywhere. Folders are drawers in
+one desk, not separate desks. The vault is the desk.
+
+A user wanting controlled vault-wide styling places one beacon satchel —
+typically at the top of a config file — and writes their codexes there.
+Every file in the vault inherits the styling. No imports, no per-file
+declarations, no plumbing.
+
+A user with a private working note can write any codex they want without
+~!~ and trust that the codex affects only that file. Local overrides
+stay local automatically.
+
+** What beacons do (and don't) do
+
+Beacons govern *codex* visibility. They do not affect:
+
+- *Entities* — these are vault-public regardless of beacon, because
+  entities are names and names need to be resolvable.
+- *Content* — body text never crosses file boundaries via the public
+  layer; transclusion (~:embed~) and reference (~:link~, ~:popover~)
+  spells are how content is shared.
+- *Spell invocations at content sites* — calling ~:bold:word~ in a file
+  has no public/private distinction; it is local rendering, not a
+  declaration.
+
+The mental model: beacons promote /declarations/. A cauldron is a
+declaration ("here is how project should behave"). A spell invocation
+is not a declaration ("here is one bold word"). Names are
+declarations-of-existence, and they are public unconditionally.
+
+** Cross-vault visibility
+
+The four rules describe behavior /within/ a single vault. Visibility
+across vault boundaries is governed by vault scope and explicit
+import/export, described in the Vaults section.
+
+** Indue declares logical scope; the OS enforces security
+
+Indue's visibility model is *logical*, not enforced. Marking a codex with
+~!~ tells Indue tools that the codex is intended to be public. It does
+not encrypt anything, does not lock anything, and does not prevent
+someone with file access from reading or modifying it. Anyone who can
+read an Indue file can read everything in it, public or private.
+
+For real security, use the operating system: filesystem permissions,
+ACLs, encryption, sandboxing. These operate on Indue files exactly as
+they do on any other plain text. A vault made group-readable is a shared
+vault; a vault made user-only is a private one. Indue tools should be
+permission-aware — handle read failures gracefully, surface write failures
+clearly, and indicate unreachable portions of a vault explicitly rather
+than silently — but security enforcement itself belongs to the layer
+below the language.
+
+* Vaults
+
+A *vault* is a logical scoping boundary for Indue's public layer. Within
+a vault, all public data is shared across all files. Vaults are declared
+by placing a ~.vault~ file at the root of the directory that defines the
+vault.
+
+Folders inside a vault — even deeply nested ones — do not create scope
+boundaries. They are organization. Only ~.vault~ files create boundaries.
+
+** The blank ~.vault~ file is the common case
+
+Most users create a vault by dropping a blank ~.vault~ file at the root of
+their workspace and never touching it again. The blank file declares a
+*private vault* (the default type), which sees up into ancestor vaults if
+any exist but is not visible to them — the right behavior for most
+workspaces.
+
+The first thing an Indue tool should do when initializing a new workspace
+is create this blank ~.vault~ file. After that, the vault Just Works.
+
+** Fallback for files outside any vault
+
+A file with no ~.vault~ ancestor in its directory hierarchy participates
+only in its own folder and subfolders, with no upward visibility. Each
+folder is its own implicit silo, looking only downward. This is graceful
+degradation, not a recommended workflow — if a user's references are not
+resolving across files they expect, the fix is to add a ~.vault~ file at
+their workspace root.
+
+** ~.vault~ file format
+
+The ~.vault~ file uses a simple key-value format. One key per line. Keys
+and values are separated by ~:~. Keys are case-insensitive (normalized to
+lowercase). Whitespace around ~:~ and around values is stripped. Comments
+begin with ~//~ and run to end of line. List values are comma-separated;
+values containing spaces or special characters are wrapped in double
+quotes. Order of keys is arbitrary.
+
+#+begin_example
+// my project vault
+type: private
+name: "My Project"
+about: "Personal project notes and tasks"
+import: globalentities, "best friends"
+export: shared-styles
+active: true
+#+end_example
+
+The full set of recognized keys:
+
+| Key      | Default     | Purpose                                              |
+|----------+-------------+------------------------------------------------------|
+| ~type~     | ~private~     | Vault type — see "Vault types" below                |
+| ~name~     | folder name | Display name for tools that surface vaults          |
+| ~about~    | (none)      | Short description                                   |
+| ~active~   | ~true~        | When ~false~, the vault is disabled (no scope effect) |
+| ~import~   | (none)      | Vault names whose public layer is pulled in         |
+| ~export~   | (none)      | Sub-vault names whose public layer is pushed out    |
+
+Unknown keys are preserved but ignored, following the parse-don't-fail
+philosophy. Future spec revisions may define additional keys without
+breaking older tools.
+
+** Vault types
+
+The ~type~ key chooses one of four ambient behaviors. Each type is sugar
+for a combination of two underlying axes — whether the vault sees /out/
+to ancestor vaults, and whether ancestor vaults can see /in/.
+
+| Type     | Out  | In   | Behavior                                                |
+|----------+------+------+---------------------------------------------------------|
+| ~private~  | yes  | no   | *Default.* Sees ancestor public layers, blocks ancestors from seeing in. |
+| ~open~     | yes  | yes  | Full two-way participation with ancestors.              |
+| ~silo~     | no   | no   | Self-contained. Neither direction crosses the boundary. |
+| ~gallery~  | no   | yes  | Library/reference. Exports public layer outward; ignores ancestors. |
+
+The named types are the primary way to declare a vault. The underlying
+~in~ and ~out~ axes can also be set explicitly when the named types do
+not cover a desired combination, though this is rarely needed:
+
+#+begin_example
+type: silo
+in: true            // overrides type's default in:false
+#+end_example
+
+Explicit axis declarations override the named type's defaults for that
+axis only.
+
+*** Choosing a type
+
+- *private* — the everyday default. A workspace that participates in
+  whatever larger context surrounds it but contains its internals.
+- *open* — a sub-vault that wants full two-way namespace sharing with
+  its parent. A collaborator's vault inside a shared project.
+- *silo* — a self-contained workspace. Nothing leaves, nothing enters.
+  A journal, a confidential project, an air-gapped notebook.
+- *gallery* — a published entity library. Useful for shared definitions
+  (entity names, codexes, schemas) that should be available to ancestor
+  vaults but should not pull in ancestor content. See "Galleries as
+  entity libraries" below.
+
+** Imports and exports
+
+Imports and exports are explicit overrides on the ambient ~in~ and ~out~
+behavior. Both are vault-level; they operate on whole vaults, not files
+or individual entities.
+
+- ~import: vaultA, vaultB~ — pulls in those vaults' public layers
+  regardless of this vault's ~in~ setting. Overrides ~in~ for the named
+  vaults specifically.
+- ~export: subA, subB~ — pushes those sub-vaults' public layers outward
+  through this vault's boundary regardless of this vault's ~out~ setting.
+  Overrides ~out~ for the named sub-vaults specifically.
+
+*** Imports are shallow
+
+Importing a vault brings in that vault's public layer only. It does not
+transitively bring in anything that vault itself imported. If you want
+something that ~vaultA~ imports, import it directly. This makes imports
+predictable to read — the visible declaration is the complete picture of
+what crosses the boundary.
+
+*** Examples
+
+A silo with explicit exports — the natural way to say "self-contained
+except for these specific things":
+
+#+begin_example
+type: silo
+export: canonical-people, canonical-projects
+#+end_example
+
+A private vault that pulls from a sibling library by name:
+
+#+begin_example
+type: private
+import: shared-entities, "best friends"
+#+end_example
+
+Vault names in ~import~ and ~export~ are resolved within the same
+ancestor vault tree — they refer to other vaults visible at the
+appropriate scope, not to filesystem paths. The vault scanner is
+responsible for matching these names to ~.vault~ markers it has
+discovered.
+
+** Galleries as entity libraries
+
+The gallery type is shaped specifically for entity libraries: a vault
+whose job is to define a stable set of public entities and codexes that
+the rest of the workspace consumes.
+
+Because galleries do not see /in/, their public layer is *hermetic* —
+nothing from the parent vault can affect what the gallery defines. The
+gallery's public output depends only on the gallery's own files.
+
+This has a useful implementation consequence: an indexer can treat a
+gallery as a separate prior pass. Read each gallery file in isolation,
+extract its public declarations, build a stable cached layer, and use
+that cached layer when resolving entities elsewhere in the workspace.
+Files inside a gallery have no cross-file dependencies on the broader
+vault, so the indexer can process them in parallel and without graph
+traversal — much simpler and faster than the general case.
+
+A typical organized vault:
+
+#+begin_example
+project/
+  .vault                 // declares this folder as a vault (type: private by default)
+  entities/
+    .vault               // declares this subfolder as a vault — contents:
+                         //     type: gallery
+                         //     name: "Canonical Entities"
+    people.indue
+    concepts.indue
+  config/
+    .vault               // type: gallery — vault-wide codexes
+    styling.indue
+    schemas.indue
+  work/                  // plain folders inside project's vault, frequently edited
+    journal/
+    projects/
+    notes/
+#+end_example
+
+The ~.vault~ marker file is what creates a vault boundary. A folder
+without one is just organizational. Inside the marker file, ~type: gallery~
+declares the gallery behavior. The folder name is independent of vault
+type — the marker file's contents tell the system what kind of vault
+this is.
+
+Two galleries provide stable cached input. The working content sits in
+plain folders organized however the user wants, and the indexer rebuilds
+only what changed.
+
+Combined with filesystem permissions, galleries also give clean
+collaborative semantics. A gallery directory made read-only at the OS
+level is a canonical reference that cannot be accidentally clobbered,
+and ownership is enforced by the kernel.
+
+** What gets shared, what doesn't
+
+Vault scope governs the *public layer*. To recap the visibility model:
+
+- *Public entities* (sigils, signets, waypoints, coordinates) flow across
+  vault boundaries according to scope and import/export.
+- *Beacon-promoted codexes* flow the same way.
+- *Private codexes* never flow, regardless of vault type or
+  import/export. A non-beaconed cauldron stays in its file.
+- *Content* never flows ambiently; cross-file content sharing is
+  explicit through ~:embed~, ~:link~, ~:popover~, etc.
+
+Vault scope cannot make a private codex public; only the beacon does
+that. Vault scope only governs whether already-public things cross the
+boundary.
+
+** Cross-vault waypoint trails
+
+When the same waypoint name appears in multiple files, the parser links
+them into a trail (see Waypoint trails). This trail behavior extends
+across vault boundaries: any waypoint visible in the current scope —
+whether defined locally, defined in the same vault, or imported from
+another vault — participates in the trail for that name. The trail is
+built over the union of all visible waypoints, regardless of which file
+or vault they live in.
+
+** Permission-aware behavior
+
+Indue tools should handle filesystem-level access failures gracefully:
+
+1. *Read failures degrade.* When a tool cannot read a file or directory
+   in a vault, it logs and continues. Unreachable files are absent from
+   the AST — the same as files that do not exist. References to entities
+   in those files simply do not resolve.
+2. *Write failures surface clearly.* When a tool cannot write to a
+   destination, it reports the OS error directly and preserves the user's
+   work in memory or a fallback location. Writes never partially succeed.
+3. *Unreachable portions are visible.* Tools rendering vault outlines
+   should indicate files or directories that exist but are unreadable,
+   rather than silently omitting them. Otherwise users debugging
+   unresolved references face confusing absences.
+
+This is the language's full obligation toward security. Beyond it, the
+operating system and the application are responsible for actual
+enforcement.
+
+** Vault marker file vs. directory extension
+
+The vault declaration is a file (~.vault~) inside the directory, not a
+directory extension (no ~.vault/~ suffix on the directory name). This is
+deliberate: turning a folder into a vault — or back — must not change the
+paths of files within it. Path stability is essential for hard links,
+external references, sync configurations, and any tool that addresses
+files by path. A marker file is purely additive; renaming a folder is
+destructive.
 
 * Full Example
 
@@ -1832,7 +2832,7 @@ override glamour/socket codexes. Explicit always wins over inherited.
 
 + = Side Notes
   - Remember to update @alice on progress
-  - Link to :link(https://example.com){the *docs*}
+  - Link to :link[https://example.com]{the *docs*}
 #+end_example
 
 Dash-mode equivalent:
@@ -1859,7 +2859,7 @@ Some are about :topic: approaches to #machine learning#
 
 + = Side Notes
 -- Remember to update @alice on progress
--- Link to :link(https://example.com){the *docs*}
+-- Link to :link[https://example.com]{the *docs*}
 #+end_example
 
 * Parser Architecture Notes
@@ -1873,8 +2873,10 @@ The formal grammar should be defined in three distinct layers:
 2. *Glamour layer*: identifies inline formatting (bold, italic, underline,
    strikethrough, superscript). These follow the line-start, single-word,
    paired, and bracket rules. Stacking and symmetric nesting rules apply.
-3. *Entity layer*: identifies signets (~@~), spells (~:~), badges (~#~), and
-   bracket content (vessels, scrolls, and conduits).
+3. *Entity layer*: identifies signets (~@~), spells (~:~), sigils (~#~), and
+   bracket content (vessels, scrolls, and conduits). The sigil form on a
+   reference also determines its scope of bestowal: sigils and waypoints
+   bestow on the enclosing block, signets bestow on the inline token.
 
 ** Indentation handling
 
@@ -1912,27 +2914,27 @@ without traversing the text.
 
 * Relationship to Typst
 
-| Feature         | Typst                 | Indue                |
-|-----------------+-----------------------+----------------------|
+| Feature         | Typst               | Indue              |
+|-----------------+---------------------+--------------------|
 | Function prefix | ~#~                   | ~:~ (spell)          |
-| Tag syntax      | ~#tag("work")~ (func) | ~#work~ (badge)      |
-| Headings        | ~=~ / ~==~ / ~===~    | ~=~ / ~==~ / ~===~   |
+| Tag syntax      | ~#tag("work")~ (func) | ~#work~ (sigil)      |
+| Headings        | ~=~ / ~==~ / ~===~        | ~=~ / ~==~ / ~===~       |
 | Bold            | ~*text*~              | ~*text*~ (same)      |
 | Italic          | ~_text_~              | ~/text/~ (glamour)   |
-| Underline       | None built-in         | ~_text_~ (glamour)   |
-| Strikethrough   | None built-in         | ~%text%~ (glamour)   |
-| Checkboxes      | None (package/show)   | ~:o~ ~:x~ (spell)    |
-| Task states     | Convention            | Native spells        |
-| Lists           | ~-~ / ~+~             | ~-~ / ~+~ (same)     |
+| Underline       | None built-in       | ~_text_~ (glamour)   |
+| Strikethrough   | None built-in       | ~%text%~ (glamour)   |
+| Checkboxes      | None (package/show) | ~:o~ ~:x~ (spell)      |
+| Task states     | Convention          | Native spells      |
+| Lists           | ~-~ / ~+~               | ~-~ / ~+~ (same)       |
 | Labels          | ~<label>~             | ~<label>~ (waypoint) |
 | References      | ~@ref~                | ~@ref~ (signet)      |
-| Error handling  | Strict compiler       | Parse, don't fail    |
+| Error handling  | Strict compiler     | Parse, don't fail  |
 
 ** Transpilation to Typst
 
 - ~=~ headings pass through (same syntax).
 - ~:func(...)~ (spell) becomes ~#func(...)~.
-- ~#tag~ (badge) becomes ~#tag("tag")~ (via a Typst package).
+- ~#tag~ (sigil) becomes ~#tag("tag")~ (via a Typst package).
 - ~:o~ / ~:x~ become ~#todo~ / ~#done~ (via a Typst package).
 - Bold and lists pass through unchanged.
 - ~/italic/~ becomes ~_italic_~.
@@ -1946,13 +2948,13 @@ core spec, not an afterthought.
 
 ** Date spells
 
-| Spell                          | Purpose                        |
-|--------------------------------+--------------------------------|
-| ~:due(date)~                   | Task deadline                  |
-| ~:on(date)~                    | Event/calendar date            |
-| ~:scheduled(date)~             | Planned start date             |
-| ~:start(date)~                 | Date range start               |
-| ~:end(date)~                   | Date range end                 |
+| Spell            | Purpose             |
+|------------------+---------------------|
+| ~:due(date)~       | Task deadline       |
+| ~:on(date)~        | Event/calendar date |
+| ~:scheduled(date)~ | Planned start date  |
+| ~:start(date)~     | Date range start    |
+| ~:end(date)~       | Date range end      |
 
 Dates use ISO 8601 format by default: ~2026-04-15~, ~2026-04-15T14:00~.
 Natural-language dates are an application feature, not a spec requirement.
@@ -2095,14 +3097,14 @@ querying is left to application developers.
 The ~:query~ spell accepts a filter expression:
 
 #+begin_example
-:query(#work):                  — all blocks badged #work
+:query(#work):                  — all blocks sigiled #work
 :query(:o):                     — all open tasks
 :query(:x):                     — all closed tasks
 :query(:>):                     — all active tasks
 :query(:!):                     — all blocked tasks
 :query(@alice):                 — all blocks mentioning @alice
-:query(#work :o):               — open tasks badged #work (AND)
-:query(#work | #personal):      — badged work OR personal
+:query(#work :o):               — open tasks sigiled #work (AND)
+:query(#work | #personal):      — sigiled work OR personal
 :query(:due < 2026-04-15):      — due before April 15
 :query(:due = today):           — due today
 :query(:due < +7d):             — due within the next 7 days
@@ -2110,24 +3112,24 @@ The ~:query~ spell accepts a filter expression:
 
 *** Filter operators
 
-| Operator | Meaning             | Example                     |
-|----------+---------------------+-----------------------------|
-| (space)  | AND                 | ~#work :o~ = work AND open  |
-| ~\vert~  | OR                  | ~#work \vert #personal~     |
-| ~<~      | Before / less than  | ~:due < 2026-04-15~         |
-| ~>~      | After / greater than| ~:due > 2026-01-01~         |
-| ~=~      | Equals              | ~:due = today~              |
-| ~!~      | NOT                 | ~!#archived~                |
+| Operator | Meaning              | Example                  |
+|----------+----------------------+--------------------------|
+| (space)  | AND                  | ~#work :o~ = work AND open |
+| ~\vert~        | OR                   | ~#work \vert #personal~        |
+| ~<~        | Before / less than   | ~:due < 2026-04-15~        |
+| ~>~        | After / greater than | ~:due > 2026-01-01~        |
+| ~=~        | Equals               | ~:due = today~             |
+| ~!~        | NOT                  | ~!#archived~               |
 
 *** Relative dates in queries
 
-| Token    | Meaning            |
-|----------+--------------------|
-| ~today~  | Current date       |
-| ~+7d~    | 7 days from now    |
-| ~-3d~    | 3 days ago         |
-| ~+1w~    | 1 week from now    |
-| ~+1m~    | 1 month from now   |
+| Token | Meaning          |
+|-------+------------------|
+| ~today~ | Current date     |
+| ~+7d~   | 7 days from now  |
+| ~-3d~   | 3 days ago       |
+| ~+1w~   | 1 week from now  |
+| ~+1m~   | 1 month from now |
 
 *** Query display
 
@@ -2136,7 +3138,7 @@ By default, query results render as a flow of matching blocks (like
 
 #+begin_example
 :query(:o #work):                       — inline block list (default)
-:query(:o #work)::table:                — render as table
+:query(:o #work).table:                 — render as table
 :popover(:query(#work :>)):             — show in popover panel
 #+end_example
 
@@ -2147,89 +3149,123 @@ scope to the entire vault, specific files, or across linked documents.
 The spec does not mandate vault-wide search — that is an application
 feature built on top of the core query syntax.
 
-* Compliance Tiers
+*** Port-type note
 
-Indue is designed to be implementable at different levels of capability.
-Not every application needs to support every feature. The compliance tier
-system ensures that less ambitious apps can still participate in the Indue
-ecosystem while encouraging adoption of the features that make Indue
-distinct.
+The ~:query~ spell currently uses a vessel ~()~ to carry its filter
+expression, but the filter grammar (AND, OR, comparison operators,
+relative dates) is richer than what vessels are designed for. This is
+a known design debt — the query syntax is functional but will likely be
+redesigned in a future spec revision to better fit the port-type system.
 
-** Partial compliance (recognized, not full Indue)
+* Compliance
 
-Applications that implement basic sockets, glamours, badges, signets,
-scrolls, conduits, and parse-don't-fail error recovery — but not tasks,
-scheduling, or structural features — are recognized as "Indue-aware" but
-are not considered compliant Indue implementations. This level exists as
-a stepping stone, not a destination. Many Markdown renderers could reach
-this level with minimal effort, but it does not represent what makes Indue
-distinct.
+Indue compliance is binary. An implementation either supports the full
+semantic core of the language or it doesn't. There is no tiered checklist —
+the semantic features that make Indue distinct from Markdown are not
+optional extras.
 
-** Tier 1: Core (required)
+** Core
 
-The minimum for calling something an "Indue-compatible" application.
+The complete semantic foundation. An application claiming Indue
+compatibility must support all of the following:
 
-- Sockets: ~-~, ~+~, ~=~ and indentation-based nesting
-- Glamours: all five (~*~/~_~%~^~) with line-start, single-word, paired,
-  and bracket rules
-- Badges: ~#tag~
-- Signets: ~@ref~
-- Waypoints: ~<label>~ and coordinates ~<<id>>~
-- Scrolls and conduits: ~[...]~ and ~{...}~
-- Basic spells: ~:fn~, ~:fn()~, ~:fn[]~, ~:fn{}~
-- Cast: ~::~ for word and line scope
-- Nick: ~\~ escaping
-- Parse-don't-fail error recovery
-- Task state spells: ~:o~, ~:x~, ~:>~, ~:!~
-- Named task states: ~:todo~, ~:done~, ~:started~, ~:waiting~, ~:next~
-- Scheduling: ~:due~, ~:on~, ~:scheduled~
-- Basic recurrence: ~:repeat~ with simple intervals (~daily~, ~weekly~,
-  ~monthly~, ~2 weeks~)
+*Structure*
+- Sockets: ~-~, ~+~, ~=~ with indentation-based and dash-mode nesting
 - Heading promotion: ~- =~ / ~+ =~
 - Schema declarations: ~:+~, ~:-~, ~:=~
-- Tables: ~:table~ with conduit rows and pipe columns
-- Layout: ~:layout~ for basic column arrangements
-- Link spell: ~:link~
+- Folding and heading outline
 
-** Tier 2: Knowledge (recommended for PKM)
+*Glamours*
+- All five (~*~/~_~%~^~) with line-start, single-word, paired, and bracket
+  rules including stacking
 
-Features that enable the knowledge management use case.
+*Entities*
+- Sigils: ~#tag~ (including multi-word and whole-line), block-scope bestowal
+- Signets: ~@ref~, token-scope bestowal
+- Waypoints: ~<label>~ with trails (undefined, portals, defined, terminated),
+  block-scope bestowal
+- Coordinates: ~<<id>>~
+- Self-reference: ~<>~
+- Two-axis cauldron targeting: entity name × sigil form
+  (~:::name:::~, ~:::#name:::~, ~:::@name:::~, ~:::<name>:::~,
+  ~:::#:::~, ~:::@:::~, ~:::<>:::~)
+- Entity codex cascade: form-only → identity → form-specific → inline
 
+*Spell system*
+- Bond: ~.~ chaining
+- Shell: ~::~ paired scope with independent termination
+- Cauldron: ~:::target:::~ precision targeting (entity configuration)
+- Backward spells: ~::fn:~ retroactive application
+- Full spell scoping: word, line, bracket, block, forward, backward
+- Port types: vessel ~()~, scroll ~[]~, conduit ~{}~, waypoint ~<>~, bond ~.~
+- Multiline chain form
+- Nick: ~\~ escaping
+- Parse-don't-fail error recovery
+
+*Tasks and scheduling*
+- Task state spells: ~:o~, ~:x~, ~:>~, ~:!~
+- Named task states: ~:todo~, ~:done~, ~:started~, ~:waiting~, ~:next~
+- Date spells: ~:due~, ~:on~, ~:scheduled~, ~:start~, ~:end~
+- Full recurrence: ~:repeat~ with simple intervals, day-of-week patterns,
+  ordinal patterns (~1st friday~, ~last saturday of quarter~, etc.),
+  exceptions, and completion modes (~:repeat!~)
+
+*Knowledge features*
 - Transclusion: ~:embed~
 - Popovers: ~:popover~
-- Basic queries: ~:query~ with badge, signet, and task state filters
-- Spell chaining: ~::~ as chain operator
-- Cauldron: ~:::~ for multi-spell cooperation
-- Advanced recurrence: ordinal patterns, exceptions, completion modes
-- Dash-mode lists
+- Queries: ~:query~ with full filter syntax
+- Links: ~:link~
+- Content reattachment: ~:of~
 
-** Tier 3: Presentation (optional)
+*Presentation (core set)*
+- Text: ~:bold~, ~:italic~, ~:underline~, ~:strike~, ~:super~, ~:fg~/~:color~,
+  ~:bg~, ~:font~, ~:grow~, ~:shrink~, ~:align~, ~:case~
+- Block: ~:radius~, ~:shadow~, ~:padding~
+- Border: ~:stroke~, ~:pattern~, ~:tint~, ~:style~
+- Preset: ~:card~, ~:chip~, ~:callout~, ~:highlight~
+- Layout: ~:layout~ for basic column arrangements
+- Tables: ~:table~
+- Glamour and socket configuration: ~:*~, ~:/~, ~:+~, ~:-~, ~:=~, etc.
 
-Formatting and layout features for polished output.
+*Entity configuration*
+- Cauldron in all forms (backward, forward, inline)
+- Satchel: hoisted configuration, file-local by default
 
-- Formatting spells: ~:color~, ~:bgcolor~, ~:font~, ~:grow~, ~:shrink~
-- Block styling: ~:radius~, ~:shadow~, ~:border~, ~:padding~
-- Preset spells: ~:card~, ~:chip~, ~:callout~
-- Page-constrained layout: ~:pagelayout~
-- Page configuration: ~:page~, ~:break~
-- Sigil configuration: ~:*~, ~:/~, etc.
+*Visibility and vaults*
+- Public/private visibility model: content private, entities public,
+  configuration private, beacons promote to public
+- Beacon (~!~): cauldron prefix and satchel prefix forms
+- Vault declarations via ~.vault~ files at directory roots
+- Four vault types: ~private~, ~open~, ~silo~, ~gallery~
+- Two-axis underpinning: ~in~ and ~out~ axes
+- Import/export overrides for explicit cross-vault wiring
+- ~.vault~ file keys: ~type~, ~name~, ~about~, ~active~, ~import~, ~export~
+- Cross-vault waypoint trails span all visible waypoints
+- Permission-aware behavior on filesystem failures
 
-** Tier labeling
+** Extensions
 
-Applications should declare their compliance tier. A Tier 2 app implements
-everything in Tier 1 and Tier 2. Tiers are cumulative.
+Extensions are renderer-specific or application-specific features built on
+top of the core. They use the ~:ext.*~ namespace and degrade gracefully in
+applications that don't support them. ~:ext.css~ is the canonical reference
+extension — see Custom Spell Extensions for details.
 
-The tier system explicitly discourages building Indue apps that only handle
-basic formatting. There are plenty of Markdown renderers for that. Indue
-exists because tasks, scheduling, and linking/graphs deserve first-class
-treatment. Tier 1 apps that never progress to Tier 2 are missing the point.
+Container geometry (grid, flexbox, absolute positioning, page-constrained
+layouts, animations) belongs in extensions, not core. Core layout handles
+horizontal columns and flow. Anything beyond that is ~:ext.css~ territory.
+
+The compliance story is simple: does it do the full semantic core? If yes,
+it is Indue-compatible. If no, it is at best Indue-aware — a stepping stone,
+not a destination. There are plenty of Markdown renderers for basic
+formatting. Indue exists because tasks, scheduling, and linking deserve
+first-class treatment.
 
 * Custom Spell Extensions
 
 Applications may define their own spells beyond those in the core spec.
 Custom spells must follow all standard spell syntax rules — they use the
 same ~:name~ prefix, the same vessel/scroll/conduit arguments, and the same
-cast/chaining behavior.
+bond/chaining behavior.
 
 ** The ~:ext~ namespace (recommended)
 
@@ -2248,6 +3284,37 @@ convenience within their own ecosystem:
 #+begin_example
 :kanban{...}                    — works in MyApp, unknown elsewhere
 #+end_example
+
+** The ~:ext.css~ reference extension
+
+~:ext.css~ is a reference implementation of the extension system. It maps CSS
+concepts to Indue entities, filling gaps that core spells do not cover without
+overriding core formatting:
+
+#+begin_example
+:ext.css
+[.bold { font-weight: bold; color: red; }]
+[#meeting { background: #e8f4fd; border-radius: 8px; }]
+[<section> { padding: 1em; }]:
+#+end_example
+
+The extension maps CSS selectors to Indue entities: ~.classname~ maps to
+sigil ~#name~, ~#id~ maps to waypoint ~<n>~, and CSS properties translate
+to equivalent Indue spell chains. Because sigils, signets, and waypoints
+have distinct scopes of bestowal in core Indue, ~:ext.css~ rules targeting
+~#~ entities apply to the block, while rules targeting ~@~ entities apply
+to the inline token — matching the core semantics rather than overriding
+them.
+
+When ~:ext.css~ conflicts with core spells, core spells win. ~:ext.css~
+fills gaps — it does not override fundamentals. Applications rendering to
+HTML/CSS can extend ~:ext.css~ beyond the Indue spec (grid, flexbox,
+animations, etc.) and remain compliant because it is clearly namespaced as
+an extension. Other renderers ignore it gracefully.
+
+Core Indue formatting spells remain minimal and renderer-agnostic:
+~:fg~/~:color~, ~:bg~, ~:radius~, ~:align~, ~:case~, ~:bold~, ~:italic~,
+~:underline~, ~:strike~, ~:super~.
 
 ** Graceful degradation
 
@@ -2268,10 +3335,11 @@ rather than disappearing or causing errors.
 
 ** Custom spell discovery
 
-Applications may include a spell registry in their vault configuration
-(e.g. the ~.indue~ vault marker file) that declares custom spells with
-descriptions, so other applications can provide better fallback rendering
-or migration tools.
+Applications may declare custom spells in the ~.vault~ marker file or in
+a beaconed satchel of a vault-public configuration file, so that other
+applications can provide better fallback rendering or migration tools.
+The mechanism is left to applications; the spec only requires that
+unknown spells degrade gracefully per the parse-don't-fail philosophy.
 
 * Open Design Questions
 
@@ -2283,7 +3351,8 @@ or define its own subset?
 ** Term/definition lists
 
 ~/~ is used for italic, so Typst's ~/ term: definition~ is not available.
-Options include a spell like ~:def(term){definition}~ or a different sigil.
+Options include a spell like ~:def(term){definition}~ or a different
+delimiter character entirely (~;~ is currently available, for example).
 
 ** Blockquotes
 
@@ -2293,9 +3362,19 @@ Options include a spell like ~:def(term){definition}~ or a different sigil.
 
 Should Indue define its own page layout, or always delegate to Typst?
 
-** Metadata and frontmatter
+** Document-level metadata and frontmatter
 
-How should document-level metadata (title, author, date) be represented?
+How should *document-level* metadata (title, author, date) be represented?
+A YAML-style frontmatter block, a dedicated ~:doc~ spell, a satchel-hosted
+~:::doc:::~ codex, or something else?
+
+Note that *per-entity-instance* metadata — e.g., distinct styling or
+distinct behavior for ~@alice~ versus ~@bob~ when both appear on the same
+block — is no longer an open question. The sigil/signet scope split
+resolved it: each signet token carries its own codex independently of
+its neighbors, and the surrounding block stays untouched. Block-level
+metadata, in turn, is carried by the sigils and waypoints attached to
+the block. Only the document level remains undecided.
 
 ** Scripting and logic
 
@@ -2336,3 +3415,10 @@ Building Indue as a real language requires:
 - A Flutter/Dart application (OUST, name pending) consuming the Rust
   implementation via Flutter Rust Bridge, targeting MechanixOS, Android,
   iOS, and desktop Linux.
+- A vault scanner that locates ~.vault~ markers, builds the public layer
+  for each vault, applies import/export overrides, and exposes the
+  resolved namespace to consuming tools. Galleries should be processable
+  as a separate prior pass to enable caching of hermetic public layers.
+- Permission-aware filesystem traversal: graceful handling of read
+  failures, clear surfacing of write failures, and explicit reporting of
+  unreachable files rather than silent omission.
