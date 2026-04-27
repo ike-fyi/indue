@@ -98,17 +98,17 @@ and the character is still there, still whole.
 | ~#~              | *Sigil*      | Tag                  |
 | ~@~              | *Signet*     | Reference / mention  |
 | ~:fn~            | *Spell*      | Function             |
-| ~.~              | *Bond*       | Spell chain operator |
-| ~::~             | *Shell*      | Paired scope / independent termination |
-| ~:::target:::~   | *Cauldron*   | Precision targeting pot |
+| ~.~              | *Bond*       | Function chain operator |
+| ~::~             | *Shell*      | Paired scope / independent termination                                   |
+| ~:::target:::~   | *Cauldron*   | Specific target for functions |
 | ~()~             | *Vessel*     | Value argument       |
-| ~[]~             | *Scroll*     | Verbatim block       |
-| ~{}~             | *Conduit*    | Rich content block   |
+| ~[]~             | *Scroll*     | Verbatim block that returns just text/string data |
+| ~{}~             | *Conduit*    | Rich content block with parsed inner content. |
 | ~<label>~        | *Waypoint*   | Label / anchor       |
 | ~<>~             |            | Self-ref current block |
 | ~<< id >>~       | *Coordinate* | Block ID             |
 | ~\~              | *Nick*       | Escape character     |
-| ~\~~             | *Satchel*    | Hoisted config block |
+| ~~~              | *Satchel*    | Hoisted config block |
 | Config block   | *Codex*      | Inherited properties |
 | ~!~              | *Beacon*     | Public marker        |
 
@@ -149,7 +149,7 @@ Quotes inside any bracket type are just literal characters.
 ** Every spell is useful in isolation
 
 A spell that only makes sense composed with one specific other spell is a
-design smell. Those should be redesigned as a single spell with multiple
+design spell. Those should be redesigned as a single spell with multiple
 ports. Each spell should carry clear meaning on its own.
 
 ** Same spell overwrites, different spells compose
@@ -158,8 +158,8 @@ When the same spell appears twice in a chain, the later instance wins. When
 different spells appear in a chain, they are additive:
 
 #+begin_example
-:color(red).color(blue):word    — blue wins (same spell, later overwrites)
-:bold.italic:word               — both apply (different spells, additive)
+ :color(red).color(blue):word    — blue wins (same spell, later overwrites)
+ :bold.italic:word               — both apply (different spells, additive)
 #+end_example
 
 ** Spells are renderer-agnostic at core tier
@@ -211,20 +211,20 @@ without a closing delimiter, applies to the entire line. Multiple glamour
 characters can be stacked at line start:
 
 #+begin_example
-* This whole line is bold
-/ This whole line is italic
-*/ This whole line is bold and italic
-_% This whole line is underlined and struck through
-# taggedline
+ * This whole line is bold
+ / This whole line is italic
+ */ This whole line is bold and italic
+ _% This whole line is underlined and struck through
+ # taggedline
 #+end_example
 
 This is especially useful inside lists where content length may change:
 
 #+begin_example
-- = Project Alpha
-  - * This important item is bold regardless of how long it gets
-  - */ This one is bold and italic
-  - Normal item
+ - = Project Alpha
+   - * This important item is bold regardless of how long it gets
+   - */ This one is bold and italic
+   - Normal item
 #+end_example
 
 ** The single-word rule
@@ -234,8 +234,8 @@ first character) opens markup that terminates at the next whitespace. This
 is the same logic used by sigils (~#tag~) and signets (~@alice~):
 
 #+begin_example
-This is *bold right here         — "bold" is bold, rest is normal
-She has /style in spades         — "style" is italic
+ This is *bold right here         — "bold" is bold, rest is normal
+ She has /style in spades         — "style" is italic
 #+end_example
 
 To use a glamour character literally in this position, escape it with a
@@ -247,9 +247,9 @@ If a matching closer exists on the same line, the glamour spans multiple
 words:
 
 #+begin_example
-This has *bold* in it           — paired, one word
-This has *bold words* in it     — paired, multi-word
-This is *bold right here        — no closer: single-word rule applies
+ This has *bold* in it           — paired, one word
+ This has *bold words* in it     — paired, multi-word
+ This is *bold right here        — no closer: single-word rule applies
 #+end_example
 
 The parser scans the current line for a closer. Found one? Paired mode.
@@ -257,36 +257,46 @@ No closer? Single-word, terminate at whitespace.
 
 ** The bracket rule
 
-Glamours can also scope their content using scrolls ~[]~ or conduits ~{}~:
+Glamours can also scope their content using conduits ~{}~ or scrolls ~[]~
+You can always use conduits unless you want to make sure the contents are verbatim.
 
 #+begin_example
-*[bold words]               — scroll defines scope
-*{bold with #tags inside}   — conduit: inner content is parsed
+ *{bold with #tags inside}   — conduit: inner content is parsed
+ *[bold words]               — scroll defines scope
 #+end_example
 
-This is the only way to combine multiple glamours (stacking):
+Combine multiple glamours (stacking):
 
 #+begin_example
-*/[bold and italic]         — glamour stack + scroll
-_*{underline and bold}      — glamour stack + conduit
-%/[strikethrough and italic] — glamour stack + scroll
+ */[bold and italic]         — glamour stack + scroll
+ _{underline and bold}      — glamour stack + conduit
+ %[strikethrough and italic] — glamour stack + scroll
 #+end_example
 
 Adjacent glamour characters with no whitespace form a stack. The bracket
 immediately after the stack defines the scope. Order of glamours in the
 stack does not matter.
 
-** No symmetric nesting
+You can alternatively use spell cast syntax discussed later
+
+** Nesting
 
 Glamours cannot be nested by wrapping them symmetrically. The outer glamour
 wins and inner glamour characters are treated as literal text:
 
 #+begin_example
-*_text_*     → just bold. Inner _ is literal.
-_*text*_     → just underline. Inner * is literal.
+ *_text_*     → just bold. Inner _ is literal.
+ _*text*_     → just underline. Inner * is literal.
 #+end_example
 
-To combine glamours, always use the bracket form: ~*_[text]~.
+To combine glamours,  use the curly bracket form: ~*_{text}~.
+You can also use glamor conduits and spell casting discussed later
+
+#+begin_example
+ *{text1 /{text2} text3 }     → text 1 and text 3 are just bold. text2 is bold and italic
+ :bold::text1 :italic::text2::italic: text3:: → same as above using directional spell casting and termination
+#+end_example
+
 
 ** The nick (~\~)
 
@@ -445,16 +455,16 @@ Inline spells and shells target text. Container geometry (grid, flex,
 dimensions) belongs in ~:ext.css~, not core.
 
 #+begin_example
-Block targeting (styles the container):
-:bg(#f5f5f5)<section>:
-:radius(6)<section>:
-:shadow(2,2,4)<>:            — <> targets current block
-:stroke(1)<>:                — border width
-
-Text targeting (styles the content):
-:color(red):word
-:bold.italic:word
-:bg(#ffffcc)::highlighted text::   — shell for text-level highlight
+ Block targeting (styles the container):
+ :bg(#f5f5f5):::#section:::   - targets blocks with #section on it
+ :radius(6):::<section>:::  - targets block with waypoint
+ :shadow(2,2,4):            — targets current block
+ :stroke(1):                — border width
+ 
+ Text targeting (styles the content):
+ :color(red):word
+ :bold.italic:word
+ :bg(#ffffcc)::highlighted text::   — shell for text-level highlight
 #+end_example
 
 *** Common block spells
@@ -490,14 +500,14 @@ when multiple border spells are being applied to the same target.
 These compose via chaining when multiple properties are needed:
 
 #+begin_example
-:::section:::
-.bg(#f5f5f5)
-.radius(8)
-.shadow(2,2,4)
-.padding(1em)
-.stroke(1)
-.tint(#ccc)
-.pattern(solid):
+ :::section:::
+ .bg(#f5f5f5)
+ .radius(8)
+ .shadow(2,2,4)
+ .padding(1em)
+ .stroke(1)
+ .tint(#ccc)
+ .pattern(solid):
 #+end_example
 
 *** Preset spells
@@ -554,12 +564,12 @@ normalizes both to indent levels. Tabs are recommended for proportional fonts
 because they render at a visible width.
 
 #+begin_example
-- Level 1 item
-  - Level 2 item
-    - Level 3 item
-      Content belongs to Level 3
-  + Level 2 ordered item
-- Another Level 1 item
+ - Level 1 item
+   - Level 2 item
+     - Level 3 item
+       Content belongs to Level 3
+   + Level 2 ordered item
+ - Another Level 1 item
 #+end_example
 
 Ownership rule: any line indented strictly deeper than a socket belongs to
@@ -572,11 +582,11 @@ Nesting is determined by repeating the dash character. The final character
 in the sequence determines the list type.
 
 #+begin_example
-- Level 1 unordered
--- Level 2 unordered
---- Level 3 unordered
--+ Level 2 ordered
---+ Level 3 ordered
+ - Level 1 unordered
+ -- Level 2 unordered
+ --- Level 3 unordered
+ -+ Level 2 ordered
+ --+ Level 3 ordered
 #+end_example
 
 Dash-mode rules:
@@ -594,15 +604,15 @@ Dash-mode rules:
 The same content in both modes:
 
 #+begin_example
-Indented:                    Dash-mode:
-- Project Alpha              - Project Alpha
-  - Goals                    -- Goals
-    - Item A                 --- Item A
-    - Item B                 --- Item B
-  + Timeline                 -+ Timeline
-    + Q1                     --+ Q1
-    + Q2                     --+ Q2
-- Project Beta               - Project Beta
+ Indented:                    Dash-mode:
+ - Project Alpha              - Project Alpha
+   - Goals                    -- Goals
+     - Item A                 --- Item A
+     - Item B                 --- Item B
+   + Timeline                 -+ Timeline
+     + Q1                     --+ Q1
+     + Q2                     --+ Q2
+ - Project Beta               - Project Beta
 #+end_example
 
 ** Mixing modes
@@ -651,16 +661,16 @@ heading hierarchy above the current item. Each ~=~ promotion looks up the
 tree for the most recent heading and adds one to its level.
 
 #+begin_example
-= Document Title                        ← H1
-== Background                           ← H2
-- = Project Alpha                       ← H3 (parent heading is H2)
-  - Item A
-  - = Goals                             ← H4 (parent heading is H3)
-    - Item C
-    - = Stretch Goals                   ← H5 (parent heading is H4)
-  - = Timeline                          ← H4 (sibling of Goals)
-- = Project Beta                        ← H3 (sibling of Alpha)
-== Conclusion                           ← H2 (back to document level)
+ = Document Title                        ← H1
+ == Background                           ← H2
+ - = Project Alpha                       ← H3 (parent heading is H2)
+   - Item A
+   - = Goals                             ← H4 (parent heading is H3)
+     - Item C
+     - = Stretch Goals                   ← H5 (parent heading is H4)
+   - = Timeline                          ← H4 (sibling of Goals)
+ - = Project Beta                        ← H3 (sibling of Alpha)
+ == Conclusion                           ← H2 (back to document level)
 #+end_example
 
 The writer never thinks about H-numbers. They just write ~- =~ and the
@@ -672,9 +682,9 @@ For flat document-mode writing (no list structure), standalone headings use
 ~=~ at line start with depth by repetition:
 
 #+begin_example
-= Heading 1
-== Heading 2
-=== Heading 3
+ = Heading 1
+ == Heading 2
+ === Heading 3
 #+end_example
 
 Multiple ~=~ symbols only matter in flat files where all headings are at the
@@ -694,17 +704,17 @@ from Org-mode, Markdown editors, and word processors. A standalone heading
 folds everything until the next heading of equal or higher level.
 
 #+begin_example
-= Introduction                    ← folds until next =
-Some paragraph text.
-Another paragraph.
+ = Introduction                    ← folds until next =
+ Some paragraph text.
+ Another paragraph.
+ 
+ == Background                     ← folds until next == or =
+ More text here.
 
-== Background                     ← folds until next == or =
-More text here.
-
-== Methods                        ← folds until next == or =
-Even more here.
-
-= Conclusion                     ← folds until next =
+ == Methods                        ← folds until next == or =
+ Even more here.
+ 
+ = Conclusion                     ← folds until next =
 #+end_example
 
 A standalone heading's fold scope includes any lists beneath it — folding the
@@ -770,16 +780,16 @@ navigable outline. The two features are completely orthogonal.
 Using a schema declaration, list markers can be made invisible:
 
 #+begin_example
-:-[]
-- = Introduction
-  This looks like body text under a heading.
-  No visible bullet. Just indented prose.
-  - = Background
-    More body text.
-  - = Methods
-    And more here.
-- = Conclusion
-  Final thoughts.
+ :-[]
+ - = Introduction
+   This looks like body text under a heading.
+   No visible bullet. Just indented prose.
+   - = Background
+     More body text.
+   - = Methods
+     And more here.
+ - = Conclusion
+   Final thoughts.
 #+end_example
 
 Folds naturally from list structure. ToC comes from heading promotions. The
@@ -803,7 +813,7 @@ In rare cases where content genuinely needs to attach to an ancestor, the
 ~:of~ spell explicitly reattaches content to a named waypoint:
 
 #+begin_example
-- = Project Alpha <alpha>
+ - = Project Alpha <alpha>
   - = Goals
     - Item A
     - Item B
@@ -923,9 +933,9 @@ Glamours must precede spells. The first ~:~ character is the hard boundary
 between glamour territory and spell territory:
 
 #+begin_example
-*/:bold.color(red):[text]     — valid: glamours first, then spells
-:bold*/:[text]                — INVALID: glamours cannot follow spells
-*:color(red):[text]           — valid: single glamour then spells
+ */:bold.color(red):[text]     — valid: glamours first, then spells
+ :bold*/:[text]                — INVALID: glamours cannot follow spells
+ *:color(red):[text]           — valid: single glamour then spells
 #+end_example
 
 Invalid glamour placement is handled by parse-don't-fail — the glamour
@@ -936,8 +946,8 @@ characters are treated as literal text.
 Sigils (tags) use ~#~, the universal tagging character:
 
 #+begin_example
-- Buy groceries #errand #personal
-- Read about #machine learning# approaches
+ - Buy groceries #errand #personal
+ - Read about #machine learning# approaches
 #+end_example
 
 - Single-word sigil: ~#errand~
@@ -991,8 +1001,8 @@ Waypoints (labels) are human-readable anchors placed at the end of a heading
 or block element:
 
 #+begin_example
-- = Introduction <intro>
-See @intro for background.
+ - = Introduction <intro>
+ See @intro for background.
 #+end_example
 
 A waypoint is a navigation target. Signets and sigils can optionally resolve
@@ -2809,57 +2819,57 @@ destructive.
 * Full Example
 
 #+begin_example
-:{ :=[I.] :+[a)] }
-
-+ = Project Notes <project> <<n8a1f>>
-
-  + = Research phase #work <<n3b7c2>>
-    - = Goals <<nd92e>>
-      Establish baseline metrics and survey prior work.
-    - :x Survey competitors <<n5f1a8>>
-    - :> Read foundational papers #research <<n7c3d4>>
-      Some are about :topic: approaches to #machine learning#
-    - :o Summarize findings :due(2026-04-01) <<n9k2m1>>
-
-  + = Implementation phase #work #engineering <<n2a9b7>>
-    - = Schema <<nf14c3>>
-      + :x Define tables
-      + :started: Build parser :due(2026-04-15)
-      + :o Write tests
-    - = Deployment <<n6d8e5>>
-      + :o Set up CI #devops
-      + :! Waiting on infrastructure team #blocked reason#
-
-+ = Side Notes
-  - Remember to update @alice on progress
-  - Link to :link[https://example.com]{the *docs*}
+ :{ :=[I.] :+[a)] }
+ 
+ + = Project Notes <project> <<n8a1f>>
+ 
+   + = Research phase #work <<n3b7c2>>
+     - = Goals <<nd92e>>
+       Establish baseline metrics and survey prior work.
+     - :x Survey competitors <<n5f1a8>>
+     - :> Read foundational papers #research <<n7c3d4>>
+       Some are about :topic: approaches to #machine learning#
+     - :o Summarize findings :due(2026-04-01) <<n9k2m1>>
+ 
+   + = Implementation phase #work #engineering <<n2a9b7>>
+     - = Schema <<nf14c3>>
+       + :x Define tables
+       + :started: Build parser :due(2026-04-15)
+       + :o Write tests
+     - = Deployment <<n6d8e5>>
+       + :o Set up CI #devops
+       + :! Waiting on infrastructure team #blocked reason# 
+ 
+ + = Side Notes
+   - Remember to update @alice on progress
+   - Link to :link[https://example.com]{the *docs*}
 #+end_example
 
 Dash-mode equivalent:
 
 #+begin_example
-:{ :=[I.] :+[a)] }
-
-+ = Project Notes <project> <<n8a1f>>
--+ = Research phase #work <<n3b7c2>>
--- = Goals <<nd92e>>
-Establish baseline metrics and survey prior work.
---- :x Survey competitors <<n5f1a8>>
---- :> Read foundational papers #research <<n7c3d4>>
-Some are about :topic: approaches to #machine learning#
---- :o Summarize findings :due(2026-04-01) <<n9k2m1>>
--+ = Implementation phase #work #engineering <<n2a9b7>>
--- = Schema <<nf14c3>>
---+ :x Define tables
---+ :started: Build parser :due(2026-04-15)
---+ :o Write tests
--- = Deployment <<n6d8e5>>
---+ :o Set up CI #devops
---+ :! Waiting on infrastructure team #blocked reason#
-
-+ = Side Notes
--- Remember to update @alice on progress
--- Link to :link[https://example.com]{the *docs*}
+ :{ :=[I.] :+[a)] }
+ 
+ + = Project Notes <project> <<n8a1f>>
+ -+ = Research phase #work <<n3b7c2>>
+ -- = Goals <<nd92e>>
+ Establish baseline metrics and survey prior work.
+ --- :x Survey competitors <<n5f1a8>>
+ --- :> Read foundational papers #research <<n7c3d4>>
+ Some are about :topic: approaches to #machine learning#
+ --- :o Summarize findings :due(2026-04-01) <<n9k2m1>>
+ -+ = Implementation phase #work #engineering <<n2a9b7>>
+ -- = Schema <<nf14c3>>
+ --+ :x Define tables
+ --+ :started: Build parser :due(2026-04-15)
+ --+ :o Write tests
+ -- = Deployment <<n6d8e5>>
+ --+ :o Set up CI #devops
+ --+ :! Waiting on infrastructure team #blocked reason#
+ 
+ + = Side Notes
+ -- Remember to update @alice on progress
+ -- Link to :link[https://example.com]{the *docs*}
 #+end_example
 
 * Parser Architecture Notes
@@ -2985,10 +2995,10 @@ the application may use today as the implicit anchor.
 *** Day-of-week patterns
 
 #+begin_example
-:repeat[weekdays]               — Monday through Friday
-:repeat[weekends]               — Saturday and Sunday
-:repeat[mon, wed, fri]          — specific days
-:repeat[tue, thu]               — specific days
+ :repeat[weekdays]               — Monday through Friday
+ :repeat[weekends]               — Saturday and Sunday
+ :repeat[mon, wed, fri]          — specific days
+ :repeat[tue, thu]               — specific days
 #+end_example
 
 *** Ordinal patterns (irregular dates)
@@ -2996,13 +3006,13 @@ the application may use today as the implicit anchor.
 This is where most systems fail. Indue uses a readable ordinal syntax:
 
 #+begin_example
-:repeat[1st friday]             — first Friday of every month
-:repeat[last saturday]          — last Saturday of every month
-:repeat[3rd tuesday]            — third Tuesday of every month
-:repeat[2nd weekday]            — second weekday of every month
-:repeat[last day]               — last day of every month
-:repeat[1st monday of march]    — first Monday of March (yearly)
-:repeat[last friday of quarter] — last Friday of each quarter
+ :repeat[1st friday]             — first Friday of every month
+ :repeat[last saturday]          — last Saturday of every month
+ :repeat[3rd tuesday]            — third Tuesday of every month
+ :repeat[2nd weekday]            — second weekday of every month
+ :repeat[last day]               — last day of every month
+ :repeat[1st monday of march]    — first Monday of March (yearly)
+ :repeat[last friday of quarter] — last Friday of each quarter
 #+end_example
 
 Ordinal keywords: ~1st~, ~2nd~, ~3rd~, ~4th~, ~5th~, ~last~.
@@ -3027,9 +3037,9 @@ Recurrence start and end are controlled by the existing date spells on the
 same item:
 
 #+begin_example
-- :o Team meeting :on(2026-04-07) :repeat[weekly] :end(2026-12-31)
-- :o Quarterly review :on(2026-01-15) :repeat[last friday of quarter]
-- :o Sprint planning :scheduled(2026-04-01) :repeat[2 weeks]
+ - :o Team meeting :on(2026-04-07) :repeat[weekly] :end(2026-12-31)
+ - :o Quarterly review :on(2026-01-15) :repeat[last friday of quarter]
+ - :o Sprint planning :scheduled(2026-04-01) :repeat[2 weeks]
 #+end_example
 
 ~:end~ terminates the recurrence. Without an ~:end~, the recurrence
@@ -3041,8 +3051,8 @@ which the pattern begins.
 Specific occurrences can be skipped:
 
 #+begin_example
-:skip(2026-07-04)               — skip this date
-:skip(2026-12-25, 2026-12-26)   — skip multiple dates
+ :skip(2026-07-04)               — skip this date
+ :skip(2026-12-25, 2026-12-26)   — skip multiple dates
 #+end_example
 
 *** Completion behavior
@@ -3050,8 +3060,8 @@ Specific occurrences can be skipped:
 Two modes for how the next date is calculated after completion:
 
 #+begin_example
-:repeat[weekly]                 — next date from the scheduled date
-:repeat![weekly]                — next date from the completion date
+ :repeat[weekly]                 — next date from the scheduled date
+ :repeat![weekly]                — next date from the completion date
 #+end_example
 
 ~:repeat~ schedules from the original anchor (task recurs on the same day
@@ -3062,13 +3072,13 @@ completion matters).
 *** Full examples
 
 #+begin_example
-- :o Pay rent :due(2026-04-01) :repeat[monthly]
-- :o Team standup :on(2026-04-07T09:00) :repeat[weekdays]
-- :o Haircut :scheduled(2026-04-15) :repeat![6 weeks]
-- :o Book club :on(2026-04-20) :repeat[3rd saturday]
-- :o Tax prep :due(2026-03-15) :repeat[yearly]
-- :o Sprint review :on(2026-04-12) :repeat[last friday of 2 weeks]
-- :o Board meeting :on(2026-01-20) :repeat[3rd monday of quarter]
+ - :o Pay rent :due(2026-04-01) :repeat[monthly]
+ - :o Team standup :on(2026-04-07T09:00) :repeat[weekdays]
+ - :o Haircut :scheduled(2026-04-15) :repeat![6 weeks]
+ - :o Book club :on(2026-04-20) :repeat[3rd saturday]
+ - :o Tax prep :due(2026-03-15) :repeat[yearly]
+ - :o Sprint review :on(2026-04-12) :repeat[last friday of 2 weeks]
+ - :o Board meeting :on(2026-01-20) :repeat[3rd monday of quarter]
 #+end_example
 
 *** RRULE interoperability
@@ -3273,16 +3283,16 @@ To avoid name collisions between applications, custom spells should use a
 namespace prefix:
 
 #+begin_example
-:ext.myapp.kanban{...}          — app-specific kanban board
-:ext.myapp.timeline{...}        — app-specific timeline view
-:ext.obsidian.dataview{...}     — Obsidian-specific dataview
+ :ext.myapp.kanban{...}          — app-specific kanban board
+ :ext.myapp.timeline{...}        — app-specific timeline view
+ :ext.obsidian.dataview{...}     — Obsidian-specific dataview
 #+end_example
 
 Applications may also register short names that omit the namespace for
 convenience within their own ecosystem:
 
 #+begin_example
-:kanban{...}                    — works in MyApp, unknown elsewhere
+ :kanban{...}                    — works in MyApp, unknown elsewhere
 #+end_example
 
 ** The ~:ext.css~ reference extension
@@ -3292,10 +3302,10 @@ concepts to Indue entities, filling gaps that core spells do not cover without
 overriding core formatting:
 
 #+begin_example
-:ext.css
-[.bold { font-weight: bold; color: red; }]
-[#meeting { background: #e8f4fd; border-radius: 8px; }]
-[<section> { padding: 1em; }]:
+ :ext.css
+ [.bold { font-weight: bold; color: red; }]
+ [#meeting { background: #e8f4fd; border-radius: 8px; }]
+ [<section> { padding: 1em; }]:
 #+end_example
 
 The extension maps CSS selectors to Indue entities: ~.classname~ maps to
