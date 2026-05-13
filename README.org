@@ -1388,11 +1388,11 @@ what is being passed:
 
 | Port     | Syntax  | Delivers                           |
 |----------+---------+------------------------------------|
-| Vessel   | ~()~    | A value: URL, date, number, setting|
-| Scroll   | ~[]~    | Verbatim text, no parsing          |
-| Conduit  | ~{}~    | Rich parsed Indue content          |
-| Waypoint | ~<>~    | A reference, anchor, or named entity|
-| Bond     | ~.spell~| Another spell in the chain         |
+| Vessel   | ()      | A value: URL, date, number, setting|
+| Scroll   | []      | Verbatim text, no parsing          |
+| Conduit  | {}      | Rich parsed Indue content          |
+| Waypoint | <>      | A reference, anchor, or named entity|
+| Bond     | .spell  | Another spell in the chain         |
 
 Adjacent brackets after a spell name are consumed greedily with no separator:
 
