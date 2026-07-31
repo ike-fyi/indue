@@ -86,6 +86,7 @@ Symmetry).
 | ~\~      | Escape character     | Nick       |
 | ~~~      | Hoisted config block | Satchel    |
 | ~!~      | Public marker        | Beacon     |
+| ~;~ / ~;;~ / ~;;;~ | Comment (level by count) | Whisper |
 
 ** Reserved and available characters
 
@@ -94,7 +95,7 @@ Symmetry).
 | ~>~         | Reserved, likely blockquote shorthand |
 | ~&~         | Available                              |
 | ~$~         | Available, likely math mode           |
-| ~;~         | Available, prime keyboard real estate |
+| ~;~         | Comment (Whisper), level by repetition |
 
 * Full Example
 
@@ -189,8 +190,8 @@ When the same spell appears twice in a chain, the later instance wins. When
 different spells appear in a chain, they are additive:
 
 #+begin_example
-:color(red).color(blue):word    // blue wins (same spell, later overwrites)
-:bold.italic:word               // both apply (different spells, additive)
+:color(red).color(blue):word    ; blue wins (same spell, later overwrites)
+:bold.italic:word               ; both apply (different spells, additive)
 #+end_example
 
 ** Spells are renderer-agnostic at core tier
@@ -265,8 +266,8 @@ first character) opens markup that terminates at the next whitespace. This
 is the same logic used by sigils (~#tag~) and signets (~@alice~):
 
 #+begin_example
-This is *bold right here         // "bold" is bold, rest is normal
-She has /style in spades         // "style" is italic
+This is *bold right here         ; "bold" is bold, rest is normal
+She has /style in spades         ; "style" is italic
 #+end_example
 
 To use a glamour character literally in this position, escape it with a
@@ -278,9 +279,9 @@ If a matching closer exists on the same line, the glamour spans multiple
 words:
 
 #+begin_example
-This has *bold* in it           // paired, one word
-This has *bold words* in it     // paired, multi-word
-This is *bold right here        // no closer: single-word rule applies
+This has *bold* in it           ; paired, one word
+This has *bold words* in it     ; paired, multi-word
+This is *bold right here        ; no closer: single-word rule applies
 #+end_example
 
 The parser scans the current line for a closer. Found one? Paired mode.
@@ -291,16 +292,16 @@ No closer? Single-word, terminate at whitespace.
 Glamours can also scope their content using scrolls ~[]~ or conduits ~{}~:
 
 #+begin_example
-*[bold words]               // scroll defines scope
-*{bold with #tags inside}   // conduit: inner content is parsed
+*[bold words]               ; scroll defines scope
+*{bold with #tags inside}   ; conduit: inner content is parsed
 #+end_example
 
 This is the only way to combine multiple glamours (stacking):
 
 #+begin_example
-*/[bold and italic]         // glamour stack + scroll
-_*{underline and bold}      // glamour stack + conduit
-%/[strikethrough and italic] // glamour stack + scroll
+*/[bold and italic]         ; glamour stack + scroll
+_*{underline and bold}      ; glamour stack + conduit
+%/[strikethrough and italic] ; glamour stack + scroll
 #+end_example
 
 Adjacent glamour characters with no whitespace form a stack. The bracket
@@ -325,8 +326,8 @@ To combine glamours, always use the bracket form: ~*_[text]~.
 literal glamour character that would otherwise be interpreted as markup:
 
 #+begin_example
-The price is 50\% off       // literal %, not strikethrough
-Use \*asterisks\* literally // literal *, not bold
+The price is 50\% off       ; literal %, not strikethrough
+Use \*asterisks\* literally ; literal *, not bold
 #+end_example
 
 ~\~ before a non-glamour character renders as a literal backslash.
@@ -375,6 +376,7 @@ and the character is still there, still whole.
 | ~\~~             | *Satchel*    | Hoisted config block |
 | Config block   | *Codex*      | Inherited properties |
 | ~!~              | *Beacon*     | Public marker        |
+| ~;~ / ~;;~ / ~;;;~ | *Whisper*  | Comment              |
 
 A one-sentence summary of the entire system: sockets create slots; glamours,
 sigils, signets, and spells equip the content sitting on those slots; bonds
@@ -463,9 +465,9 @@ These spells follow all standard scoping and chaining rules.
 These chain naturally with glamours and each other:
 
 #+begin_example
-:bold.color(red):word             // bold + red, one word
-:italic.grow(1): whole line       // italic + larger, line scope
-:color(blue).bg(#ffffcc):[highlighted text]  // colored + highlighted
+:bold.color(red):word             ; bold + red, one word
+:italic.grow(1): whole line       ; italic + larger, line scope
+:color(blue).bg(#ffffcc):[highlighted text]  ; colored + highlighted
 #+end_example
 
 ** Glamour and socket configuration (~:char~)
@@ -503,13 +505,13 @@ self-reference port (~<>~) for the current block. Inline spells (~:bold~,
 Block-natural spells (target the container):
 :bg(#f5f5f5)<section>:
 :radius(6)<section>:
-:shadow(2,2,4)<>:            // <> targets current block
-:stroke(1)<>:                // border width
+:shadow(2,2,4)<>:            ; <> targets current block
+:stroke(1)<>:                ; border width
 
 Inline spells (target the text):
 :color(red):word
 :bold.italic:word
-:bg(#ffffcc)::highlighted text::   // shell for text-level highlight
+:bg(#ffffcc)::highlighted text::   ; shell for text-level highlight
 #+end_example
 
 To apply an inline spell to a whole block, wrap it in ~:indue{...}~. See
@@ -574,7 +576,7 @@ individual properties after the preset:
 
 #+begin_example
 :card<section>:
-:bg(#fef3c7)<section>:    // override just the background
+:bg(#fef3c7)<section>:    ; override just the background
 #+end_example
 
 ** The indue spell (~:indue{...}~)
@@ -584,10 +586,10 @@ effect onto the host block. It wraps a spell or a chain of spells and
 applies them as if each had a block target.
 
 #+begin_example
-:indue{:bold:}                            // bold the whole block
-:indue{:bold.color(red):}                 // bold + red on the whole block
-:indue{:strike:}                          // strike out the block
-:indue{:bg(#fff):}                        // identical to :bg(#fff)<>:
+:indue{:bold:}                            ; bold the whole block
+:indue{:bold.color(red):}                 ; bold + red on the whole block
+:indue{:strike:}                          ; strike out the block
+:indue{:bg(#fff):}                        ; identical to :bg(#fff)<>:
                                             (block-natural spells already do this)
 #+end_example
 
@@ -1044,13 +1046,97 @@ Glamours must precede spells. The first ~:~ character is the hard boundary
 between glamour territory and spell territory:
 
 #+begin_example
-*/:bold.color(red):[text]     // valid: glamours first, then spells
-:bold*/:[text]                // INVALID: glamours cannot follow spells
-*:color(red):[text]           // valid: single glamour then spells
+*/:bold.color(red):[text]     ; valid: glamours first, then spells
+:bold*/:[text]                ; INVALID: glamours cannot follow spells
+*:color(red):[text]           ; valid: single glamour then spells
 #+end_example
 
 Invalid glamour placement is handled by parse-don't-fail, the glamour
 characters are treated as literal text.
+
+* Comments: Whispers
+
+A *whisper* is a comment, text that lives in the source but never reaches
+the render. Whispers use the semicolon ~;~. Everything from the semicolon
+to the end of the line is a comment and is stripped before the body is
+parsed.
+
+#+begin_example
+- Buy groceries          ; trailing whisper, ignored on render
+; this whole line is a whisper
+:bold:word               ; whispers are fine after spells too
+#+end_example
+
+** Graduated levels (Lisp-style)
+
+Like the rest of Indue, the meaning scales with the count of the marker.
+This mirrors the convention in Lisp dialects, where the number of leading
+semicolons signals a comment's structural altitude. The character does
+exactly one thing, comments out the rest of the line, but the count is a
+readable signal of intent, the same way ~=~ / ~==~ / ~===~ count for
+heading depth and ~-~ / ~--~ / ~---~ count for list depth.
+
+| Marker  | Convention      | Typical use                                  |
+|---------+-----------------+----------------------------------------------|
+| ~;~       | Inline whisper  | Trailing note on a line of content          |
+| ~;;~      | Block whisper   | Standalone note describing the lines below  |
+| ~;;;~     | Section whisper | Heading-level note for a region of the file |
+| ~;;;;~    | File whisper     | Top-of-file banner, license, or metadata    |
+
+#+begin_example
+;;;; project-config.indue
+;;;; vault-wide entity definitions, edit with care
+
+;;; People
+;; canonical contacts, names must match the directory
+:::alice::: .color(#4a90d9).chip :   ; brand blue
+:::bob:::   .color(#d97757).chip :   ; warm orange
+
+;;; Projects
+:::project::: .bg(#f0f0f0).card :
+#+end_example
+
+The graduated levels are a *convention*, not a parser rule. To the
+tokenizer, ~;~, ~;;~, ~;;;~, and ~;;;;~ are identical: each comments out the
+remainder of the line. Tools (formatters, folders, outline views) may treat
+the higher levels as structural markers, aligning block whispers to the
+indentation of the code beneath them or surfacing section whispers in a
+navigation pane, exactly as Lisp editors do. The single character keeps the
+rule trivial; the repetition is free expressivity for the writer.
+
+** Scope and verbatim contexts
+
+A whisper is recognized in body text and inside conduits ~{}~ (rich,
+parsed content). It is *not* recognized inside scrolls ~[]~, which are
+verbatim, a semicolon inside a scroll is a literal semicolon, never a
+comment. This matters for content like code, URLs, and raw data:
+
+#+begin_example
+:code(rust)[let x = 5; ; the ; inside the scroll is literal Rust]
+:link[https://example.com/path;param]{label}   ; only THIS ; is a whisper
+#+end_example
+
+In the first line the semicolon belonging to the Rust statement survives
+because it sits inside a scroll; the trailing whisper after the closing
+bracket is stripped. In the second, the matrix-parameter semicolon inside
+the URL scroll is preserved while the trailing whisper is removed.
+
+** Escaping a literal semicolon
+
+Outside a scroll, use the nick (~\~) to write a literal semicolon that
+should not start a comment:
+
+#+begin_example
+The ratio is 3\;1 in plain prose.   ; renders "3;1", then a real whisper
+#+end_example
+
+** Whispers and parse-don't-fail
+
+Whispers are removed in a lexical pass before the socket, glamour, and
+entity layers run. There is no such thing as an unterminated whisper, the
+end of the line always closes it, so the no-errors philosophy is preserved
+trivially. A whisper never spans lines; multi-line notes are simply
+multiple whisper lines.
 
 * Sigils: Tags
 
@@ -1190,9 +1276,9 @@ divider and index. ~<argument|1>~ and ~< argument | 1 >~ are identical.
 To break the automatic cycle, replace the index with ~x~:
 
 #+begin_example
-<argument | 1>    // start
-<argument | 2>    // middle
-<argument | x>    // end (trail stops here, no cycling)
+<argument | 1>    ; start
+<argument | 2>    ; middle
+<argument | x>    ; end (trail stops here, no cycling)
 #+end_example
 
 Without an ~x~ terminator, defined trails cycle like undefined ones. The
@@ -1266,9 +1352,9 @@ that produce no visible inline output of their own.
 
 #+begin_example
 He said :anchor: and walked off.
-   //  one space eaten after the spell:
-   //  rendered as: "He said and walked off."
-   //  with single spacing.
+   ;  one space eaten after the spell:
+   ;  rendered as: "He said and walked off."
+   ;  with single spacing.
 #+end_example
 
 If the user wants extra space (two spaces between words for some reason),
@@ -1296,12 +1382,12 @@ and brackets are the doors that determine what the spell applies to.
 A spell's effect attaches to whatever the syntax around it specifies:
 
 #+begin_example
-:bold:word              // word scope (adjacent, no space after :)
-:bold: whole line       // line scope (space after :, first position only)
-:bold:[bracket scope]   // bracket scope (scroll or conduit)
-:bold:                  // bare, mid-line: no-op (styling has nothing to attach to)
-:indue{:bold:}          // block scope (wraps spell for block-effect)
-::::name:::: .bold :    // block scope via four-colon cauldron (indue sugar)
+:bold:word              ; word scope (adjacent, no space after :)
+:bold: whole line       ; line scope (space after :, first position only)
+:bold:[bracket scope]   ; bracket scope (scroll or conduit)
+:bold:                  ; bare, mid-line: no-op (styling has nothing to attach to)
+:indue{:bold:}          ; block scope (wraps spell for block-effect)
+::::name:::: .bold :    ; block scope via four-colon cauldron (indue sugar)
 #+end_example
 
 The line-scope form (~:bold: whole line~) only applies when the spell is
@@ -1322,8 +1408,8 @@ Spells can apply retroactively to content that precedes them within the
 current block:
 
 #+begin_example
-::bold:                 // backward to block start
-hey dude ::bold:        // backward to line start
+::bold:                 ; backward to block start
+hey dude ::bold:        ; backward to line start
 #+end_example
 
 The ~::~ at the start (or mid-line) signals a backward application. The
@@ -1340,8 +1426,8 @@ provide.
 Shells are block-bounded, they never cross structural markers (sockets).
 
 #+begin_example
-:bold:: hey dude ::              // "hey dude" is bold
-:bold.underline:: hey dude ::    // "hey dude" is bold + underline
+:bold:: hey dude ::              ; "hey dude" is bold
+:bold.underline:: hey dude ::    ; "hey dude" is bold + underline
 #+end_example
 
 *** Closing rules
@@ -1366,19 +1452,19 @@ The ~.~ character chains spells together. Each spell in the chain adds its
 effect. The chain terminates at the final ~:~ which determines the scope.
 
 #+begin_example
-:bold.underline:word              // bold + underline, word scope
-:bold.color(red): whole line      // bold + red, line scope
-:color(red).bg(#000).bold:word // three spells chained
-:bold.italic:[bracketed content]  // bold + italic, bracket scope
+:bold.underline:word              ; bold + underline, word scope
+:bold.color(red): whole line      ; bold + red, line scope
+:color(red).bg(#000).bold:word ; three spells chained
+:bold.italic:[bracketed content]  ; bold + italic, bracket scope
 #+end_example
 
 Bonds connect spell names only. Ports (brackets) bind to the spell they
 touch, no ~.~ between a spell and its ports:
 
 #+begin_example
-:link[https://example.com]{click *here*}:    // scroll + conduit, both bound to :link
-:font(serif)[Georgia]:                       // vessel + scroll bound to :font
-:color(red).bold:word                         // .bold chains to :color, not to (red)
+:link[https://example.com]{click *here*}:    ; scroll + conduit, both bound to :link
+:font(serif)[Georgia]:                       ; vessel + scroll bound to :font
+:color(red).bold:word                         ; .bold chains to :color, not to (red)
 #+end_example
 
 ** Port types
@@ -1484,8 +1570,8 @@ cauldron target does not need special treatment:
 
 #+begin_example
 :::meeting:::
-.bold            // leading . is ignored (no spell before it)
-.color(red):     // .color bonds to :bold normally
+.bold            ; leading . is ignored (no spell before it)
+.color(red):     ; .color bonds to :bold normally
 #+end_example
 
 *** Cauldron whitespace trimming
@@ -1532,18 +1618,18 @@ trigger this cauldron. The third is the bestowal target: where the
 cauldron's spells land when it fires. They are independent.
 
 #+begin_example
-Entity name only // cascades to every form of that entity:
-:::alice:::                // all forms of alice (#alice, @alice, <alice>)
+Entity name only ; cascades to every form of that entity:
+:::alice:::                ; all forms of alice (#alice, @alice, <alice>)
 
-Form + entity name // narrows to one form of one entity:
-:::#alice:::               // only sigil uses of alice
-:::@alice:::               // only signet mentions of alice
-:::<alice>:::              // only waypoint anchors named alice
+Form + entity name ; narrows to one form of one entity:
+:::#alice:::               ; only sigil uses of alice
+:::@alice:::               ; only signet mentions of alice
+:::<alice>:::              ; only waypoint anchors named alice
 
-Form only // every entity that uses that form:
-:::#:::                    // all sigils regardless of entity
-:::@:::                    // all signets regardless of entity
-:::<>:::                   // all waypoints regardless of entity
+Form only ; every entity that uses that form:
+:::#:::                    ; all sigils regardless of entity
+:::@:::                    ; all signets regardless of entity
+:::<>:::                   ; all waypoints regardless of entity
 #+end_example
 
 The full matching matrix (three-colon form shown; four-colon escalates
@@ -1563,10 +1649,10 @@ To bestow on the block instead, use four colons or wrap spells in
 ~:indue{...}~. Both work for any of the matching targets above:
 
 #+begin_example
-::::alice::::                  // every reference to alice paints its block
-::::#alice::::                 // #alice references paint their blocks
-::::#::::                      // every sigil paints its block
-:::alice::: .indue{.bold}:    // mixed: token-target except .bold which paints the block
+::::alice::::                  ; every reference to alice paints its block
+::::#alice::::                 ; #alice references paint their blocks
+::::#::::                      ; every sigil paints its block
+:::alice::: .indue{.bold}:    ; mixed: token-target except .bold which paints the block
 #+end_example
 
 The unscoped entity-name target (~:::alice:::~) is the *identity layer*:
@@ -1611,13 +1697,13 @@ Glamour codex (configure what bold does):
 Socket codex (configure ordered list style):
 :::+::: .style[a)] :
 
-Entity codex // identity layer (covers all forms of project):
+Entity codex ; identity layer (covers all forms of project):
 :::project:::
 .bg(#f0f0f0)
 .stroke(1)
 .tint(#ccc):
 
-Entity codex // form-specific (only the signet form of project):
+Entity codex ; form-specific (only the signet form of project):
 :::@project::: .chip :
 #+end_example
 
@@ -1629,9 +1715,9 @@ appearing after a spell name or value is a target; ~:<>:::~ as a cauldron
 target configures all waypoints as a type.
 
 #+begin_example
-:bg(#f5f5f5)<>:      // current block container
-:bg(#f5f5f5)<name>:  // named block container
-:bg(#f5f5f5)::       // text/highlight level via shell
+:bg(#f5f5f5)<>:      ; current block container
+:bg(#f5f5f5)<name>:  ; named block container
+:bg(#f5f5f5)::       ; text/highlight level via shell
 #+end_example
 
 Self-reference lets block-level spells target the current block without
@@ -1660,8 +1746,8 @@ Arguments bind to a spell when there is no whitespace between them. All
 brackets and parentheses glued to the spell name are consumed by it:
 
 #+begin_example
-:fn(val)[text]{rich}   // all three bound to :fn (no whitespace)
-:fn(val) [text]        // only (val) bound; [text] is separate content
+:fn(val)[text]{rich}   ; all three bound to :fn (no whitespace)
+:fn(val) [text]        ; only (val) bound; [text] is separate content
 #+end_example
 
 Vessels ~()~ are always evaluated first regardless of position.
@@ -1737,8 +1823,8 @@ Conduits preserve the full power of Indue inside them; scrolls deliberately
 suppress it.
 
 #+begin_example
-:link[https://example.com]{Read *this* #tagged}  // scroll: URL verbatim, conduit: rich label
-:code(rust)[fn main() { println!("hello"); }]    // vessel: language, scroll: content is literal
+:link[https://example.com]{Read *this* #tagged}  ; scroll: URL verbatim, conduit: rich label
+:code(rust)[fn main() { println!("hello"); }]    ; vessel: language, scroll: content is literal
 #+end_example
 
 ** Pipe convention
@@ -1756,11 +1842,11 @@ content independently. When using pipes inside a scroll, the content is
 verbatim and pipes are just literal characters that the spell splits on.
 
 #+begin_example
-Conduit (cells are parsed // use for formatted content):
+Conduit (cells are parsed ; use for formatted content):
 :table{*Name*|Role|Status}
 {Alice|Engineer|:> Active}
 
-Scroll (cells are verbatim // use for raw data):
+Scroll (cells are verbatim ; use for raw data):
 :data[1.0|2.5|3.7]
 [4.2|5.1|6.8]
 #+end_example
@@ -1855,9 +1941,9 @@ Sockets are parsed before spells. Task spells apply to the content /after/
 the socket:
 
 #+begin_example
-- = :x: Whole Heading         // heading slot, title struck out
-- :x:Whole Heading            // list slot, only "Whole" struck out
-:x: - = Text                  // NOT a socket; - = is literal text
+- = :x: Whole Heading         ; heading slot, title struck out
+- :x:Whole Heading            ; list slot, only "Whole" struck out
+:x: - = Text                  ; NOT a socket; - = is literal text
 #+end_example
 
 * List and Heading Schema Declarations
@@ -1867,10 +1953,10 @@ List and heading marker styles are declared on standalone lines using the ~:+~,
 cramming metadata onto the first content line.
 
 #+begin_example
-:+[a)]          // ordered lists at this level use a), b), c)
-:-[*]           // unordered lists at this level use *
-:=[I.]          // headings at this level use I., II., III.
-:-[]            // invisible markers (no visible bullet)
+:+[a)]          ; ordered lists at this level use a), b), c)
+:-[*]           ; unordered lists at this level use *
+:=[I.]          ; headings at this level use I., II., III.
+:-[]            ; invisible markers (no visible bullet)
 #+end_example
 
 Declarations can be grouped using a conduit:
@@ -1886,14 +1972,14 @@ outdent past the declaration's starting column.
 
 #+begin_example
 :{ :=[I.] :+[a)] :-[*] }
-+ = Meeting Notes                     // renders as: I. Meeting Notes
++ = Meeting Notes                     ; renders as: I. Meeting Notes
   :=[A.]
-  + = Action Items                    // renders as: A. Action Items
-  + = General Notes                   // renders as: B. General Notes
-    - = Ticket Audits                 // renders as: * Ticket Audits
-      - Common Scenario               // renders as:   * Common Scenario
-    - Uncommon Scenario               // renders as: * Uncommon Scenario
-+ = Other Topics                      // renders as: II. Other Topics
+  + = Action Items                    ; renders as: A. Action Items
+  + = General Notes                   ; renders as: B. General Notes
+    - = Ticket Audits                 ; renders as: * Ticket Audits
+      - Common Scenario               ; renders as:   * Common Scenario
+    - Uncommon Scenario               ; renders as: * Uncommon Scenario
++ = Other Topics                      ; renders as: II. Other Topics
 #+end_example
 
 ** Pattern matching
@@ -1982,10 +2068,10 @@ The conduit is used because ~<waypoints>~ are parsed Indue syntax. Pipes
 divide columns. Adjacent waypoints within a column stack vertically:
 
 #+begin_example
-:layout{<nav>|<content>}:                // 2 columns
-:layout{<a>|<b>|<c>}:                   // 3 columns
-:layout{<top><bottom>|<side>}:          // left col split, right col full
-:layout{<a><b>|<c><d>}:                 // 2x2 grid
+:layout{<nav>|<content>}:                ; 2 columns
+:layout{<a>|<b>|<c>}:                   ; 3 columns
+:layout{<top><bottom>|<side>}:          ; left col split, right col full
+:layout{<a><b>|<c><d>}:                 ; 2x2 grid
 #+end_example
 
 Column sizing targets the waypoint directly:
@@ -2048,8 +2134,8 @@ changed.
 ** Page and element spells
 
 #+begin_example
-:break(page):                  // force a new page
-:align(center)<wp>:            // center a waypoint's content
+:break(page):                  ; force a new page
+:align(center)<wp>:            ; center a waypoint's content
 #+end_example
 
 Deleting any layout or page line causes content to render linearly, nothing
@@ -2089,10 +2175,10 @@ Transclusion pulls referenced content inline at the point where the spell
 appears. The source content appears as if it were written here.
 
 #+begin_example
-:embed<intro>:                // transclude block with waypoint <intro>
-:embed(<<n3b7c2>>):            // transclude by coordinate
-:embed(#work):                 // transclude all blocks sigiled #work
-:embed(@alice):                // transclude entity content
+:embed<intro>:                ; transclude block with waypoint <intro>
+:embed(<<n3b7c2>>):            ; transclude by coordinate
+:embed(#work):                 ; transclude all blocks sigiled #work
+:embed(@alice):                ; transclude entity content
 #+end_example
 
 Whether transclusion is one-way (read-only mirror) or two-way (editable in
@@ -2106,11 +2192,11 @@ without leaving the current context. An optional conduit provides a rich
 display label, or a scroll for plain text:
 
 #+begin_example
-:popover<wp>:                // shows block content on hover/click
-:popover<wp>[Details]:       // with custom label
-:popover(@alice):              // entity info card
-:popover(:query(#work :>)):    // query results in a panel
-:popover[Tooltip text]:        // static text, no reference needed
+:popover<wp>:                ; shows block content on hover/click
+:popover<wp>[Details]:       ; with custom label
+:popover(@alice):              ; entity info card
+:popover(:query(#work :>)):    ; query results in a panel
+:popover[Tooltip text]:        ; static text, no reference needed
 #+end_example
 
 *** Chaining references
@@ -2118,9 +2204,9 @@ display label, or a scroll for plain text:
 Reference spells chain with bonds like any other spell:
 
 #+begin_example
-:link[url].embed<wp>:            // link with inline transclusion
-:link.popover<wp>:               // link with hover preview
-:link[url]{*click here*}:        // link with formatted label
+:link[url].embed<wp>:            ; link with inline transclusion
+:link.popover<wp>:               ; link with hover preview
+:link[url]{*click here*}:        ; link with formatted label
 #+end_example
 
 * Entity Configuration: The Cauldron
@@ -2280,22 +2366,22 @@ form. See "The two-axis targeting matrix" in the Spells section for the
 complete table. Briefly:
 
 #+begin_example
-Form-only // every reference of that form, regardless of name:
-:::<>::: .color(blue) :     // every waypoint
-:::#::: .bold :             // every sigil
-:::@::: .italic :           // every signet
+Form-only ; every reference of that form, regardless of name:
+:::<>::: .color(blue) :     ; every waypoint
+:::#::: .bold :             ; every sigil
+:::@::: .italic :           ; every signet
 
-Identity layer // every form of one named entity:
+Identity layer ; every form of one named entity:
 :::project:::
 .bg(#f0f0f0)
 .stroke(1)
 .tint(#ccc)
 .padding(0.5em):
 
-Form-specific // only one form of one named entity:
-:::#project::: .card :       // only #project (block-level)
-:::@project::: .chip :       // only @project (inline token)
-:::<project>::: .grow(1) :   // only <project> waypoint anchors
+Form-specific ; only one form of one named entity:
+:::#project::: .card :       ; only #project (block-level)
+:::@project::: .chip :       ; only @project (inline token)
+:::<project>::: .grow(1) :   ; only <project> waypoint anchors
 
 Forward form (spells first):
 :bold.color(red):::project:::
@@ -2339,7 +2425,7 @@ All forms use the same cauldron syntax and the same scoping rules.
 This codex makes every block tagged #meeting or anchored <meeting>
 automatically appear as a numbered callout with a light blue background.
 Inline @meeting tokens, on the other hand, would receive these spells on
-the token only // they'd render as small inline callouts.
+the token only ; they'd render as small inline callouts.
 #+end_example
 
 *** Glamour codex examples
@@ -2348,10 +2434,10 @@ Configuration follows all standard spell scoping rules. Quick codexes use
 the spell form directly:
 
 #+begin_example
-:*(red)                   // configure * to be red, globally from here on
-:*(red):word              // configure * to be red, just for this word
-:*(red):[this sentence]   // configure * to be red, just this scope
-:*(red): this whole line  // configure * to be red, for this line
+:*(red)                   ; configure * to be red, globally from here on
+:*(red):word              ; configure * to be red, just for this word
+:*(red):[this sentence]   ; configure * to be red, just this scope
+:*(red): this whole line  ; configure * to be red, for this line
 #+end_example
 
 Global configuration (self-terminating) persists until the same spell
@@ -2374,16 +2460,16 @@ The cauldron form handles multi-property codexes:
 .grow(1):
 
 Now all *bold text* is also italic, red, and larger automatically.
-Regular /italic text/ is unaffected // only * was configured.
+Regular /italic text/ is unaffected ; only * was configured.
 #+end_example
 
 *** Socket codex examples
 
 #+begin_example
-:+[a)]          // ordered lists use a), b), c)
-:-[*]           // unordered lists use *
-:=[I.]          // headings use I., II., III.
-:-[]            // invisible markers (no visible bullet)
+:+[a)]          ; ordered lists use a), b), c)
+:-[*]           ; unordered lists use *
+:=[I.]          ; headings use I., II., III.
+:-[]            ; invisible markers (no visible bullet)
 #+end_example
 
 *** Configuration target reference
@@ -2433,23 +2519,23 @@ A complete four-layer example for a single entity:
 
 #+begin_example
 :::@:::
-.italic:                       // every signet renders italic by default
+.italic:                       ; every signet renders italic by default
 
 :::alice:::
 .color(#4a90d9)
-.font[Inter]:                  // alice's identity: blue, Inter font
+.font[Inter]:                  ; alice's identity: blue, Inter font
 
 :::@alice:::
 .chip
-.popover<alice>:               // only @alice gets the chip + popover
+.popover<alice>:               ; only @alice gets the chip + popover
 
 :::#alice:::
 .bg(#eef4fb)
-.stroke(1):                    // only #alice gets the block tinting
+.stroke(1):                    ; only #alice gets the block tinting
 
 :::<alice>:::
 .bold
-.grow(1):                      // only <alice> anchors get bold + size
+.grow(1):                      ; only <alice> anchors get bold + size
 #+end_example
 
 Resolution at each reference:
@@ -2478,12 +2564,12 @@ Codex effects are applied to the current block and forward. If a codex
 appears in the middle of a document, blocks above it are not affected.
 
 #+begin_example
-- Regular block #project             // no codex yet, default styling
+- Regular block #project             ; no codex yet, default styling
 
 :::project::: .bg(#f0f0f0) :
 
-- Styled block #project              // inherits bg from codex
-- Another styled block #project      // also inherits
+- Styled block #project              ; inherits bg from codex
+- Another styled block #project      ; also inherits
 #+end_example
 
 A later codex for the same entity overrides the previous one:
@@ -2491,11 +2577,11 @@ A later codex for the same entity overrides the previous one:
 #+begin_example
 :::project::: .bg(#f0f0f0) :
 
-- Block A #project                   // light gray
+- Block A #project                   ; light gray
 
 :::project::: .bg(#ffffcc) :
 
-- Block B #project                   // light yellow (overridden)
+- Block B #project                   ; light yellow (overridden)
 #+end_example
 
 ** Beacons and the public layer (~!~)
@@ -2505,9 +2591,9 @@ By default, a codex configures only the file it appears in. The *beacon*
 namespace visible to every other file in the same vault.
 
 #+begin_example
-:::project::: .bg(#f0f0f0) :        // file-local: only this file sees it
+:::project::: .bg(#f0f0f0) :        ; file-local: only this file sees it
 
-!:::project::: .bg(#f0f0f0) :       // vault-public: every file in the vault sees it
+!:::project::: .bg(#f0f0f0) :       ; vault-public: every file in the vault sees it
 #+end_example
 
 The beacon attaches to the cauldron as a whole. Inline (~!:::project::: .bg(#f0f0f0).card :~)
@@ -2580,7 +2666,7 @@ Content here automatically gets the project styling.
 Satchels can appear anywhere in the document. Common patterns:
 
 #+begin_example
-Header satchel (best practice // clean start):
+Header satchel (best practice ; clean start):
 ~~~~~~~~~~
 Configuration here
 ~~~~~~~~~~
@@ -2596,11 +2682,11 @@ New configuration
 = Part Two
 Content with updated config...
 
-Footer satchel (no closing needed // terminates at end of file):
+Footer satchel (no closing needed ; terminates at end of file):
 = Content
 More content...
 ~~~~~~~~~~
-Configuration here // no closing ~ required at end of document.
+Configuration here ; no closing ~ required at end of document.
 #+end_example
 
 The footer form is especially useful: type ~~~~~~~~~~  as a visual divider
@@ -2654,11 +2740,11 @@ codexes by beaconing them individually:
 #+begin_example
 ~~~~~~~~~~
 :::private-style:::
-.bg(#fff):                   // file-local
+.bg(#fff):                   ; file-local
 
 !:::project:::
 .bg(#f0f0f0)
-.card:                       // public, despite the satchel being private
+.card:                       ; public, despite the satchel being private
 ~~~~~~~~~~
 #+end_example
 
@@ -2860,18 +2946,18 @@ their workspace root.
 The ~.vault~ file uses a simple key-value format. One key per line. Keys
 and values are separated by ~:~. Keys are case-insensitive (normalized to
 lowercase). Whitespace around ~:~ and around values is stripped. Comments
-begin with ~//~ and run to end of line. List values are comma-separated;
+begin with ~;~ and run to end of line. List values are comma-separated;
 values containing spaces or special characters are wrapped in double
 quotes. Order of keys is arbitrary.
 
 #+begin_example
-// my project vault
+;; my project vault
 type: private
 name: "My Project"
 about: "Personal project notes and tasks"
 import: globalentities, "best friends"
 export: shared-styles
-active: true
+active: true            ; set false to disable without deleting
 #+end_example
 
 The full set of recognized keys:
@@ -2908,7 +2994,7 @@ not cover a desired combination, though this is rarely needed:
 
 #+begin_example
 type: silo
-in: true            // overrides type's default in:false
+in: true            ; overrides type's default in:false
 #+end_example
 
 Explicit axis declarations override the named type's defaults for that
@@ -2993,18 +3079,18 @@ A typical organized vault:
 
 #+begin_example
 project/
-  .vault                 // declares this folder as a vault (type: private by default)
+  .vault                 ; declares this folder as a vault (type: private by default)
   entities/
-    .vault               // declares this subfolder as a vault // contents:
-                         //     type: gallery
-                         //     name: "Canonical Entities"
+    .vault               ; declares this subfolder as a vault ; contents:
+                         ;     type: gallery
+                         ;     name: "Canonical Entities"
     people.indue
     concepts.indue
   config/
-    .vault               // type: gallery // vault-wide codexes
+    .vault               ; type: gallery ; vault-wide codexes
     styling.indue
     schemas.indue
-  work/                  // plain folders inside project's vault, frequently edited
+  work/                  ; plain folders inside project's vault, frequently edited
     journal/
     projects/
     notes/
@@ -3085,8 +3171,17 @@ destructive.
 
 ** Three-layer grammar
 
-The formal grammar should be defined in three distinct layers:
+The formal grammar should be defined in three distinct layers, preceded by
+a lexical pre-pass:
 
+0. *Whisper pre-pass*: strips comments before the layered grammar runs.
+   On each line, the first unescaped ~;~ that is *not* inside a scroll
+   ~[]~ begins a whisper; the whisper and everything after it on that line
+   is discarded. Semicolons inside scrolls are literal, and a nick-escaped
+   ~\;~ is a literal semicolon. The count of consecutive semicolons
+   (~;~/~;;~/~;;;~/~;;;;~) carries no parser meaning, all whisper levels
+   strip identically; the count is a convention for human readers and
+   optional tooling (folders, outline views) only.
 1. *Socket layer*: identifies list items, heading promotions, and
    coordinates. This is line-start based. Sockets are parsed first.
 2. *Glamour layer*: identifies inline formatting (bold, italic, underline,
@@ -3097,6 +3192,10 @@ The formal grammar should be defined in three distinct layers:
    communicates intent (tag, mention, anchor) but does not control
    bestowal. Bestowal target is controlled by cauldron form: three colons
    for token, four colons (or ~:indue{...}~) for block.
+
+Because scrolls suppress whisper detection, the pre-pass must be
+scroll-aware rather than a naive line split: it scans for ~;~ while
+tracking whether it is currently inside an open scroll on that line.
 
 ** Indentation handling
 
@@ -3197,18 +3296,18 @@ the application may use today as the implicit anchor.
 :repeat[weekly]
 :repeat[monthly]
 :repeat[yearly]
-:repeat[3 days]                 // every 3 days
-:repeat[2 weeks]                // every 2 weeks
-:repeat[6 months]               // every 6 months
+:repeat[3 days]                 ; every 3 days
+:repeat[2 weeks]                ; every 2 weeks
+:repeat[6 months]               ; every 6 months
 #+end_example
 
 *** Day-of-week patterns
 
 #+begin_example
-:repeat[weekdays]               // Monday through Friday
-:repeat[weekends]               // Saturday and Sunday
-:repeat[mon, wed, fri]          // specific days
-:repeat[tue, thu]               // specific days
+:repeat[weekdays]               ; Monday through Friday
+:repeat[weekends]               ; Saturday and Sunday
+:repeat[mon, wed, fri]          ; specific days
+:repeat[tue, thu]               ; specific days
 #+end_example
 
 *** Ordinal patterns (irregular dates)
@@ -3216,13 +3315,13 @@ the application may use today as the implicit anchor.
 This is where most systems fail. Indue uses a readable ordinal syntax:
 
 #+begin_example
-:repeat[1st friday]             // first Friday of every month
-:repeat[last saturday]          // last Saturday of every month
-:repeat[3rd tuesday]            // third Tuesday of every month
-:repeat[2nd weekday]            // second weekday of every month
-:repeat[last day]               // last day of every month
-:repeat[1st monday of march]    // first Monday of March (yearly)
-:repeat[last friday of quarter] // last Friday of each quarter
+:repeat[1st friday]             ; first Friday of every month
+:repeat[last saturday]          ; last Saturday of every month
+:repeat[3rd tuesday]            ; third Tuesday of every month
+:repeat[2nd weekday]            ; second weekday of every month
+:repeat[last day]               ; last day of every month
+:repeat[1st monday of march]    ; first Monday of March (yearly)
+:repeat[last friday of quarter] ; last Friday of each quarter
 #+end_example
 
 Ordinal keywords: ~1st~, ~2nd~, ~3rd~, ~4th~, ~5th~, ~last~.
@@ -3237,8 +3336,8 @@ names (~january~ / ~jan~ through ~december~ / ~dec~).
 *** Interval + ordinal combinations
 
 #+begin_example
-:repeat[1st friday of 2 months] // first Friday, every other month
-:repeat[last day of 3 months]   // last day, every 3 months
+:repeat[1st friday of 2 months] ; first Friday, every other month
+:repeat[last day of 3 months]   ; last day, every 3 months
 #+end_example
 
 *** Bounds
@@ -3261,8 +3360,8 @@ which the pattern begins.
 Specific occurrences can be skipped:
 
 #+begin_example
-:skip(2026-07-04)               // skip this date
-:skip(2026-12-25, 2026-12-26)   // skip multiple dates
+:skip(2026-07-04)               ; skip this date
+:skip(2026-12-25, 2026-12-26)   ; skip multiple dates
 #+end_example
 
 *** Completion behavior
@@ -3270,8 +3369,8 @@ Specific occurrences can be skipped:
 Two modes for how the next date is calculated after completion:
 
 #+begin_example
-:repeat[weekly]                 // next date from the scheduled date
-:repeat![weekly]                // next date from the completion date
+:repeat[weekly]                 ; next date from the scheduled date
+:repeat![weekly]                ; next date from the completion date
 #+end_example
 
 ~:repeat~ schedules from the original anchor (task recurs on the same day
@@ -3317,17 +3416,17 @@ querying is left to application developers.
 The ~:query~ spell accepts a filter expression:
 
 #+begin_example
-:query(#work):                  // all blocks sigiled #work
-:query(:o):                     // all open tasks
-:query(:x):                     // all closed tasks
-:query(:>):                     // all active tasks
-:query(:!):                     // all blocked tasks
-:query(@alice):                 // all blocks mentioning @alice
-:query(#work :o):               // open tasks sigiled #work (AND)
-:query(#work | #personal):      // sigiled work OR personal
-:query(:due < 2026-04-15):      // due before April 15
-:query(:due = today):           // due today
-:query(:due < +7d):             // due within the next 7 days
+:query(#work):                  ; all blocks sigiled #work
+:query(:o):                     ; all open tasks
+:query(:x):                     ; all closed tasks
+:query(:>):                     ; all active tasks
+:query(:!):                     ; all blocked tasks
+:query(@alice):                 ; all blocks mentioning @alice
+:query(#work :o):               ; open tasks sigiled #work (AND)
+:query(#work | #personal):      ; sigiled work OR personal
+:query(:due < 2026-04-15):      ; due before April 15
+:query(:due = today):           ; due today
+:query(:due < +7d):             ; due within the next 7 days
 #+end_example
 
 *** Filter operators
@@ -3357,9 +3456,9 @@ By default, query results render as a flow of matching blocks (like
 ~:embed~). Applications may provide alternative views:
 
 #+begin_example
-:query(:o #work):                       // inline block list (default)
-:query(:o #work).table:                 // render as table
-:popover(:query(#work :>)):             // show in popover panel
+:query(:o #work):                       ; inline block list (default)
+:query(:o #work).table:                 ; render as table
+:popover(:query(#work :>)):             ; show in popover panel
 #+end_example
 
 *** Scope
@@ -3388,6 +3487,12 @@ optional extras.
 
 The complete semantic foundation. An application claiming Indue
 compatibility must support all of the following:
+
+*Lexical*
+- Whispers (comments): ~;~ to end of line, stripped in a scroll-aware
+  pre-pass. Literal ~;~ inside scrolls ~[]~ and via the nick (~\;~).
+  Graduated levels (~;~/~;;~/~;;;~/~;;;;~) strip identically; level is a
+  reader/tooling convention, not a parser distinction.
 
 *Structure*
 - Sockets: ~-~, ~+~, ~=~ with indentation-based and dash-mode nesting
@@ -3500,16 +3605,16 @@ To avoid name collisions between applications, custom spells should use a
 namespace prefix:
 
 #+begin_example
-:ext.myapp.kanban{...}          // app-specific kanban board
-:ext.myapp.timeline{...}        // app-specific timeline view
-:ext.obsidian.dataview{...}     // Obsidian-specific dataview
+:ext.myapp.kanban{...}          ; app-specific kanban board
+:ext.myapp.timeline{...}        ; app-specific timeline view
+:ext.obsidian.dataview{...}     ; Obsidian-specific dataview
 #+end_example
 
 Applications may also register short names that omit the namespace for
 convenience within their own ecosystem:
 
 #+begin_example
-:kanban{...}                    // works in MyApp, unknown elsewhere
+:kanban{...}                    ; works in MyApp, unknown elsewhere
 #+end_example
 
 ** The ~:ext.css~ reference extension
@@ -3578,8 +3683,10 @@ or define its own subset?
 ** Term/definition lists
 
 ~/~ is used for italic, so Typst's ~/ term: definition~ is not available.
-Options include a spell like ~:def(term){definition}~ or a different
-delimiter character entirely (~;~ is currently available, for example).
+The leading candidate is a spell like ~:def(term){definition}~. A bare
+delimiter character is harder to find now that ~;~ has been claimed for
+whispers (comments) and ~&~ remains the main unreserved punctuation; a
+spell form avoids consuming scarce single-character real estate.
 
 ** Blockquotes
 
@@ -3614,10 +3721,13 @@ Currently positional only. Named arguments may be added if needed.
 ** Escaping edge cases
 
 The nick (~\~) serves as a general escape character (e.g. ~\*~ for a literal
-asterisk, ~\#~ for a literal hash). The full set of characters that need
-escaping in various contexts should be specified precisely. In particular:
-which characters need escaping inside scrolls (probably none, since scrolls
-are verbatim), inside conduits, and in plain text at line start vs mid-line.
+asterisk, ~\#~ for a literal hash, ~\;~ for a literal semicolon that should
+not begin a whisper). The full set of characters that need escaping in
+various contexts should be specified precisely. In particular: which
+characters need escaping inside scrolls (probably none, since scrolls are
+verbatim, including ~;~ which is never a whisper there), inside conduits
+(where ~;~ does begin a whisper), and in plain text at line start vs
+mid-line.
 
 ** Code block syntax
 
