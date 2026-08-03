@@ -53,7 +53,6 @@ Symmetry).
 | ~/~         | Italic        | ~:italic~          |
 | ~_~         | Underline     | ~:underline~       |
 | ~%~         | Strikethrough | ~:strike~          |
-| ~^~         | Superscript   | ~:sup~             |
 
 ** Sigils, signets, and references
 
@@ -93,7 +92,7 @@ Symmetry).
 | Character | Status                                 |
 |-----------+----------------------------------------|
 | ~>~         | Coordinate (block handle)             |
-| ~^~         | Waypoint (span anchor); ~:sup~ spell for superscript |
+| ~^~         | Waypoint (span anchor)|
 | ~&~         | Available                              |
 | ~$~         | Available                              |
 | ~;~         | Comment (Whisper), level by repetition |
