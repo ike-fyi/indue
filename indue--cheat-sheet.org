@@ -292,7 +292,7 @@ These are shapes taken from other markup because you already know them. They wor
 
 | Write            | Same as             |
 |------------------+---------------------|
-| ~[label](url)~     | ~:link[url]:label~    |
+| ~[label](url)~     | ~:link[url].[label]~    |
 | ~[]~ or ~[ ]~        | ~:o~                  |
 | ~[>]~              | ~:>~                  |
 | ~[x]~              | ~:x~                  |
