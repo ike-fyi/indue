@@ -1,0 +1,367 @@
+#+TITLE: Indue Query Syntax
+#+SUBTITLE: Finding and Reading Data in a Lair
+#+AUTHOR: Ike Ah-Loe
+#+STATUS: Draft, under active design
+
+* About This Document
+
+This specifies Indue's query language: how to find blocks, tasks, and entities in a document or a Lair, and how to read data out of them.
+
+It is a companion to *Indue, Language Specification*, which defines the syntax and semantic model; *The Indue Spellbook*, which catalogues the spells; and *Indue Reference Schema*, which defines the tables a query addresses.
+
+** Queries are SQL
+
+A query is a subset of SQL's ~SELECT ... WHERE~ shape:
+
+#+begin_example
+SELECT block WHERE task = open
+SELECT block, span WHERE task = open AND tag = work
+SELECT due, priority WHERE task = open AND due < +7d
+#+end_example
+
+That choice was made for two reasons that turn out to be the same reason.
+
+*SQL is readable in plain text.* ~SELECT block WHERE task = open~ is an English sentence with three keywords most people have seen. Someone opening a document with no application can read what a query is asking for, which is the property every other decision in Indue has been measured against.
+
+*And SQL is what applications already speak.* An application storing a Lair in a database can pass a query through with little or no translation, because the query already is a ~WHERE~ clause over tables whose names are specified (see *Indue Reference Schema*). Without a shared schema, SQL-shaped syntax would still need bespoke translation per application, which is most of what it is meant to avoid.
+
+** One language, two contexts
+
+The string after ~indue query~ is the string that goes inside ~:query[...]~:
+
+#+begin_example
+$ indue query "SELECT block WHERE task = open"
+#+end_example
+
+#+begin_example
+:query[SELECT block WHERE task = open]
+#+end_example
+
+A query can be pasted between a note and a terminal unchanged, tooling can generate either from the same source, and there is one grammar to learn, document, and implement.
+
+At a prompt, quote the whole query. Inside a scroll no quoting is needed, since a scroll is unparsed.
+
+** A subset, not a dialect
+
+The language is a *subset* of SQL, not a variant of it. Everything it accepts, standard SQL accepts, with three exceptions documented below: relation pseudo-fields, unquoted bare values, and relative dates.
+
+What it leaves out is what makes SQL hard to type: joins, subqueries, aggregates, and window functions. Those require a query planner rather than a filter, and an application is free to use them internally.
+
+* Selecting
+
+~SELECT~ answers two questions at once, as it does in SQL: *what shape of thing comes back*, and *which parts of it*.
+
+** Selecting a kind
+
+Naming a kind returns whole nodes of that kind:
+
+#+begin_example
+SELECT block                    ; whole blocks
+SELECT task                     ; whole tasks
+SELECT source                   ; whole sources
+SELECT block, span              ; both
+#+end_example
+
+| Kind       | Returns                                        |
+|------------+------------------------------------------------|
+| ~block~      | Blocks                                         |
+| ~span~       | Spans                                          |
+| ~task~       | Tasks, one row each, so a block with two yields two |
+| ~source~     | Sources, resolved: shadowed and accumulated    |
+| ~station~    | Stations                                       |
+| ~document~   | Documents                                      |
+
+*** Why tasks are their own kind
+
+A block may carry a block-level task and any number of span-level tasks (see The Task Model). ~SELECT task~ returns each one, so a query for open tasks does not silently collapse three into one row.
+
+** Selecting fields
+
+Naming fields returns those columns instead of whole nodes:
+
+#+begin_example
+SELECT text WHERE tag = work
+SELECT text, due, priority WHERE task = open
+#+end_example
+
+Field names are the schema's column names, which are the AST's field names.
+
+** Result shapes
+
+The shape follows from what was selected and how many rows match.
+
+|                  | One row         | Many rows           |
+|------------------+-----------------+---------------------|
+| ~SELECT <kind>~    | one node        | a list of nodes     |
+| ~SELECT <field>~   | one value       | a list of values    |
+| ~SELECT a, b~      | one row         | a matrix            |
+
+Nothing declares the shape; it falls out. A query matching one thing and asking for one field returns a value, which is why single-value reads need no special mode.
+
+* Filtering
+
+~WHERE~ takes conditions joined by ~AND~, ~OR~, and ~NOT~, grouped with parentheses.
+
+#+begin_example
+WHERE task = open
+WHERE task = open AND tag = work
+WHERE tag = work OR tag = personal
+WHERE task = open AND NOT tag = archived
+WHERE task = open AND (due < +7d OR priority > 2)
+#+end_example
+
+Keywords are case-insensitive: ~and~ and ~AND~ are the same.
+
+~AND~ binds tighter than ~OR~, as in SQL, so ~a AND b OR c~ is ~(a AND b) OR c~. Parenthesise when in doubt.
+
+** Comparison
+
+| Operator | Meaning                  | Types                |
+|----------+--------------------------+----------------------|
+| ~=~        | Equal to                 | any                  |
+| ~!=~       | Not equal to             | any                  |
+| ~<~ ~>~      | Less than, greater than  | numbers, dates, times |
+| ~<=~ ~>=~    | Or equal to              | numbers, dates, times |
+| ~IN~       | One of a list            | any                  |
+| ~LIKE~     | Text pattern             | text                 |
+| ~IS NULL~  | Has no value             | any                  |
+| ~IS NOT NULL~ | Has any value         | any                  |
+
+#+begin_example
+WHERE priority > 2
+WHERE due <= 2026-04-15
+WHERE kind IN (heading, table)
+WHERE text LIKE %migration%
+WHERE due IS NOT NULL
+#+end_example
+
+All of these are standard SQL. ~<~ and ~>~ are unambiguous here because a query is not Indue syntax: nothing competes for them.
+
+** Bare values
+
+A value needs no quotes unless it contains a space:
+
+#+begin_example
+WHERE task = open
+WHERE tag = "machine learning"
+#+end_example
+
+This is the first divergence from strict SQL, and it is worth the cost. A query is normally already inside shell quotes, so requiring inner quotes on every value would mean nested quoting for the common case.
+
+An implementation passing a query to a real database quotes bare values during translation.
+
+** Relations as fields
+
+A block has many tags, so ~tag~ cannot be a column. Matching one is defined as an existence test, and the language surfaces it as though it were a field:
+
+#+begin_example
+WHERE tag = work
+#+end_example
+
+expands to:
+
+#+begin_example
+EXISTS (SELECT 1 FROM v_reference r
+        WHERE r.node_id = v_block.id
+          AND r.kind = 'sigil' AND r.name = 'work')
+#+end_example
+
+Four pseudo-fields work this way:
+
+| Pseudo-field | Matches                        |
+|--------------+--------------------------------|
+| ~tag~          | A sigil occurring in the node  |
+| ~mention~      | A signet occurring in the node |
+| ~station~      | A station on the node          |
+| ~source~       | A source naming the node       |
+
+#+begin_example
+WHERE tag = work AND mention = alice
+WHERE source = alice
+WHERE tag IN (work, urgent)
+#+end_example
+
+This is the second divergence, and the largest. Writing that ~EXISTS~ by hand would undo the readability the whole design is for.
+
+*** Entities are matched by name, not by mark
+
+There is no ~#work~ in a query. The parser resolved ~#work~, ~#work#~, and ~#[work]~ into one entity with the name ~work~ before any query ran, so a query matches the name and names the kind separately.
+
+That is why the pseudo-fields exist: they are how a query says which *kind* of reference it means, since the mark is no longer present to say it.
+
+** Dates
+
+Dates are ISO 8601. Relative dates resolve at query time:
+
+| Form         | Means                    |
+|--------------+--------------------------|
+| ~2026-04-15~   | That date                |
+| ~today~        | Today                    |
+| ~+7d~          | Seven days from now      |
+| ~-2w~          | Two weeks ago            |
+| ~+3m~ ~+1y~      | Months, years            |
+
+#+begin_example
+WHERE due < +7d
+WHERE completions > -30d
+WHERE on = today
+#+end_example
+
+This is the third divergence. SQL has no portable relative-date literal, and date arithmetic is the most common thing a task query does. An implementation resolves these to absolute dates before translation.
+
+** Traversal
+
+Tree relations are matched with two pseudo-fields, both resolving through the closure table:
+
+| Pseudo-field | Matches                                       |
+|--------------+-----------------------------------------------|
+| ~under~        | Nodes anywhere in that node's subtree          |
+| ~in~           | Nodes directly inside that node                |
+
+#+begin_example
+WHERE task = open AND under = current-sprint
+WHERE kind = heading AND in = handbook
+#+end_example
+
+The value is a station or source name, since those are how a place is named.
+
+** Scope
+
+A query searches the whole Lair by default, in both contexts, so a document's query and the same string at a prompt return the same results.
+
+~FROM~ narrows to a document:
+
+#+begin_example
+SELECT block FROM projects/alpha.indue WHERE task = open
+SELECT block FROM here WHERE task = open
+#+end_example
+
+~here~ means the current document, and is meaningful only inside one.
+
+* Ordering and Limiting
+
+#+begin_example
+SELECT block WHERE task = open ORDER BY due
+SELECT block WHERE task = open ORDER BY due DESC
+SELECT block WHERE task = open ORDER BY due LIMIT 10
+#+end_example
+
+Without ~ORDER BY~, results are in *document order*: by file path, then by position. This is deterministic, so two implementations agree.
+
+Missing values sort last, ascending or descending.
+
+* Reading Values
+
+Filtering finds things. Reading gets one value out of one thing.
+
+** Dotted access
+
+A source's properties are read with a dot. This is not a query and needs no engine: a source resolves to exactly one record, so the result is exactly one value.
+
+#+begin_example
+&alice.role
+&alice.email
+&n3b7c2.due
+#+end_example
+
+It works anywhere a value goes:
+
+#+begin_example
+Their role is &alice.role.
+:span-bg<&team.color>:[the team]
+#+end_example
+
+The equivalent query is available and more verbose, which is the point of having both:
+
+#+begin_example
+SELECT role FROM source WHERE name = alice
+#+end_example
+
+** Why sources only
+
+Dotted access is defined on sources and not stations, because a source is single-valued by construction: shadowing guarantees one record per name.
+
+A station may appear many times, so ~^intro.due~ would have no single answer. Where both are wanted on one block, declare both:
+
+#+begin_example
+^&[alice]
+:info[role | Engineer]
+#+end_example
+
+** History
+
+A repeated key on a source accumulates rather than overwriting. Dotted access returns the current value; earlier ones are reached by version:
+
+#+begin_example
+&goblin.hp                 ; the current value
+&goblin|1.hp               ; the value at version 1
+#+end_example
+
+* In a Document
+
+~:query~ takes the same string, and the result shape determines the rendering:
+
+| Shape      | Renders as     |
+|------------+----------------|
+| one value  | inline text    |
+| list       | a list         |
+| matrix     | a table        |
+
+#+begin_example
+:query[SELECT block WHERE task = open]
+:query[SELECT text, due WHERE task = open ORDER BY due]
+:query[SELECT role FROM source WHERE name = alice]
+#+end_example
+
+An explicit rendering overrides the default:
+
+#+begin_example
+:query[SELECT block WHERE task = open].table
+:query[SELECT block WHERE task = open].list
+#+end_example
+
+** Output flags have no meaning in a document
+
+At a prompt, ~--format json~ and ~--format yaml~ serialise results for scripting. A document renders rather than serialising, so these are inert there, in the ordinary parse-don't-fail sense.
+
+* The Result Contract
+
+*A query resolves as if the whole Lair had been parsed.*
+
+This is the portability guarantee, and it is what makes the query language part of the format rather than part of one program. An application may maintain an index, cache results, or query its own database. It may not return a different answer than a full parse would.
+
+Two consequences:
+
+*Applications may optimise freely.* Incremental parsing, inverted indexes, and materialised views are all fine, because the contract is about results rather than method.
+
+*The reference implementation is checkable.* ~indue query~ over a Lair is the definition of what a query returns, and another implementation can be diffed against it on the same input with the same string.
+
+* Error Handling
+
+Queries follow the language's recover-forward discipline.
+
+*A malformed query matches nothing* and reports the problem. It does not match everything, which would be a silent and destructive default.
+
+*An unknown field matches nothing.* It is not an error: a Lair may legitimately not use a key another one does.
+
+*A type mismatch matches nothing.* ~priority > 2~ against a block whose priority is ~high~ does not match and does not fail. This is the same casting behaviour values have everywhere: try, and be inert if it cannot be done.
+
+*An unresolved dotted read renders nothing.* ~&alice.role~ where no such source or key exists produces no output rather than an error string.
+
+* Open Questions
+
+** Aggregates
+
+~COUNT~, ~SUM~, and ~GROUP BY~ are not in the language. Counting is the obvious first addition, and it is genuinely useful for agenda views. Grouping raises the question of what a grouped result renders as.
+
+** Joins across kinds
+
+~SELECT block, span~ is a union, not a join. There is currently no way to ask a question that relates two kinds, such as "blocks whose parent is tagged ~project~". Whether that needs syntax, or whether ~under~ covers enough of it, is unsettled.
+
+** Pattern syntax
+
+~LIKE~ is listed with SQL's ~%~ wildcards. Whether that is the right choice, or whether a glob or regular-expression subset would serve better, is unsettled.
+
+** Live queries
+
+A query in a document is evaluated when the document is rendered. Whether a query result may itself be queried, and what that means for evaluation order, is not specified. Self-referential queries are the obvious hazard.
