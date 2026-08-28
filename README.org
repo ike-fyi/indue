@@ -69,10 +69,11 @@ Superscript (~:sup~), subscript (~:sub~), and maths (~:math~, aliased ~:$~) are 
 |----------------+----------------------+--------------|
 | ~#tag~         | Tag (single word)    | Sigil        |
 | ~#[multi word]~ | Tag (multi-word)    | Sigil        |
+| ~#multi word# | Tag (multi-word)    | Sigil        |
 | ~#~            | Tag whole line       | Sigil        |
 | ~@name~        | Entity reference     | Signet       |
 | ~^label~       | Anchor (a named place) | Station   |
-| ~&name&~       | Canonical record       | Source     |
+| ~&name~       | Canonical record       | Source     |
 
 
 ** Spells and containers
