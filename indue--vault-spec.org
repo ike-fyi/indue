@@ -1,0 +1,559 @@
+#+TITLE: Indue Vault Specification
+#+SUBTITLE: Multi-Document Collections, Visibility, and Exchange
+#+AUTHOR: Ike Ah-Loe
+#+STATUS: Pre-specification, exploratory design
+
+* About This Specification
+
+This specifies how Indue documents behave *together*: what a collection is,
+which names and configuration cross a file boundary, and how collections
+import from and export to one another.
+
+It is a companion to *Indue, Language Specification* and *The Indue
+Spellbook*. It depends on those; they do not depend on it. An application
+that deals only in single documents is fully compliant with the language
+specification without implementing anything here, and the one construct
+that reaches across documents, the beacon (~!~), is designed so that such an
+application can parse and preserve it without acting on it.
+
+Everything in this document is therefore optional in the sense that a
+conforming Indue tool need not implement it, and mandatory in the sense that
+a tool which *does* handle multi-document collections must implement it as
+written, or collections will not resolve consistently between applications.
+
+** What is specified here
+
+| Topic                       | Covers                                          |
+|-----------------------------+-------------------------------------------------|
+| Public/private visibility   | What crosses a file boundary, and what does not |
+| File disposition            | ~.indue~, ~.avow~, ~.veil~: what a file publishes  |
+| Beacons (~!~)                 | Promoting configuration into the public layer   |
+| Vaults                      | Declaring a collection, and its scope           |
+| Vault types                 | ~private~, ~open~, ~silo~, ~gallery~                |
+| Imports and exports         | Explicit wiring between collections             |
+| Permission-aware behaviour  | Handling filesystem failures gracefully         |
+
+** A note on filesystem layout
+
+Names inside a vault resolve vault-wide, and folder structure is purely
+organisational. Where a project wants namespaced virtual folders in its file
+names, the recommended convention is *Morse-Case*. This is a recommendation
+only: a vault that ignores it is a valid vault, and the convention is useful
+independently of Indue.
+
+* Public/Private Visibility
+
+Indue distinguishes between *content* (text, blocks, list items, headings),
+*entities* (sigils, signets, stations, sources), and *configuration*
+(codexes, schema declarations, satchel-hosted spells). These three things
+have different default visibility, and understanding the rules is
+essential for working across multiple files.
+
+** The four rules
+
+The complete visibility model in four rules:
+
+1. *Content is private by default.* Body text, list items, headings, and
+   inline content live in the file that contains them. Content does not
+   leave its file unless something explicitly references it (e.g., via
+   ~:embed~ or ~:popover~ from another file).
+2. *Entities are public by default.* Sigils (~#name~), signets (~@name~),
+   stations (~^name~), and sources (~&name&~) declared anywhere in
+   a file automatically join the vault's *public layer* and become
+   resolvable from every other file in the same vault. Names need to be
+   findable for the language to be useful, so this is the default with no
+   opt-in required.
+3. *Configuration is private by default.* Codex definitions
+   (~@<project> ... :~), schema declarations (~:+[a)]~), satchels, and
+   any other configuration-shaped spell are file-local unless promoted
+   with a beacon (~!~). The beacon prefix on a cauldron or satchel
+   promotes it to the vault's public layer.
+4. *Within a vault, the public layer is shared by all files.* Folder
+   structure inside a vault is purely organizational, it does not create
+   scope boundaries. A public entity or beacon-promoted codex is visible
+   to every file in the vault regardless of where each lives in the
+   directory tree.
+
+The four rules together, in one file:
+
+#+begin_example
+; notes/projects/alpha.indue
+
+@<project> .bg<#f0f0f0> :   ; rule 3: private, styles only this file
+!@<client> .card :          ; rule 3: beaconed, styles the whole vault
+
+- = Project Alpha ^alpha #project
+  Internal notes on the rollout.
+#+end_example
+
+~^alpha~ and ~#project~ join the public layer with no opt-in (rule 2), so
+another file can write ~@alpha~ and resolve it. The body text stays in this
+file (rule 1). The ~project~ codex styles nothing outside this file, while
+the beaconed ~client~ codex reaches every file in the vault (rule 3), no
+matter which folder they sit in (rule 4).
+
+** What this means in practice
+
+A user organizing a personal knowledge base into folders for people,
+projects, places, etc., does not need to think about scope at all. Any
+~@alice~ defined anywhere is alice everywhere. Folders are drawers in
+one desk, not separate desks. The vault is the desk.
+
+A user wanting controlled vault-wide styling places one beacon satchel ,
+typically at the top of a config file, and writes their codexes there.
+Every file in the vault inherits the styling. No imports, no per-file
+declarations, no plumbing.
+
+A user with a private working note can write any codex they want without
+~!~ and trust that the codex affects only that file. Local overrides
+stay local automatically.
+
+** What beacons do (and don't) do
+
+Beacons govern *codex* visibility. They do not affect:
+
+- *Entities*. These are vault-public regardless of beacon, because
+  entities are names and names need to be resolvable.
+- *Content*. Body text never crosses file boundaries via the public
+  layer; transclusion (~:embed~) and reference (~:link~, ~:popover~)
+  spells are how content is shared.
+- *Spell invocations at content sites*. Calling ~:bold:word~ in a file
+  has no public/private distinction; it is local rendering, not a
+  declaration.
+
+The mental model: beacons promote /declarations/. A cauldron is a
+declaration ("here is how project should behave"). A spell invocation
+is not a declaration ("here is one bold word"). Names are
+declarations-of-existence, and they are public unconditionally.
+
+** Cross-vault visibility
+
+The four rules describe behavior /within/ a single vault. Visibility
+across vault boundaries is governed by vault scope and explicit
+import/export, described in the Vaults section.
+
+** Indue declares logical scope; the OS enforces security
+
+Indue's visibility model is *logical*, not enforced. Marking a codex with
+~!~ tells Indue tools that the codex is intended to be public. It does
+not encrypt anything, does not lock anything, and does not prevent
+someone with file access from reading or modifying it. Anyone who can
+read an Indue file can read everything in it, public or private.
+
+For real security, use the operating system: filesystem permissions,
+ACLs, encryption, sandboxing. These operate on Indue files exactly as
+they do on any other plain text. A vault made group-readable is a shared
+vault; a vault made user-only is a private one. Indue tools should be
+permission-aware, handle read failures gracefully, surface write failures
+clearly, and indicate unreachable portions of a vault explicitly rather
+than silently, but security enforcement itself belongs to the layer
+below the language.
+
+* File Disposition
+
+A Lair is a set of participants, and each file decides how much of itself can be gleaned by the others. That decision is carried by the file's extension.
+
+| Extension  | Publishes                                    |
+|------------+----------------------------------------------|
+| ~.indue~     | Whatever the file's own syntax says          |
+| ~.avow~      | Everything, regardless of beacons            |
+| ~.veil~      | Nothing, regardless of beacons               |
+
+The three read as what a participant does with what they carry: *indue* is to be clothed in power, *avow* is to declare it openly, *veil* is to keep it to oneself.
+
+** The default carries no override
+
+An ~.indue~ file behaves exactly as the visibility rules describe: entities are vault-public, codexes are file-local unless beaconed, and content never leaves. Most files are this, and nothing about them needs deciding.
+
+** ~.avow~: everything published
+
+An ~.avow~ file publishes its whole contents to the Lair, whether or not anything in it is beaconed.
+
+The canonical use is a *spell pack*: a file whose entire purpose is to offer definitions to the rest of the Lair. Wrapping every definition in a beaconed satchel would be ceremony for something the file already is.
+
+#+begin_example
+; languages.avow
+<:rust>.code<rust>:
+<:python>.code<python>:
+<:zig>.code<zig>:
+#+end_example
+
+** ~.veil~: nothing published
+
+A ~.veil~ file contributes nothing to the Lair. Its entities do not enter the shared namespace, its codexes do not reach other files, and a beacon inside it has nowhere to go.
+
+The canonical use is *untethered musing*: drafts, scratch notes, half-formed thoughts. Without this, every ~@name~ in a rambling note becomes a vault-wide signet whether or not that was intended, and the only remedy is a nested silo Lair, which is a directory and a marker file for something that should be a property of one file.
+
+A veiled file is not hidden. It is plainly present, opens normally, and works completely when read directly. What is veiled is its reach.
+
+** The extension overrides, it does not rewrite
+
+In-file syntax keeps its meaning under both overrides. A beaconed satchel inside a ~.veil~ file is still a beaconed satchel; it simply has nowhere to publish to. An unbeaconed codex inside an ~.avow~ file is still written the way it is written; the extension is what carries it outward.
+
+This matters because renaming restores intent rather than requiring a rewrite. Changing ~drafts.veil~ to ~drafts.indue~ makes its beacons take effect exactly as they were always written.
+
+Two questions, two mechanisms: the *extension* answers whether anything reaches outside, and the *syntax* answers which parts would if it could.
+
+** Why the extension and not a marker in the file
+
+For ~.veil~ especially, the property must be knowable *without opening the file*. That is the point: a scanner building the Lair's public layer can skip a veiled file entirely, with no parse at all.
+
+~.avow~ earns its extension differently. The file must still be read, but a loader can parse it in a simplified mode, with visibility resolution switched off: there are no beacons to detect and no per-declaration public state to track, because everything is public by construction.
+
+So the extensions are not visibility sugar. They are *parse contracts*: a promise about what a file contains that lets a loader take a shortcut it could not otherwise take.
+
+** Disposition is not security
+
+These are participation choices, not access control. A ~.veil~ file is readable by anyone who can read the directory, and a ~.avow~ file is no more exposed than any other plain text.
+
+What they provide is *machine-readable intent*. A system that does have enforcement power — filesystem permissions, encryption at rest, sync exclusion, export filtering — can use a file's disposition as the source of truth for what to protect, rather than guessing. Indue states what was meant; the layer below enforces it.
+
+** File disposition and Lair type are different scopes
+
+A file's extension governs *participation within its Lair*: what the other files can glean from it.
+
+A Lair's type governs *how Lairs deal with each other*: what crosses a collection boundary, in which direction.
+
+Neither overrides the other, because they answer different questions. A ~.veil~ file inside an ~open~ Lair still publishes nothing, since the Lair's openness concerns its dealings with other Lairs and the file's veil concerns its dealings with its neighbours.
+
+* Beacons and the Public Layer (~!~)
+
+By default, a codex configures only the file it appears in. The *beacon*
+(~!~) prefix promotes a codex into the vault's *public layer*, the shared
+namespace visible to every other file in the same vault.
+
+#+begin_example
+@<project> .bg<#f0f0f0> :        ; file-local: only this file sees it
+
+!@<project> .bg<#f0f0f0> :       ; vault-public: every file in the vault sees it
+#+end_example
+
+The beacon attaches to the cauldron as a whole. Inline (~!@<project> .bg<#f0f0f0>.card :~)
+and multiline (~!@<project>~ followed by spell lines and a terminator)
+forms both accept the prefix.
+
+There is no inline form that beacons a single property /inside/ a cauldron.
+A cauldron is the unit of beaconing, its accumulated spells are either
+public together or private together. To beacon a single spell as its own
+public unit, write it as its own (small) cauldron with its own beacon, or
+beacon the satchel that contains it.
+
+** What beacons promote, and what they don't
+
+Beacons govern *codex* visibility, cauldron definitions, schema
+declarations, and configuration-shaped spells. They do not affect:
+
+- *Entities* (sigils, signets, stations, sources), these are vault-public by
+  default, regardless of where they appear. The beacon is irrelevant to
+  them.
+- *Inline content*. Paragraphs, list items, body text. Content is
+  always file-local; beacons do not export content into other files.
+- *Spell invocations at content sites*. Calling ~:bold:word~ in a file
+  has no public/private distinction; it just renders inline.
+
+The mental model: codexes describe /how things behave/, and that's the
+thing whose visibility scope is opt-in. Names (entities) and uses (content,
+invocations) are not subject to the public/private split.
+
+** Beacons and satchels compose
+
+A common pattern: one beacon-prefixed satchel at the top of a file
+publishes everything inside it as vault-wide configuration. A second,
+non-beaconed satchel below it carries file-local configuration. Both
+The satchel itself is defined in *Indue, Language Specification*.
+
+
+* Vaults
+
+A *vault* is a logical scoping boundary for Indue's public layer. Within
+a vault, all public data is shared across all files. Vaults are declared
+by placing a ~.vault~ file at the root of the directory that defines the
+vault.
+
+Folders inside a vault, even deeply nested ones, do not create scope
+boundaries. They are organization. Only ~.vault~ files create boundaries.
+
+** The blank ~.vault~ file is the common case
+
+Most users create a vault by dropping a blank ~.vault~ file at the root of
+their workspace and never touching it again. The blank file declares a
+*private vault* (the default type), which sees up into ancestor vaults if
+any exist but is not visible to them, the right behavior for most
+workspaces.
+
+The first thing an Indue tool should do when initializing a new workspace
+is create this blank ~.vault~ file. After that, the vault Just Works.
+
+** Fallback for files outside any vault
+
+A file with no ~.vault~ ancestor in its directory hierarchy participates
+only in its own folder and subfolders, with no upward visibility. Each
+folder is its own implicit silo, looking only downward. This is graceful
+degradation, not a recommended workflow, if a user's references are not
+resolving across files they expect, the fix is to add a ~.vault~ file at
+their workspace root.
+
+** ~.vault~ file format
+
+The ~.vault~ file uses a simple key-value format. One key per line. Keys
+and values are separated by ~:~. Keys are case-insensitive (normalized to
+lowercase). Whitespace around ~:~ and around values is stripped. Comments
+begin with ~;~ and run to end of line. List values are comma-separated;
+values containing spaces or special characters are wrapped in double
+quotes. Order of keys is arbitrary.
+
+#+begin_example
+;; my project vault
+type: private
+name: "My Project"
+about: "Personal project notes and tasks"
+import: globalentities, "best friends"
+export: shared-styles
+active: true            ; set false to disable without deleting
+#+end_example
+
+The full set of recognized keys:
+
+| Key      | Default     | Purpose                                              |
+|----------+-------------+------------------------------------------------------|
+| ~type~     | ~private~     | Vault type, see "Vault types" below                |
+| ~name~     | folder name | Display name for tools that surface vaults          |
+| ~about~    | (none)      | Short description                                   |
+| ~active~   | ~true~        | When ~false~, the vault is disabled (no scope effect) |
+| ~import~   | (none)      | Vault names whose public layer is pulled in         |
+| ~export~   | (none)      | Sub-vault names whose public layer is pushed out    |
+
+Unknown keys are preserved but ignored, following the parse-don't-fail
+philosophy. Future spec revisions may define additional keys without
+breaking older tools.
+
+** Vault types
+
+The ~type~ key chooses one of four ambient behaviors. Each type is sugar
+for a combination of two underlying axes, whether the vault sees /out/
+to ancestor vaults, and whether ancestor vaults can see /in/.
+
+| Type     | Out  | In   | Behavior                                                |
+|----------+------+------+---------------------------------------------------------|
+| ~private~  | yes  | no   | *Default.* Sees ancestor public layers, blocks ancestors from seeing in. |
+| ~open~     | yes  | yes  | Full two-way participation with ancestors.              |
+| ~silo~     | no   | no   | Self-contained. Neither direction crosses the boundary. |
+| ~gallery~  | no   | yes  | Library/reference. Exports public layer outward; ignores ancestors. |
+
+The named types are the primary way to declare a vault. The underlying
+~in~ and ~out~ axes can also be set explicitly when the named types do
+not cover a desired combination, though this is rarely needed:
+
+#+begin_example
+type: silo
+in: true            ; overrides type's default in:false
+#+end_example
+
+Explicit axis declarations override the named type's defaults for that
+axis only.
+
+*** Choosing a type
+
+- *private*. The everyday default. A workspace that participates in
+  whatever larger context surrounds it but contains its internals.
+- *open*. A sub-vault that wants full two-way namespace sharing with
+  its parent. A collaborator's vault inside a shared project.
+- *silo*. A self-contained workspace. Nothing leaves, nothing enters.
+  A journal, a confidential project, an air-gapped notebook.
+- *gallery*. A published entity library. Useful for shared definitions
+  (entity names, codexes, schemas) that should be available to ancestor
+  vaults but should not pull in ancestor content. See "Galleries as
+  entity libraries" below.
+
+** Imports and exports
+
+Imports and exports are explicit overrides on the ambient ~in~ and ~out~
+behavior. Both are vault-level; they operate on whole vaults, not files
+or individual entities.
+
+- ~import: vaultA, vaultB~. Pulls in those vaults' public layers
+  regardless of this vault's ~in~ setting. Overrides ~in~ for the named
+  vaults specifically.
+- ~export: subA, subB~. Pushes those sub-vaults' public layers outward
+  through this vault's boundary regardless of this vault's ~out~ setting.
+  Overrides ~out~ for the named sub-vaults specifically.
+
+*** Imports are shallow
+
+Importing a vault brings in that vault's public layer only. It does not
+transitively bring in anything that vault itself imported. If you want
+something that ~vaultA~ imports, import it directly. This makes imports
+predictable to read, the visible declaration is the complete picture of
+what crosses the boundary.
+
+*** Examples
+
+A silo with explicit exports, the natural way to say "self-contained
+except for these specific things":
+
+#+begin_example
+type: silo
+export: canonical-people, canonical-projects
+#+end_example
+
+A private vault that pulls from a sibling library by name:
+
+#+begin_example
+type: private
+import: shared-entities, "best friends"
+#+end_example
+
+Vault names in ~import~ and ~export~ are resolved within the same
+ancestor vault tree, they refer to other vaults visible at the
+appropriate scope, not to filesystem paths. The vault scanner is
+responsible for matching these names to ~.vault~ markers it has
+discovered.
+
+** Galleries as entity libraries
+
+The gallery type is shaped specifically for entity libraries: a vault
+whose job is to define a stable set of public entities and codexes that
+the rest of the workspace consumes.
+
+Because galleries do not see /in/, their public layer is *hermetic* ,
+nothing from the parent vault can affect what the gallery defines. The
+gallery's public output depends only on the gallery's own files.
+
+This has a useful implementation consequence: an indexer can treat a
+gallery as a separate prior pass. Read each gallery file in isolation,
+extract its public declarations, build a stable cached layer, and use
+that cached layer when resolving entities elsewhere in the workspace.
+Files inside a gallery have no cross-file dependencies on the broader
+vault, so the indexer can process them in parallel and without graph
+traversal, much simpler and faster than the general case.
+
+A typical organized vault:
+
+#+begin_example
+project/
+  .vault                 ; declares this folder as a vault (type: private by default)
+  entities/
+    .vault               ; declares this subfolder as a vault ; contents:
+                         ;     type: gallery
+                         ;     name: "Canonical Entities"
+    people.indue
+    concepts.indue
+  config/
+    .vault               ; type: gallery ; vault-wide codexes
+    styling.indue
+    schemas.indue
+  work/                  ; plain folders inside project's vault, frequently edited
+    journal/
+    projects/
+    notes/
+#+end_example
+
+The ~.vault~ marker file is what creates a vault boundary. A folder
+without one is just organizational. Inside the marker file, ~type: gallery~
+declares the gallery behavior. The folder name is independent of vault
+type, the marker file's contents tell the system what kind of vault
+this is.
+
+Two galleries provide stable cached input. The working content sits in
+plain folders organized however the user wants, and the indexer rebuilds
+only what changed.
+
+Combined with filesystem permissions, galleries also give clean
+collaborative semantics. A gallery directory made read-only at the OS
+level is a canonical reference that cannot be accidentally clobbered,
+and ownership is enforced by the kernel.
+
+** What gets shared, what doesn't
+
+Vault scope governs the *public layer*. To recap the visibility model:
+
+- *Public entities* (sigils, signets, stations, sources) flow across
+  vault boundaries according to scope and import/export.
+- *Beacon-promoted codexes* flow the same way.
+- *Private codexes* never flow, regardless of vault type or
+  import/export. A non-beaconed cauldron stays in its file.
+- *Content* never flows ambiently; cross-file content sharing is
+  explicit through ~:embed~, ~:link~, ~:popover~, etc.
+
+Vault scope cannot make a private codex public; only the beacon does
+that. Vault scope only governs whether already-public things cross the
+boundary.
+
+** Cross-vault station trails
+
+When the same station name appears in multiple files, the parser links
+them into a trail (see Station trails in *Indue, Language Specification*).
+This trail behavior extends
+across vault boundaries: any station visible in the current scope ,
+whether defined locally, defined in the same vault, or imported from
+another vault, participates in the trail for that name. The trail is
+built over the union of all visible stations, regardless of which file
+or vault they live in.
+
+** Cross-vault sources
+
+Sources behave differently from stations across files, and the difference matters.
+
+Within a document, repeated declarations of a name shadow: the last is the link target, and properties accumulate in document order. Both depend on there being an *order*, which a document has and a set of files does not. Scan order is not a semantic property, and making meaning depend on it would let two applications legitimately disagree about which source wins.
+
+So shadowing stops at the file boundary. *Two files in a vault declaring the same source name is a collision, and applications should report it rather than silently picking one.*
+
+Because a vault's public surface lives in beaconed satchels, collisions are findable: an application scans those regions and can name both files. This is the practical reason public declarations are restricted there rather than scattered through every block.
+
+Where a name genuinely needs a record in more than one file, one file should hold the source and the others should reference it.
+
+** Permission-aware behavior
+
+Indue tools should handle filesystem-level access failures gracefully:
+
+1. *Read failures degrade.* When a tool cannot read a file or directory
+   in a vault, it logs and continues. Unreachable files are absent from
+   the AST, the same as files that do not exist. References to entities
+   in those files simply do not resolve.
+2. *Write failures surface clearly.* When a tool cannot write to a
+   destination, it reports the OS error directly and preserves the user's
+   work in memory or a fallback location. Writes never partially succeed.
+3. *Unreachable portions are visible.* Tools rendering vault outlines
+   should indicate files or directories that exist but are unreadable,
+   rather than silently omitting them. Otherwise users debugging
+   unresolved references face confusing absences.
+
+This is the language's full obligation toward security. Beyond it, the
+operating system and the application are responsible for actual
+enforcement.
+
+** Vault marker file vs. directory extension
+
+The vault declaration is a file (~.vault~) inside the directory, not a
+directory extension (no ~.vault/~ suffix on the directory name). This is
+deliberate: turning a folder into a vault, or back, must not change the
+paths of files within it. Path stability is essential for hard links,
+external references, sync configurations, and any tool that addresses
+files by path. A marker file is purely additive; renaming a folder is
+destructive.
+
+* Vault Compliance
+
+An implementation that handles multi-document collections must support all
+of the following. An implementation that handles only single documents is
+not required to, and remains compliant with *Indue, Language
+Specification*.
+
+*File disposition*
+- ~.indue~: visibility determined by the file's own syntax
+- ~.avow~: everything published, beacons irrelevant
+- ~.veil~: nothing published, and skippable without parsing
+- Overrides do not rewrite in-file syntax; renaming restores intent
+- Disposition is participation, not access control
+
+*Visibility and vaults*
+- Public/private visibility model: content private, entities public,
+  configuration private, beacons promote to public
+- Beacon (~!~): cauldron prefix and satchel prefix forms
+- Vault declarations via ~.vault~ files at directory roots
+- Four vault types: ~private~, ~open~, ~silo~, ~gallery~
+- Two-axis underpinning: ~in~ and ~out~ axes
+- Import/export overrides for explicit cross-vault wiring
+- ~.vault~ file keys: ~type~, ~name~, ~about~, ~active~, ~import~, ~export~
+- Cross-vault station trails span all visible stations
+- Permission-aware behavior on filesystem failures
