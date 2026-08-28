@@ -1,0 +1,1193 @@
+#+TITLE: The Indue Spellbook
+#+SUBTITLE: The Spell Catalogue, by Category
+#+AUTHOR: Ike Ah-Loe
+#+STATUS: Pre-specification, exploratory design
+
+* About This Book
+
+This is the catalogue of Indue's spells, organised by category. It is a companion to *Indue, Language Specification*, which defines the syntax and the semantic model this book assumes throughout: how a spell takes inputs, where its effects land, how chains fold over property state, and how unrecognised spells recover forward.
+
+Read the language specification to learn *how spells work*. Read this book to find out *which spells exist*.
+
+Adding a spell to this catalogue is not a breaking change. Unknown spells degrade to their targets by design, so an implementation built against an earlier edition stays correct when it meets a spell it does not know.
+
+** How to read an entry
+
+Spell names follow CSS wherever a CSS property means the same thing, so that knowledge transfers. Where a CSS name is long and the spell is written often, a short alias is listed beside it and either may be used.
+
+Two conventions are worth knowing before the tables make sense:
+
+- *Nature.* Every spell paints either a *span* (a run of text) or a *block* (a container). Nature belongs to the spell, never to the target. Where a property is meaningful at both tiers, there are two spells: the bare name is block-natural, and a ~span-~ prefixed name is span-natural. See Span and Block in the language specification.
+- *Inputs are vessels.* ~:bg<red>~, not ~:bg(red)~. A scroll ~[...]~ is used where the value is opaque text, such as a font name or a URL.
+
+** Categories
+
+| Category                  | Covers                                            |
+|---------------------------+---------------------------------------------------|
+| Text                      | Weight, style, case, size, colour of text itself  |
+| Spans                     | The box behind a run of text                      |
+| Blocks                    | Fill, border, radius, spacing of a container      |
+| Fonts                     | Faces, categories, fallbacks                      |
+| Presets                   | The few bundles worth shipping, plus recipes      |
+| Structure                 | Markers, stepping, quotes, code, tables           |
+| References and Embedding  | Links, buttons, transclusion, popovers            |
+| Tasks                     | Cycles, custom states, task styling               |
+| Metadata                  | Arbitrary key-value data on a block               |
+| Scheduling and Recurrence | Dates, repetition, exceptions                     |
+| Queries                   | Finding and reading data                          |
+| Application Preferences   | Portable presentation preferences                 |
+| Extensions                | Application-specific spells                       |
+
+* Text
+
+Spells that paint the glyphs themselves.
+
+| Spell                        | Effect                                     |
+|------------------------------+--------------------------------------------|
+| ~:bold~                        | Bold (spell form of ~*~)                     |
+| ~:italic~                      | Italic (spell form of ~/~)                   |
+| ~:underline~                   | Underline (spell form of ~_~)                |
+| ~:strike~                      | Strikethrough (spell form of ~%~)            |
+| ~:sup~                         | Superscript                                |
+| ~:sub~                         | Subscript                                  |
+| ~:color<value>~ / ~:fg<value>~   | Text colour                                |
+| ~:weight<n>~                   | Numeric weight (100–900)                   |
+| ~:grow<n>~                     | n steps larger, relative to context        |
+| ~:shrink<n>~                   | n steps smaller, relative to context       |
+| ~:case<value>~                 | ~upper~, ~lower~, ~title~, ~sentence~            |
+| ~:align<value>~                | ~left~, ~center~, ~right~, ~justify~             |
+| ~:opacity<value>~              | Transparency                               |
+| ~:mono~                        | Monospace, with no claim that it is code   |
+
+#+begin_example
+:bold:word
+:color<red>.italic:[a whole phrase]
+:case<upper>:shout
+#+end_example
+
+Size is always *relative*, and the direction is in the spell name rather than in the sign of a number:
+
+#+begin_example
+:grow<2>                   ; two steps larger than this context
+:shrink<1>                 ; one step smaller
+:grow<2>.shrink<1>         ; net one step up, by the ordinary fold
+#+end_example
+
+Both take positive values. A negative is not a way to reverse them, since dropping or adding a minus sign would silently produce the opposite of what was meant, with nothing to notice. Named directions cannot be inverted by a typo.
+
+There is no absolute size, deliberately. An absolute value would require every application to agree on a unit and a base, which an outliner, a phone, and a print export have no reason to share. Saying "a step larger than its context" lets each application resolve it against its own scale, and never fights a reader's own settings.
+
+~:color~ and ~:fg~ are the same spell. ~:color~ matches CSS; ~:fg~ is shorter and pairs with ~:bg~.
+
+** Colour values
+
+Anywhere a colour is taken, these forms are accepted:
+
+| Form         | Example              |
+|--------------+----------------------|
+| Hex          | ~#f0f0f0~, ~#fff~       |
+| Named        | ~red~, ~steelblue~      |
+| Functional   | ~rgb<255 0 0>~         |
+| Reference    | ~^accent~ (reads a value from elsewhere) |
+
+** Mixing colours
+
+~:mix~ blends the current value of the colour property it follows, which is why chain order matters:
+
+#+begin_example
+:color<red>.mix<blue 50%>     ; a purple
+:color<blue>.mix<red 50%>     ; the same purple, reached the other way
+:color<red>.mix<blue 90%>     ; nearly blue
+#+end_example
+
+* Spans
+
+A *span* is a run of text within a block. These spells paint the box behind it, the one you would see if you highlighted the text with a marker pen. They are the span-natural counterparts of the block spells in the next section.
+
+| Spell                                    | Effect                                  |
+|------------------------------------------+-----------------------------------------|
+| ~:span-bg<value>~ / ~:span-background<value>~ | Background behind the text         |
+| ~:span-fg<value>~ / ~:span-color<value>~     | Text colour within the span         |
+| ~:span-border<width>~                      | Border around the span's background     |
+| ~:span-border-color<value>~                | Colour of that border                   |
+| ~:span-radius<value>~                      | Rounding of the span's background       |
+| ~:span-padding<value>~                     | Space between the text and its background edge |
+
+#+begin_example
+:span-bg<#f5e6a3>:[an important phrase]
+:span-bg<#e8f0fe>.span-radius<12>.span-padding<0.4>:[chip]
+#+end_example
+
+Rounding a short span's background produces a pill, which is the usual way to render a chip or a token.
+
+~:span-fg~ exists because a block-level colour is in effect for the whole block; ~:span-fg~ shadows it for its own span only, leaving the rest of the block alone.
+
+** Why these are separate spells
+
+~:bg~, ~:border~, and ~:radius~ paint a block. A span is a different box: it follows the text, breaks across lines with it, and is bounded by the run rather than by the container. The same name cannot mean both without the target deciding the tier, which is exactly what the language does not do (see Span and Block in the language specification).
+
+Spells whose names already announce a tier never take the prefix. ~:bg~ is block-only; ~:bold~ is span-only; neither is ambiguous.
+
+* Blocks
+
+A *block* is a container: a paragraph, a list item, a heading and what it owns.
+
+| Spell                        | Effect                     |
+|------------------------------+----------------------------|
+| ~:bg<value>~ / ~:background<value>~ | Fill colour          |
+| ~:radius<value>~               | Corner rounding            |
+| ~:padding<value>~              | Inner spacing              |
+| ~:margin<value>~               | Outer spacing              |
+| ~:shadow<x y blur>~            | Drop shadow                |
+| ~:width<value>~                | Width                      |
+| ~:height<value>~               | Height                     |
+
+#+begin_example
+:bg<#f0f0f0>.radius<8>.padding<1>
+:shadow<2 2 4>
+#+end_example
+
+** Borders
+
+A border is several properties rather than one, so each can be set or overridden independently:
+
+| Spell                        | Effect                               |
+|------------------------------+--------------------------------------|
+| ~:border<width>~ / ~:stroke<width>~ | Border width                   |
+| ~:border-color<value>~         | Border colour                        |
+| ~:border-style<value>~         | ~solid~, ~dashed~, ~dotted~, ~double~      |
+
+#+begin_example
+:border<1>.border-color<#ccc>.border-style<solid>
+#+end_example
+
+~:stroke~ is kept as an alias of ~:border~ for writers who think of it as a drawn line rather than a CSS box property.
+
+** Reach
+
+A block spell reaches the block *and everything it owns*, because a block encloses its subtree. A span spell reaches only its own run, because a span encloses nothing.
+
+Those defaults serve the usual case: a card frames a heading and its body, and bolding a heading does not bold the paragraphs beneath it. Where the default is wrong, two spells set reach explicitly.
+
+| Spell             | Effect                                       |
+|-------------------+----------------------------------------------|
+| ~:deep~             | Both tiers reach into owned blocks           |
+| ~:shallow~          | Both tiers stop at the block they are in     |
+| ~:deep<block>~      | Block tier only, span untouched              |
+| ~:shallow<span>~    | Span tier only, block untouched              |
+| ~:deep<span block>~ | Both, stated explicitly                      |
+
+The bare form sets both tiers. Naming a tier leaves the other alone.
+
+#+begin_example
+<=>
+.bg<red>
+.radius<8>
+.fg<white>
+.shallow:
+#+end_example
+
+That gives every heading a banner: the fill covers the heading's own block and stops, rather than flooding the body beneath it.
+
+Reach is ordinary property state, so position in the chain does not matter. The whole construct settles before anything renders, which means the fix can be appended when a render turns out wrong rather than inserted at the front. Where a chain sets reach twice, the last write wins, as with any property.
+
+Not every spell is affected. ~:radius~, ~:padding~, ~:border~, and ~:shadow~ shape one container's geometry, and there is nothing to distribute to owned blocks. Reach matters for spells whose result is visible on every box it lands on, which in practice means fills and text properties.
+
+** Tables
+
+Tables are the only construct in the core with internal columns, and they occupy a single block-level slot (see Single-column renderability in the language specification). The block spells above apply to them, which is how corners are cut and rounded and how rules are drawn:
+
+#+begin_example
+:table{
+Name | Role | State
+Alice | Engineer | [>]
+Bob | Designer | []
+}
+.border<1>
+.border-color<#ddd>
+.radius<6>:
+#+end_example
+
+Pipes separate cells and newlines separate rows. The conduit is ~:table~'s *input*: the row data it renders from.
+
+~:table~ is untargeted, and it is an embedding spell, so it generates its own target, the table it produces. The chain that follows styles that generated table. This is why the chain comes after the conduit rather than before it: a conduit glued to a spell name belongs to *that* spell, so writing the styling first would hand the rows to ~:radius~ instead.
+
+*** A table is always a spell block
+
+A table occupies its own block and never sits inline within one. That is the only arrangement that makes sense in a single-pane document: a table inline in a sentence has no defined layout, and stating the rule turns that from undefined behaviour into an authoring error an application can flag.
+
+* Fonts
+
+Font handling is two kinds of statement, because they are two different intentions.
+
+** Naming a face
+
+~:font~ takes a face by name, or a filepath to a font file, recognised by slashes in the value. The value is a scroll, since a font name or path is opaque text:
+
+#+begin_example
+:font[Garamond]
+:font[/fonts/Garamond.otf]
+#+end_example
+
+Several faces may be given as a fallback chain, tried in order:
+
+#+begin_example
+:font<[Garamond] [Georgia]>
+#+end_example
+
+If no listed face resolves, the spell is inert and the property keeps its current value. Because the path form is a scroll and relative paths work, exporting a document with embedded fonts is straightforward: copy the font files alongside the export and point the scroll at them.
+
+** Asking for a category
+
+~:serif~, ~:sans~, and ~:mono~ name a *category* rather than a face, and let the application choose. They are separate spells because they express a different intention: not "use this face" but "use whatever you have of this kind."
+
+#+begin_example
+:serif
+:font<[Garamond] [Georgia]>.serif    ; try these faces, else your serif
+#+end_example
+
+Face selection and category are separate properties, so the two compose: the face chain is tried first, then the category, then the application default.
+
+** Prefer categories for portable documents
+
+For notes, the category is usually the real intent, and a document that only asks for a category renders correctly everywhere with no missing faces, no embedded files, and no divergence between devices. It looks native in each application it is opened in.
+
+Named faces are for when the specific face is the point, typically export and publication.
+
+* Presets
+
+A preset is a shipped class definition: a bundle of elemental spells under one name. Presets are ordinary definitions, not built-in behaviour, so they can be read, overridden, or replaced.
+
+Very few earn a place here, and the test is whether the bundled values are *the whole answer* or merely a starting point:
+
+- If changing the values would make it a different thing, it is a preset. A chip that is not fully rounded is not a chip.
+- If you would expect to override most of the values anyway, it is a *recipe*, not a spell. The name saves nothing when the bundle does not survive contact with a real document.
+
+| Spell   | Bundles                                          |
+|---------+--------------------------------------------------|
+| ~:chip~   | Full rounding, span background, small padding    |
+
+#+begin_example
+:chip.span-bg<#e8f0fe>:[draft]
+#+end_example
+
+A chip needs only a colour: its shape is what makes it a chip, so the shape is the definition and the colour is yours.
+
+** Recipes
+
+Everything else that might look like a preset is written as a class definition in the document or a spell pack. These are worth showing, because they are the common shapes, but shipping them as spells would only mean everyone overriding them.
+
+*** A card
+
+#+begin_example
+<:card>
+.bg<#fff>
+.radius<8>
+.padding<1>
+.border<1>
+.border-color<#e2e2e2>:
+#+end_example
+
+Cards fail the preset test: radius, shadow, padding, and border are exactly what people have opinions about, so a shipped card would be overridden in full every time.
+
+*** A callout
+
+#+begin_example
+<:callout>
+.bg<#f7f7fa>
+.padding<1>
+.border<0 0 0 3>
+.border-color<#5b8def>:
+#+end_example
+
+*** A panel with a coloured header
+
+Two classes used as a pair, and the reason ~:shallow~ matters: without it the header's fill would flood the blocks it owns.
+
+#+begin_example
+<:panel-head>.bg<#dde>.padding<0.5>.shallow:
+<:panel-body>.bg<#f7f7fa>.padding<1>:
+#+end_example
+
+*** Variants build on classes
+
+A variant is ordinary chaining, not a new definition from scratch:
+
+#+begin_example
+<:card-warn>.card.bg<#fff3cd>:
+#+end_example
+
+* Structure
+
+Spells that shape a document rather than paint it.
+
+** Markers and stepping
+
+~:list~ sets the *symbols* used for unordered items; ~:step~ sets the *stepping patterns* used for ordered items and headings. Both are opened as shells and scope to the subtree they sit in. The full rules, including depth chains, the void as ditto, and chain cycling, are in the language specification.
+
+| Spell            | Effect                                        |
+|------------------+-----------------------------------------------|
+| ~:list<symbols>~   | Marker symbols, one per depth                 |
+| ~:step[pattern]~   | Stepping pattern, shown as its first marker   |
+
+#+begin_example
+:step[I.]::                ; I., II., III. and that pattern's chain below
+:list<- + *>::             ; three depths of symbols
+:step<[A.] [] [] [i.]>::   ; A., two depths of ditto, then roman
+:list<[]>::                ; invisible markers, for prose-style documents
+#+end_example
+
+** Quotes
+
+A blockquote is a *structural container*: it holds blocks, it nests, and what it asserts is provenance, that the content came from somewhere else.
+
+| Spell            | Effect                    |
+|------------------+---------------------------|
+| ~:quote~ / ~:q~      | Blockquote                |
+
+#+begin_example
+:q:{A short quoted passage.}
+
+:q::
+A longer, multi-paragraph quote.
+
+It can span several blocks.
+::q
+#+end_example
+
+A conduit target is rich and nests, so a quote can contain another quote. A scroll target is an unparsed leaf.
+
+Appearance is not part of the construct. Indentation is only one convention among several: a left rule, italics, smaller type, or a tinted background are all common, and some treatments do not indent at all. Presentation is therefore a codex decision:
+
+#+begin_example
+<:quote>.margin<2>.border-color<#888>:
+#+end_example
+
+** Code
+
+~:code~ renders unparsed content as monospace and marks it as a code sample.
+
+| Spell                       | Effect                                |
+|-----------------------------+---------------------------------------|
+| ~:code[body]~                 | Code, unhighlighted (spell form of ~`~) |
+| ~:code<language>[body]~       | Code, highlighted if supported        |
+
+#+begin_example
+:code[git status]
+:code<rust>[fn main() {
+    println!("hi");
+}]
+#+end_example
+
+Unlabelled ~:code~ is what other markup languages call verbatim: monospace, set apart, no language claimed.
+
+*** Language values belong to the application
+
+The specification defines that ~:code~ takes a language input. It does not define which languages exist. Which languages an application can highlight depends on the grammars or language servers it happens to have, that list churns constantly, and no specification can track it without going stale.
+
+An application that does not recognise a value renders without highlighting, the same way an unrecognised spell degrades to its target.
+
+This is also why language shortcuts are user-defined rather than built in. Defining one is a single line:
+
+#+begin_example
+<:rust>.code<rust>:        ; now :rust[...] is a Rust code block
+#+end_example
+
+A file of such definitions, beaconed into a Lair, is a spell pack: a shared vocabulary any document in that Lair can use.
+
+*** The backtick glamour
+
+~`~ is a glamour for ~:code~, and follows every glamour rule (see Glamours in the language specification):
+
+#+begin_example
+Run `cargo build to compile.        ; grab rule, one word
+Run `[cargo build --release].       ; bracketed
+Run `cargo build` to compile.       ; paired
+#+end_example
+
+Repeats collapse, so ~```~ means what ~`~ means. There is no fenced form with significant backtick length: length-matching lives on shells (see below), where it applies to any spell rather than to one borrowed shape.
+
+*** Multi-line and hostile content
+
+Three forms, loosest to strictest:
+
+#+begin_example
+`[
+content with backticks but no closing bracket
+]
+
+`::
+content bounded by a shell region
+::
+
+`:::
+absolutely anything, including :: and ]
+:::
+#+end_example
+
+The last is a *hypershell*: its delimiter is length-matched, so no content can close it early. Code is where that matters most, since ~::~ is common in C++, Rust, PHP, and Ruby paths, and a bare ~::~ inside an ordinary shell would close every open shell in the document.
+
+** Maths
+
+| Spell                | Effect                        |
+|----------------------+-------------------------------|
+| ~:math[...]~ / ~:$[...]~ | Mathematical notation      |
+
+Maths notation is dense with characters Indue also uses, so it is written as a scroll where none of them fire:
+
+#+begin_example
+:math[E = mc^2]
+:$[E = mc^2]
+#+end_example
+
+Rendering maths requires a typesetting library, so an application without one is not expected to typeset it. Under parse-don't-fail an unrecognised ~:math~ degrades to its content, which stays readable, so the same file works in a task manager and typesets properly in a journal application that implements it.
+
+* References and Embedding
+
+Spells that point at things, or pull them in.
+
+| Spell             | Behaviour                             |
+|-------------------+---------------------------------------|
+| ~:link[url]~        | Navigation, click to go there         |
+| ~:button[url]~      | A rendered control that navigates     |
+| ~:embed@<ref>~      | Transclusion, pulls content inline    |
+| ~:popover@<ref>~    | A panel shown on hover or click       |
+| ~:of@<ref>~         | Reattach content to an ancestor       |
+
+** Links
+
+~:link~ takes the destination as a scroll and an optional label as a vessel. A URL is opaque text, so it belongs in a scroll where nothing is evaluated and nothing needs escaping.
+
+Being an embedding spell, ~:link~ with no target generates its own content: the label if one was given, otherwise the URL itself.
+
+#+begin_example
+:link[https://example.com]                  ; renders the URL
+:link[https://example.com]<the docs>        ; renders "the docs"
+:link<the docs>[https://example.com]        ; identical, order is free
+:link[https://example.com]:label            ; label as a target
+:link[https://example.com]:{the *docs*}     ; rich target, formatting allowed
+:link@<^section>                            ; link to a place by station
+:link[https://example.com]:<project>        ; every rendered form of project links
+#+end_example
+
+The target forms link *existing* content; the no-target forms generate it. Only the target forms can carry formatting or address an entity.
+
+** Buttons
+
+A button is a link that renders as a control rather than as inline text. Indue is a markup language, so a button's destination is the same set of things a link can point at: a URL in a scroll, or an entity or station as a target.
+
+| Spell           | Effect                   |
+|-----------------+--------------------------|
+| ~:button[url]~    | A control that navigates |
+
+#+begin_example
+:button[https://example.com]<Read the docs>
+:button@<^section><Jump to section>
+#+end_example
+
+~:button~ is an embedding spell: it generates its own content, so anything chained onto it styles the control it produced. There is no separate family of button presentation spells, because the ordinary ones already land on the right thing:
+
+#+begin_example
+:button[https://example.com]<Sign up>.span-bg<#2b6cb0>.span-fg<#fff>.span-radius<6>.span-padding<0.6>
+#+end_example
+
+A button someone uses repeatedly is a class:
+
+#+begin_example
+<:cta>.span-bg<#2b6cb0>.span-fg<#fff>.span-radius<6>.span-padding<0.6>:
+
+:button[https://example.com]<Sign up>.cta
+#+end_example
+
+A station destination behaves as an arrival point. A source is arrival-only and renders nothing, which is the usual way to mark a landing spot that should not appear in the text.
+
+** Transclusion
+
+~:embed~ pulls the referenced content into the current document at that position.
+
+#+begin_example
+:embed@<^definitions>      ; pull in the block anchored at "definitions"
+:embed@<@alice>            ; pull in the entity's content
+#+end_example
+
+Embedded content is live: it reflects the source. It is not a copy.
+
+** Popovers
+
+A popover has two pieces of content, and they sit on opposite sides of the spell:
+
+- The *trigger*, the thing in the flow you hover or click, is the *target*. It stays readable whether or not the popover is understood.
+- The *panel*, which renders off-flow, is an *input*. A conduit carries rich panel content; a scroll carries plain text.
+
+#+begin_example
+:popover{The *full* definition, with a :link[url]:source}:term
+:popover[Plain tooltip text]:term
+:popover@<^wp>             ; panel content comes from the referenced place
+#+end_example
+
+* Tasks
+
+The task *model*, the three lifecycle states and what they guarantee, is defined in *Indue, Language Specification*. It lives there because those three states are a portability guarantee rather than catalogue: they are what let a task written in one application mean the same thing in every other.
+
+This section covers the spells that surround the model.
+
+** The three states, in brief
+
+| State  | Spell           | Alias | Goety |
+|--------+-----------------+-------+-------|
+| open   | ~:task<open>~     | ~:o~    | ~[]~    |
+| active | ~:task<active>~   | ~:>~    | ~[>]~   |
+| closed | ~:task<closed>~   | ~:x~    | ~[x]~   |
+
+#+begin_example
+- :o Buy groceries
+- :> Read foundational papers
+- :x Fix the sink
+#+end_example
+
+The set is closed. There is no fourth state, and reasons for a task's condition (blocked, waiting, deferred) belong in tags, where they compose with any lifecycle position:
+
+#+begin_example
+- :> Rewrite the parser #blocked #[waiting on review]
+#+end_example
+
+** Block tasks and span tasks
+
+A task targeting a *block* sets a block property and shadows: one state per block. A task targeting a *span* is its own task, and these accumulate.
+
+#+begin_example
+- :o Buy groceries
+- When you get home, [feed the cats].o and [let out the dogs].o :repeat[daily]
+#+end_example
+
+Span tasks are contained by their block but do not determine its state, and a block carries one schedule however many tasks sit on it. The full model is in *Indue, Language Specification*.
+
+** Custom states
+
+A custom state is an ordinary spell definition that declares which lifecycle position it occupies. ~.task<state>~ is mandatory: it is what keeps custom vocabulary portable, so an application that has never heard of ~:review~ still knows the task is active.
+
+#+begin_example
+<:todo>.task<open>:
+<:doing>.task<active>:
+<:review>.task<active>:
+<:shipped>.task<closed>:
+<:dropped>.task<closed>:
+#+end_example
+
+Custom states are first-class spells, so they carry their own presentation like anything else:
+
+#+begin_example
+<:review>
+.task<active>
+.span-bg<#f5e6a3>
+.span-radius<10>
+.embed[REVIEW]:
+#+end_example
+
+No user-defined spell may take a name containing ~>~, since a vessel closes on it. Custom active states use ordinary names.
+
+** Cycles
+
+A cycle is a named, ordered list of states: what an application advances through when a reader toggles a task.
+
+| Spell                        | Effect                              |
+|------------------------------+-------------------------------------|
+| ~:cycle[name]<:a :b :c>~       | Declare a named, ordered cycle      |
+
+#+begin_example
+:cycle[gtd]<:todo :doing :waiting :shipped>
+:cycle[bugs]<:todo :doing :review :shipped :dropped>
+#+end_example
+
+The name is a scroll, an opaque label an application can display. The states are a vessel of referenced spell names.
+
+If a state appears in more than one cycle, the last cycle declared wins for that state. If two cycles share a name, the later replaces the earlier. Both follow the ordinary cascade.
+
+Applications should surface the cycles a document declares, by name, and let the reader choose which one a toggle advances. Where no cycle is declared, advancing follows open → active → closed.
+
+** Styling task states
+
+Task states are spells, so they style like any other. The built-in three ship without presentation beyond their marker, which keeps them neutral; anything further is configuration:
+
+#+begin_example
+<:x>.strike:              ; closed tasks are struck through
+<:x>.opacity<0.6>:        ; or dimmed instead
+<:>>.span-bg<#e8f0fe>:    ; invalid: a vessel closes on >
+#+end_example
+
+The last line does not work, and shows the one limitation worth knowing: ~:>~ can be *used* but not *referenced*, because a vessel closes on its first ~>~. To style the active state, define a custom state and use that instead:
+
+#+begin_example
+<:doing>.task<active>.span-bg<#e8f0fe>:
+#+end_example
+
+** Task-related data spells
+
+| Spell            | Effect                                    |
+|------------------+-------------------------------------------|
+| ~:priority<n>~     | Priority, application-defined scale       |
+| ~:estimate<value>~ | Effort estimate                           |
+
+#+begin_example
+- :> Build parser :scheduled<2026-04-15> :estimate<3d> :priority<2>
+#+end_example
+
+Dates, times, repetition, and series bounds are covered in Scheduling and Recurrence.
+
+* Metadata
+
+~:info~ carries arbitrary key-value data on a block. It is how an entity's record is written: a contact's details, a project's status, a book's publication data.
+
+It is usually paired with a source, which is what a mention navigates to (see Sources in *Indue, Language Specification*). Unless there is a reason to track history, keep the whole record on the *last* source of a name, so a simple renderer arriving there shows all of it.
+
+| Spell         | Effect                          |
+|---------------+---------------------------------|
+| ~:info[pairs]~  | Key-value data on this block    |
+
+The syntax deliberately mirrors a table: *pipes separate a key from its value, newlines separate pairs.* Whitespace around a pipe is trimmed, so columns may be aligned.
+
+#+begin_example
+&alice&
+:info[
+role       | Engineer
+team       | Platform
+email      | alice@example.com
+full name  | Alice Smith
+]
+#+end_example
+
+A single pair fits on one line:
+
+#+begin_example
+:info[status | draft]
+#+end_example
+
+** Values are recognised by shape
+
+Nothing needs declaring, and there is no schema to define first: the point is writing things down quickly rather than modelling them. ~:info~ recognises a few shapes so that values are useful without being typed by hand.
+
+| Shape                       | Read as   |
+|-----------------------------+-----------|
+| ~https://...~, ~mailto:...~     | a URL     |
+| ~^name~                       | a station |
+| ~&name~                       | a source  |
+| ~2026-04-07~                  | a date    |
+| ~42~, ~3.5~                     | a number  |
+| anything else               | text      |
+
+#+begin_example
+:info[
+homepage | https://alice.example
+charter  | ^project-charter
+manager  | &bob
+joined   | 2024-03-01
+level    | 4
+role     | Staff Engineer
+]
+#+end_example
+
+Recognised shapes mean a station or source value is a working link rather than a string that looks like one, and a date sorts as a date.
+
+Where a value is used somewhere that needs a different type, it is cast at the point of use. A spell taking a number will try to read the string as one; if it cannot, the spell is inert and nothing happens, which is the ordinary recover-forward behaviour applied to values rather than to syntax.
+
+** Rendering a record
+
+An application should render a source block whose only content is ~:info~ as a properties table. That makes a record readable on arrival with no authoring effort, which matters because a mention navigates to the source.
+
+This is a recommendation rather than a rule. ~:info~ says the content is metadata; how it is presented is a shipped default a document may override, the same as blockquote indentation or closed-task strikeout.
+
+** Why not one spell per key
+
+Arbitrary metadata could be written as ordinary spells (~:role<Engineer>~), and for a handful of well-known keys that reads well. As a general mechanism it does not: every key would have to be defined as a spell before it could be used, which turns jotting down a few facts into a schema exercise.
+
+~:info~ takes the opposite trade. Keys are free text, so nothing needs declaring, and the cost is that a typo is a new key rather than an error.
+
+** A scroll, not a conduit
+
+~:info~ takes a *scroll*, so its contents are unparsed. A value containing ~#~ or ~*~ stays literal rather than becoming a tag or turning bold, which is what metadata wants.
+
+~:table~, by contrast, takes a conduit, because table cells are content and should render their formatting. Same visual syntax, different container, for the two different jobs.
+
+* Scheduling and Recurrence
+
+Scheduling is the second reason Indue exists, and unlike most of the catalogue it is specified tightly: two applications must produce the same schedule from the same document, or a shared vault means nothing.
+
+Scheduling is carried by five separate spells, each on its own axis. Nothing is composite, and no spell means two things.
+
+| Axis          | Spells                          | Carries                          |
+|---------------+---------------------------------+----------------------------------|
+| Date          | ~:on~, ~:due~, ~:scheduled~         | The anchor: which day            |
+| Time of day   | ~:start~, ~:end~                  | Clock times within that day      |
+| Repetition    | ~:repeat~                         | The pattern                      |
+| Series bounds | ~:from~, ~:until~                | Where a repeating series runs    |
+| Exceptions    | ~:skip~                           | Occurrences to omit              |
+| Completion    | ~:completions~                    | When occurrences were finished   |
+
+#+begin_example
+- :o Team standup :on<2026-04-07>.start<09:00>.end<09:15> :repeat[weekdays] :until<2026-12-31>
+#+end_example
+
+** Dates
+
+| Spell              | Meaning                    |
+|--------------------+----------------------------|
+| ~:on<date>~          | An event happens this day  |
+| ~:due<date>~         | A deadline                 |
+| ~:scheduled<date>~   | A planned start            |
+
+Dates are ISO 8601 and are recognised by shape, so they sit in vessels rather than scrolls:
+
+#+begin_example
+:due<2026-04-15>
+#+end_example
+
+Natural-language dates (~tomorrow~, ~next friday~) are an application input convenience, not a stored form. What is written to the file is a date.
+
+** Times
+
+Time of day is separate from the date, so no composite ~T~ format is needed and duration follows for free:
+
+#+begin_example
+:on<2026-04-07>.start<09:00>.end<09:15>     ; a fifteen-minute meeting
+:on<2026-04-07>.start<09:00>                ; starts at nine, no stated end
+:on<2026-04-07>                             ; all day
+#+end_example
+
+~:start~ and ~:end~ are clock times only. Where a repeating *series* begins and ends is a different question, carried by ~:from~ and ~:until~.
+
+** Repetition
+
+~:repeat~ takes a pattern as a scroll. The scroll is unparsed by Indue, so the pattern is one string that ~:repeat~ tokenises itself.
+
+*** The grammar
+
+A pattern is up to three clauses, *always in this order*, each optional:
+
+#+begin_example
+every <count> <period>   on <ordinal> <day>   of <month>
+\________________/       \_______________/    \________/
+     interval                 position          narrowing
+#+end_example
+
+Each clause is introduced by its keyword, appears at most once, and may only appear in that position. There is no other arrangement.
+
+**** ~every~: the interval
+
+~every~ takes an optional count and a period noun. With no count, the count is 1.
+
+#+begin_example
+every day
+every week
+every month
+every year
+every 2 weeks
+every 3 months
+#+end_example
+
+Period nouns are ~day~, ~week~, ~month~, ~year~, in singular or plural. There is no ~quarter~: fiscal quarters begin in different months for different organisations, so the word would mean something different in every vault. ~every 3 months~ says it unambiguously and anchors from the task's own date, which is what a quarter actually is.
+
+~every year~, ~every 1 year~, and ~every 1 years~ all parse. ~every year~ and ~every 2 years~ are the documented forms; the rest are tolerated the way commas are tolerated in vessels.
+
+**** ~on~: the position within the interval
+
+~on~ takes an ordinal and a day.
+
+#+begin_example
+every month on 1st friday
+every month on last saturday
+every month on 3rd tuesday
+every month on last day
+every 2 months on 1st weekday
+#+end_example
+
+Ordinals are ~1st~, ~2nd~, ~3rd~, ~4th~, ~5th~, ~last~.
+
+Days are ~monday~ through ~sunday~ (or ~mon~ through ~sun~), plus ~day~, ~weekday~, and ~weekend-day~.
+
+Several days may be listed, which means any of them:
+
+#+begin_example
+every week on mon wed fri
+every week on tue thu
+#+end_example
+
+**** ~of~: narrowing to a month
+
+~of~ takes a month name, which pins the pattern to that month and makes the interval yearly:
+
+#+begin_example
+every year on 1st monday of march
+every 2 years on 3rd wednesday of march
+#+end_example
+
+Months are ~january~ through ~december~, or ~jan~ through ~dec~.
+
+*** Shorthands
+
+Four whole-pattern shorthands are matched before the grammar runs. They are a closed set and take no clauses:
+
+| Shorthand  | Equivalent                    |
+|------------+-------------------------------|
+| ~daily~      | ~every day~                     |
+| ~weekly~     | ~every week~                    |
+| ~monthly~    | ~every month~                   |
+| ~yearly~     | ~every year~                    |
+| ~weekdays~   | ~every week on mon tue wed thu fri~ |
+| ~weekends~   | ~every week on sat sun~         |
+
+*** The anchor
+
+A pattern says how often, never when it starts. The anchor comes from the date spell on the same item (~:on~, ~:due~, or ~:scheduled~). Where a series should start later than its anchor, ~:from~ supplies that date instead.
+
+#+begin_example
+- :o Pay rent :due<2026-04-01> :repeat[monthly]
+- :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
+#+end_example
+
+Where a pattern and an anchor disagree, the pattern wins and the anchor supplies only the starting point. An anchor of ~2026-04-20~ with ~every month on 3rd saturday~ produces third Saturdays, not the 20th of each month.
+
+*** Completion behaviour
+
+By default a series is anchored: it recurs on schedule regardless of when an occurrence was completed. ~.after<completion>~ anchors from when it was actually finished instead, which is what habits usually want.
+
+#+begin_example
+:repeat[weekly]                     ; every week, whenever it gets done
+:repeat[6 weeks].after<completion>   ; six weeks after the last haircut
+#+end_example
+
+** Series bounds
+
+| Spell           | Meaning                            |
+|-----------------+------------------------------------|
+| ~:from<date>~    | The series starts here             |
+| ~:until<date>~    | The series stops here              |
+
+~:from~ is only needed when a series should start later than its anchor. Without ~:until~, a series continues indefinitely.
+
+#+begin_example
+- :o Team meeting :on<2026-04-07> :repeat[weekly] :until<2026-12-31>
+- :o Budget review :on<2026-01-15> :repeat[every 3 months] :from<2026-07-01>
+#+end_example
+
+** Exceptions
+
+~:skip~ omits specific occurrences:
+
+#+begin_example
+:skip<2026-07-04>
+:skip<2026-12-25 2026-12-26>
+#+end_example
+
+** Completion history
+
+~:completions~ records when a repeating task was actually finished. It is what ~.after<completion>~ reads, and it is *application-maintained*: most applications write it, and a person may keep it by hand.
+
+It sits on the task's own line, or on the line immediately below:
+
+#+begin_example
+- :o Water plants :on<2026-04-07> :repeat[weekly].after<completion>
+:completions[2026-04-07 2026-04-14 2026-04-21]
+#+end_example
+
+The second line is an astral block, so it renders nothing: the dates are visible in the file and absent from the document. Dates go in a scroll rather than a vessel, since the list grows and an application appends to it.
+
+Binding is by adjacency, so no handle is needed. The full rules, including what happens when a log is detached from its task, are in *Indue, Language Specification*.
+
+** Worked examples
+
+#+begin_example
+- :o Pay rent :due<2026-04-01> :repeat[monthly]
+- :o Standup :on<2026-04-07>.start<09:00>.end<09:15> :repeat[weekdays]
+- :o Haircut :scheduled<2026-04-15> :repeat[6 weeks].after<completion>
+- :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
+- :o Tax prep :due<2026-03-15> :repeat[yearly] :skip<2027-03-15>
+- :o Sprint review :on<2026-04-12> :repeat[every 2 weeks on friday]
+- :o Board meeting :on<2026-03-18> :repeat[every 2 years on 3rd wednesday of march]
+#+end_example
+
+** Mapping to RRULE
+
+Indue is the authoring format; RRULE is the interchange format. Every pattern maps to exactly one RRULE, so export is deterministic.
+
+| Indue                 | RRULE                          |
+|-----------------------+--------------------------------|
+| ~every day~             | ~FREQ=DAILY~                     |
+| ~every week~            | ~FREQ=WEEKLY~                    |
+| ~every month~           | ~FREQ=MONTHLY~                   |
+| ~every year~            | ~FREQ=YEARLY~                    |
+| ~every <n> <period>~    | adds ~INTERVAL=<n>~              |
+| ~on <ordinal> <day>~    | ~BYDAY=<n><DD>~, ~last~ being ~-1~ |
+| ~on <ordinal> day~      | ~BYMONTHDAY=<n>~                 |
+| ~of <month>~            | ~BYMONTH=<n>~, with ~FREQ=YEARLY~  |
+| ~:from~ or the anchor  | ~DTSTART~                        |
+| ~:until~                | ~UNTIL~                          |
+| ~:skip~                 | ~EXDATE~                         |
+
+#+begin_example
+every 2 years on 3rd wednesday of march
+  → FREQ=YEARLY;INTERVAL=2;BYMONTH=3;BYDAY=3WE
+
+every month on last friday
+  → FREQ=MONTHLY;BYDAY=-1FR
+
+weekdays
+  → FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+#+end_example
+
+*** What does not round-trip
+
+Export is deterministic; *import is not*. Two things are worth knowing:
+
+Shorthands expand. ~weekdays~ exports correctly, but importing that RRULE yields ~every week on mon tue wed thu fri~ rather than the shorthand. Meaning survives; phrasing does not.
+
+~.after<completion>~ has no RRULE equivalent at all. iCalendar has no notion of rescheduling from a completion date, since it describes calendars rather than tasks. A task using it exports as its current occurrence only, and the recurrence does not survive the trip.
+
+* Queries
+
+~:query~ finds blocks, tasks, and entities, and renders the results.
+
+| Spell             | Effect                             |
+|-------------------+------------------------------------|
+| ~:query[query]~     | Live query, rendering the matches  |
+
+Queries are written in SQL:
+
+#+begin_example
+:query[SELECT block WHERE task = open]
+:query[SELECT text, due WHERE tag = work AND due < +7d ORDER BY due]
+:query[SELECT role FROM source WHERE name = alice]
+#+end_example
+
+The query is a scroll, unparsed by Indue: the query language owns its own grammar, specified in *Indue Query Syntax*, over the tables in *Indue Reference Schema*.
+
+** The same string works at a prompt
+
+What goes in the scroll is what the command-line tool takes:
+
+#+begin_example
+$ indue query "SELECT block WHERE task = open"
+#+end_example
+
+One grammar, one implementation, and a query can be moved between a note and a terminal unchanged.
+
+** Rendering follows the result shape
+
+| Shape      | Renders as  |
+|------------+-------------|
+| one value  | inline text |
+| list       | a list      |
+| matrix     | a table     |
+
+An explicit rendering overrides the default:
+
+#+begin_example
+:query[SELECT block WHERE task = open].table
+#+end_example
+
+** Reading a single value
+
+Where the need is one property of one entity, a query is more than is called for. Sources support dotted access, which resolves without an engine:
+
+#+begin_example
+Their role is &alice.role.
+#+end_example
+
+See *Indue Query Syntax* for the full grammar, and *Indue Reference Schema* for the fields available.
+
+* App Preference Spells
+
+Some properties are not facts about content but *preferences about how a
+document should be presented*. Applications already have defaults for these;
+these spells let a document state a preference, which a compliant
+application honours when present and falls back to its own default
+otherwise.
+
+They behave like any other spell: hoisted in a satchel they set a
+document-wide preference, and they resolve under the ordinary cascade.
+
+** What belongs here
+
+Only *category* preferences that degrade gracefully, where the document asks
+for a kind of thing and the application chooses the instance:
+
+| Spell     | Preference                                     |
+|-----------+------------------------------------------------|
+| ~:serif~    | Render with whichever serif face is available  |
+| ~:sans~     | Whichever sans face is available               |
+| ~:mono~     | Whichever monospace face is available          |
+
+#+begin_example
+~~~~~
+:serif
+~~~~~
+#+end_example
+
+A document asking for ~:serif~ is doing no more than a generic
+~font-family: serif~ declaration does: it never names an instance, so it
+cannot conflict with a reader's own configuration.
+
+** What does not belong here
+
+*Specific overrides of settings that readers commonly tune for
+accessibility.* Text-selection colour is the clearest example: it is
+adjustable in most editors precisely because some readers need particular
+contrast, so a document asserting a specific value could fight a setting
+someone configured out of need. Cursor appearance, forced text size, and
+forced colour schemes are excluded for the same reason.
+
+The test is *category versus instance*. Asking for "a serif face, whichever
+you have" leaves the reader's environment in control. Asking for "this exact
+colour, always" takes control away.
+
+* Custom Spell Extensions
+
+Applications may define their own spells beyond those in the core spec.
+Custom spells must follow all standard spell syntax rules, they use the
+same ~:name~ prefix, the same vessel/scroll/conduit arguments, and the same
+bond/chaining behavior.
+
+** The ~:ext~ namespace (recommended)
+
+To avoid name collisions between applications, custom spells should use a
+namespace prefix:
+
+#+begin_example
+:ext.myapp.kanban{...}          ; app-specific kanban board
+:ext.myapp.timeline{...}        ; app-specific timeline view
+:ext.obsidian.dataview{...}     ; Obsidian-specific dataview
+#+end_example
+
+Applications may also register short names that omit the namespace for
+convenience within their own ecosystem:
+
+#+begin_example
+:kanban{...}                    ; works in MyApp, unknown elsewhere
+#+end_example
+
+** The ~:ext.css~ reference extension
+
+~:ext.css~ is a reference implementation of the extension system. It maps CSS
+concepts to Indue entities, filling gaps that core spells do not cover without
+overriding core formatting:
+
+#+begin_example
+:ext.css
+[.bold { font-weight: bold; color: red; }]
+[#meeting { background: #e8f4fd; border-radius: 8px; }]
+[^section { padding: 1em; }]:
+#+end_example
+
+The extension maps CSS selectors to Indue entities: ~.classname~ maps to
+sigil ~#name~, ~#id~ maps to station ~^n~, and CSS properties translate
+to equivalent Indue spell chains. Because sigils, signets, and stations
+have distinct scopes of bestowal in core Indue, ~:ext.css~ rules targeting
+~#~ entities apply to the block, while rules targeting ~@~ entities apply
+to the inline token, matching the core semantics rather than overriding
+them.
+
+When ~:ext.css~ conflicts with core spells, core spells win. ~:ext.css~
+fills gaps, it does not override fundamentals. Applications rendering to
+HTML/CSS can extend ~:ext.css~ beyond the Indue spec (grid, flexbox,
+animations, etc.) and remain compliant because it is clearly namespaced as
+an extension. Other renderers ignore it gracefully.
+
+Core Indue formatting spells remain minimal and renderer-agnostic:
+~:fg~/~:color~, ~:bg~, ~:radius~, ~:align~, ~:case~, ~:bold~, ~:italic~,
+~:underline~, ~:strike~, ~:sup~, ~:sub~.
+
+** Graceful degradation
+
+When an application encounters an unknown spell, whether from another app's
+extension or a future version of the spec, the parse-don't-fail philosophy
+applies:
+
+- The spell name is preserved in the AST as an unknown spell node.
+- Content inside conduits ~{...}~ is rendered as formatted text.
+- Content inside scrolls ~[...]~ is rendered as plain text.
+- Vessel values ~(...)~ are preserved but not interpreted.
+- Applications should visually indicate that a spell is unrecognized (e.g.
+  subtle highlight, hover tooltip showing the spell name).
+
+This means an Indue file with app-specific spells is always readable in
+any other Indue application. The custom features degrade to visible content
+rather than disappearing or causing errors.
+
+** Custom spell discovery
+
+Applications may declare custom spells in the ~.vault~ marker file or in
+a beaconed satchel of a vault-public configuration file, so that other
+applications can provide better fallback rendering or migration tools.
+The mechanism is left to applications; the spec only requires that
+unknown spells degrade gracefully per the parse-don't-fail philosophy.
+
+* Spellbook Compliance
+
+An implementation claiming Indue compatibility must support the spells below. This complements the structural requirements in *Indue, Language Specification*; both are required.
+
+*Text*
+- ~:bold~, ~:italic~, ~:underline~, ~:strike~, ~:sup~, ~:sub~
+- ~:color~ / ~:fg~, ~:weight~, ~:grow~, ~:shrink~, ~:case~, ~:align~, ~:opacity~, ~:mono~
+- ~:mix~, folding over the current value of the colour property
+
+*Spans*
+- ~:span-bg~ / ~:span-background~, ~:span-fg~ / ~:span-color~
+- ~:span-border~, ~:span-border-color~, ~:span-radius~, ~:span-padding~
+
+*Blocks*
+- ~:bg~ / ~:background~, ~:radius~, ~:padding~, ~:margin~, ~:shadow~, ~:width~, ~:height~
+- ~:border~ / ~:stroke~, ~:border-color~, ~:border-style~
+- ~:grow~ and ~:shrink~, relative only, positive values
+
+*Fonts*
+- ~:font~ with name, filepath, and fallback-chain forms
+- ~:serif~, ~:sans~, ~:mono~ as category preferences
+
+*Reach*
+- ~:deep~ and ~:shallow~, bare and with ~block~ / ~span~ values
+- Block spells reach owned blocks by default; span spells do not
+
+*Presets*
+- ~:chip~, shipped as a definition and therefore overridable
+
+*Structure*
+- ~:list~ and ~:step~, with depth chains, void ditto, and chain cycling
+- ~:quote~ / ~:q~, a structural container
+- ~:code~, with and without a language, and the ~`~ glamour
+- ~:math~ / ~:$~
+- ~:table~, with pipe-separated cells in a conduit target
+
+*References and embedding*
+- ~:link~, in both generating and targeting forms
+- ~:button~, an embedding spell that its chain styles directly
+- ~:embed~, ~:popover~, ~:of~
+
+*Tasks*
+- ~:task~ with its three values, and the aliases ~:o~ and ~:x~
+- ~:>~ as a built-in, usable but not referenceable
+- Custom states via ~<:name>.task<state>~, with ~.task~ mandatory
+- ~:cycle[name]<...>~, enumerable and named
+
+*Queries*
+- ~:query~ taking a SQL query as a scroll, with the grammar specified in *Indue Query Syntax*
+- Result shape determining rendering: value inline, list as a list, matrix as a table
+- Dotted access on sources (~&name.key~) for single-value reads
+
+*Metadata*
+- ~:info~ with pipe-separated pairs, newline-separated rows
+- Value shapes recognised: URL, station, source, date, number, text; cast at the point of use
+
+*Scheduling*
+- Dates: ~:on~, ~:due~, ~:scheduled~
+- Times: ~:start~, ~:end~, as clock times only
+- Series bounds: ~:from~, ~:until~
+- Exceptions: ~:skip~
+- ~:repeat~ with the full pattern grammar: ~every <count> <period>~, ~on <ordinal> <day>~, ~of <month>~, in that order, each clause optional; the shorthand set; and ~.after<completion>~
+- ~:completions~, application-maintained, bound by adjacency
+- Deterministic export of every pattern to a single RRULE
+
+*Application preferences*
+- ~:serif~, ~:sans~, ~:mono~ honoured when present, with the application's own default otherwise
+
+Extensions are renderer-specific or application-specific features built on top of this catalogue. They use the ~:ext.*~ namespace and degrade gracefully in applications that do not support them (see Custom Spell Extensions).
+
+Layout belongs to extensions entirely. Container geometry (grid, flexbox, columns, absolute positioning, page-constrained layouts, animations) is ~:ext.css~ territory, because none of it survives the single-column rule. Tables are the only construct with internal columns, and they occupy one block-level slot.
