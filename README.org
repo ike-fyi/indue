@@ -99,29 +99,7 @@ Superscript (~:sup~), subscript (~:sub~), and maths (~:math~, aliased ~:$~) are 
 | ~!~      | Public marker        | Beacon     |
 | ~;~ / ~;;~ / ~;;;~ | Comment (level by count) | Whisper |
 
-** Reserved and available characters
 
-| Character | Status                                 |
-|-----------+----------------------------------------|
-| ~<>~        | Vessel (value argument, and target when marked) |
-| ~^~         | Station (anchors a place; nature comes from the spell) |
-| ~@~         | Signet in text; target marker in spell world |
-| ~&~         | Source (canonical record)              |
-| ~()~        | Available (too common in prose to reserve) |
-| ~>~         | Available                              |
-| ~$~         | Free in prose; only ~:$~ is a spell (aliasing ~:math~) |
-| ~`~         | Glamour for ~:code~                       |
-| ~;~         | Comment (Whisper), level by repetition |
-
-*** A character can be spent twice
-
-A character reserved in the material world is not thereby spent in spell world, and the reverse also holds. The two are separate namespaces, so the same glyph may carry unrelated meanings in each without ambiguity: the parser always knows which world it is reading.
-
-~@~ is the working example. In material text it is a signet, summoning an entity by name. Inside spell world it marks a bond's target. Those are different jobs, and neither constrains the other, because a signet is never read inside a chain and a target marker is never read in running prose.
-
-This is why "available" in the table above should be read narrowly. It means *available in the material world*, where a character must survive contact with ordinary prose. A glamour character, a socket, or a sigil is unavailable there, since it already carries meaning a reader would trip over, but it remains free as a mechanical device inside spell world, where prose conventions no longer apply and the only constraint is not colliding with spell syntax already in use.
-
-The practical consequence: when a new mechanism is needed inside spell world, the candidate pool is much larger than the "Available" rows suggest. It includes every character already spent on material-world syntax, provided the new use sits entirely within a spell.
 
 * Full Example
 
