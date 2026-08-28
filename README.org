@@ -4,7 +4,9 @@
 #+STATUS: Pre-specification, exploratory design
 
 * Project Status
-Basically no status. This is a just a thought experiment at this point. There is nothing usable here but feel free to share ideas to me at ike@ike.fyi if this topic interests you.
+Basically no status. This is a just a thought experiment at this point that I will be using as a goal as I learn more about lexers/interpreters/renderers, etc. I'm currently reading Crafting Interpreters and this has been a great tool to use as a companion.
+
+All of the ideas are manually written in a ton of notes at work but I've used AI to summarize for my own review and as a reference if I need. The final spec will be completely rewritten manually for consistency and my own satisfaction. There are several consistency errors I already have spotted but am waiting until I feel the ideas have solidified first.
 
 * Introduction
 
