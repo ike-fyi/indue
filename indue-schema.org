@@ -1,0 +1,310 @@
+#+TITLE: Indue Reference Schema
+#+SUBTITLE: The Table Model Queries Address
+#+AUTHOR: Ike Ah-Loe
+#+STATUS: Draft, under active design
+
+* About This Document
+
+This specifies the table shape an Indue AST maps onto, and therefore the shape a query addresses.
+
+It exists for two reasons, and they are the same reason seen from two sides.
+
+*Queries are written in SQL.* A query is human-readable because SQL's ~SELECT ... WHERE~ sentence is human-readable, and it is portable because SQL is understood everywhere. But a SQL query only means something against a known schema: ~SELECT block WHERE tag = work~ is meaningless unless ~block~ and ~tag~ are pinned down.
+
+*Applications built on databases get the mapping for free.* An application storing a Lair in SQLite, Postgres, or DuckDB can use these tables directly and pass queries through with little or no translation. Without a shared schema, every implementation would invent its own names, and a query written against one would not run against another, even though both parsed the document correctly.
+
+** What is normative and what is not
+
+*Normative*: table names, view names, column names, column types, and the meaning of each.
+
+*Not normative*: indexes, physical storage, whether a real database is used at all. An in-memory structure that answers the same queries with the same results is conforming. An application may add tables and columns of its own, provided it does not redefine these.
+
+** How to read the two layers
+
+The schema has two layers, and the distinction matters.
+
+*Base tables* are normalised. They hold the AST faithfully: one row per node, junction tables for many-to-many relations, key-value rows for open-ended properties. They are what an application writes when it loads a document.
+
+*Query views* are flattened. They exist so a query can say ~WHERE tag = work~ instead of writing a join, which is the whole reason the language reads well. Views are normative because queries depend on them.
+
+A query never addresses base tables directly.
+
+* Base Tables
+
+** node
+
+Every addressable thing is a node. One table gives every kind a shared identity, which is what lets a query select across kinds.
+
+| Column      | Type    | Notes                                             |
+|-------------+---------+---------------------------------------------------|
+| ~id~          | integer | Parse-local. Deterministic for a given input, not stable across edits |
+| ~kind~        | text    | ~block~, ~span~, ~entity~, ~task~, ~spell~, ~document~    |
+| ~document_id~ | integer | The file this node belongs to                     |
+| ~parent_id~   | integer | The owning node, null at a document's top level   |
+| ~depth~       | integer | Nesting depth, zero at a document's top level     |
+| ~ordinal~     | integer | Position among siblings, for document order       |
+| ~text~        | text    | Rendered text, flattened. Null where a node renders nothing |
+
+*** Why one node table
+
+The alternative is a table per kind, which makes ~SELECT block, span WHERE task = open~ a union of two differently-shaped queries. A shared table makes it one query with a ~kind~ predicate, and lets tree relations (~parent_id~) cross kinds without a polymorphic join.
+
+** document
+
+| Column   | Type    | Notes                                    |
+|----------+---------+------------------------------------------|
+| ~id~       | integer | Parse-local                              |
+| ~path~     | text    | Path relative to the Lair root           |
+| ~lair_id~  | integer | Null where a single document is parsed alone |
+
+Filenames never affect resolution or query results (see the language specification). ~path~ is present so results can be located, not so they can be matched on semantically.
+
+** block
+
+Fields belonging only to blocks.
+
+| Column        | Type    | Notes                                        |
+|---------------+---------+----------------------------------------------|
+| ~node_id~       | integer | References ~node~                              |
+| ~block_kind~    | text    | ~material~, ~astral~, ~table~, ~spell~           |
+| ~is_spell_block~ | boolean | Whether the only rendered content is one spell's target |
+
+** entity
+
+| Column     | Type    | Notes                                          |
+|------------+---------+------------------------------------------------|
+| ~node_id~    | integer | References ~node~                                |
+| ~name~       | text    | Normalised. Spelling variants have collapsed   |
+| ~entity_kind~ | text   | ~sigil~, ~signet~, ~station~, ~source~             |
+| ~target_id~  | integer | For a station or source: the block it names    |
+
+Entities are nodes because they are addressable and carry properties. A source's ~target_id~ is the alias binding: several names may point at one block.
+
+** task
+
+| Column      | Type    | Notes                                    |
+|-------------+---------+------------------------------------------|
+| ~node_id~     | integer | References ~node~                          |
+| ~block_id~    | integer | The block the task sits on               |
+| ~state~       | text    | ~open~, ~active~, ~closed~                   |
+| ~state_name~  | text    | The custom state used, null for the built-in three |
+| ~scope~       | text    | ~block~ or ~span~                           |
+
+A task is its own node because a block may carry several: one block-level and any number of span-level (see The Task Model).
+
+** property
+
+Open-ended keys cannot be columns, so properties are rows.
+
+| Column     | Type    | Notes                                              |
+|------------+---------+----------------------------------------------------|
+| ~node_id~    | integer | The node the property belongs to                    |
+| ~key~        | text    | Normalised property name                            |
+| ~value~      | text    | Always stored as text                               |
+| ~value_type~ | text    | ~text~, ~number~, ~date~, ~time~, ~duration~, ~url~, ~ref~ |
+| ~sequence~   | integer | Order of accumulation, for source history           |
+| ~is_current~ | boolean | Whether this is the value a plain read returns      |
+| ~origin~     | text    | ~spell~ or ~info~                                      |
+
+*** One flat namespace
+
+~:due<2026-04-01>~ and ~:info[due | 2026-04-01]~ both produce a row with ~key = 'due'~. A query reads ~due~ without knowing which wrote it, which is the point: requiring a query to know would make metadata a second namespace to reason about.
+
+~origin~ is recorded so an application can tell them apart if it needs to. Queries do not have to.
+
+*** History
+
+Repeated keys on a source accumulate rather than overwrite. Each declaration adds a row with an increasing ~sequence~, and exactly one row per ~(node_id, key)~ has ~is_current~ set.
+
+A plain read returns the current row. History is reached by ~sequence~ or by a ~version~ property.
+
+** reference
+
+Every occurrence of an entity in a node.
+
+| Column      | Type    | Notes                                       |
+|-------------+---------+---------------------------------------------|
+| ~node_id~     | integer | Where the reference appears                 |
+| ~entity_id~   | integer | The entity referred to                      |
+| ~entity_kind~ | text    | The mark used at this occurrence            |
+| ~ordinal~     | integer | Position within the node                    |
+
+This is the junction table that makes ~WHERE tag = work~ possible, and it is what backlinks are derived from. Nothing stores backlinks: they are this table, filtered.
+
+** ancestry
+
+A closure table: one row for every ancestor-descendant pair, including each node with itself at distance zero.
+
+| Column        | Type    | Notes                          |
+|---------------+---------+--------------------------------|
+| ~ancestor_id~   | integer |                                |
+| ~descendant_id~ | integer |                                |
+| ~distance~      | integer | Zero for a node and itself     |
+
+*** Why a closure table
+
+Subtree queries are common in an outliner: everything under a heading, everything a station owns, reach for a recursive block spell. With only ~parent_id~ those need recursive SQL, which is awkward to write and unevenly supported.
+
+A closure table makes ~under~ a plain join, so ~WHERE under = 'intro'~ works in any SQL dialect and in a non-SQL implementation without a graph walk. It is redundant with ~parent_id~ and worth the redundancy.
+
+* Query Views
+
+Views exist so that queries read as sentences. Every join a query would otherwise need is done here once.
+
+A query addresses views, never base tables.
+
+** v_block
+
+The main view. One row per block, with well-known properties flattened into columns and relations reduced to matchable values.
+
+| Column        | Type    | From                                        |
+|---------------+---------+---------------------------------------------|
+| ~id~            | integer | ~node.id~                                     |
+| ~kind~          | text    | ~block.block_kind~                            |
+| ~text~          | text    | ~node.text~                                   |
+| ~depth~         | integer | ~node.depth~                                  |
+| ~document~      | text    | ~document.path~                               |
+| ~parent~        | integer | ~node.parent_id~                              |
+| ~task~          | text    | The block task's ~state~                      |
+| ~task_name~     | text    | Its custom state name, if any                |
+| ~due~           | date    | ~property~ where key is ~due~                   |
+| ~scheduled~     | date    | ~property~ where key is ~scheduled~             |
+| ~on~            | date    | ~property~ where key is ~on~                    |
+| ~start~, ~end~    | time    | Clock times                                  |
+| ~from~, ~until~   | date    | Series bounds                                |
+| ~repeat~        | text    | The recurrence pattern as written            |
+| ~priority~      | number  |                                              |
+| ~estimate~      | text    |                                              |
+
+*** Well-known columns and open-ended properties
+
+Well-known keys are promoted to columns so ~WHERE due < 2026-04-15~ is a column comparison with a real date type, which is what makes date arithmetic and sorting work.
+
+Every property, well-known or not, remains available through ~v_property~. Promotion is a convenience, not a second storage.
+
+** v_reference
+
+| Column     | Type    | Notes                             |
+|------------+---------+-----------------------------------|
+| ~node_id~    | integer |                                   |
+| ~kind~       | text    | ~sigil~, ~signet~, ~station~, ~source~ |
+| ~name~       | text    | The entity's normalised name      |
+
+*** How relation matching works
+
+A block has many tags, so ~tag~ cannot be a column on ~v_block~ without duplicating rows. Instead, matching a relation is defined as an existence test against this view, and the query language surfaces it as though it were a field.
+
+~WHERE tag = work~ is defined as:
+
+#+begin_example
+EXISTS (SELECT 1 FROM v_reference r
+        WHERE r.node_id = v_block.id
+          AND r.kind = 'sigil' AND r.name = 'work')
+#+end_example
+
+The query language provides ~tag~, ~mention~, ~station~, and ~source~ as pseudo-fields that expand to this. A user writes the short form; an implementation expands it.
+
+This is the one place the language is not a literal subset of SQL, and it is deliberate: writing that ~EXISTS~ by hand would undo the readability the whole design is for.
+
+** v_property
+
+| Column     | Type    | Notes                                 |
+|------------+---------+---------------------------------------|
+| ~node_id~    | integer |                                       |
+| ~key~        | text    |                                       |
+| ~value~      | text    |                                       |
+| ~value_type~ | text    |                                       |
+| ~sequence~   | integer |                                       |
+| ~is_current~ | boolean |                                       |
+
+** v_task
+
+| Column      | Type    | Notes                                  |
+|-------------+---------+----------------------------------------|
+| ~id~          | integer | The task node                          |
+| ~state~       | text    | ~open~, ~active~, ~closed~                 |
+| ~state_name~  | text    |                                        |
+| ~scope~       | text    | ~block~ or ~span~                         |
+| ~text~        | text    | The span's text, or the block's        |
+| ~block_id~    | integer |                                        |
+| ~document~    | text    |                                        |
+| ~due~         | date    | Inherited from the block               |
+
+Tasks have their own view because a query for tasks returns *tasks*, not blocks: a block with two open span tasks yields two rows.
+
+** v_source
+
+| Column     | Type    | Notes                                      |
+|------------+---------+--------------------------------------------|
+| ~name~       | text    |                                            |
+| ~block_id~   | integer | The block the last declaration named       |
+| ~document~   | text    |                                            |
+
+One row per source name, resolved: shadowing has already picked the last declaration, and properties have accumulated. This is what dotted access reads.
+
+** v_ancestry
+
+Exposes the closure table so ~under~ and ~in~ resolve as joins.
+
+| Column        | Type    |
+|---------------+---------|
+| ~ancestor_id~   | integer |
+| ~descendant_id~ | integer |
+| ~distance~      | integer |
+
+* Mapping Queries to SQL
+
+The query language is a subset of SQL's ~SELECT ... WHERE~ shape over these views.
+
+** Direct translations
+
+#+begin_example
+SELECT block WHERE task = open
+  → SELECT * FROM v_block WHERE task = 'open'
+
+SELECT block, span WHERE task = open
+  → SELECT * FROM v_block WHERE task = 'open'
+    UNION ALL
+    SELECT * FROM v_task WHERE scope = 'span' AND state = 'open'
+
+SELECT due, priority WHERE task = open AND priority > 2
+  → SELECT due, priority FROM v_block
+    WHERE task = 'open' AND priority > 2
+
+SELECT block WHERE due < 2026-04-15 AND NOT tag = archived
+  → SELECT * FROM v_block
+    WHERE due < DATE '2026-04-15'
+      AND NOT EXISTS (SELECT 1 FROM v_reference r
+                      WHERE r.node_id = v_block.id
+                        AND r.kind = 'sigil' AND r.name = 'archived')
+#+end_example
+
+** Where the language diverges from SQL
+
+Three deliberate divergences, each earning its keep:
+
+*Relations are pseudo-fields.* ~tag = work~ expands to an existence test. Writing the join by hand would be unreadable, which defeats the purpose.
+
+*Bare values need no quotes.* ~task = open~ rather than ~task = 'open'~. Values are quoted only when they contain spaces. Requiring quotes everywhere would mean nested quoting at a shell prompt for every query.
+
+*Relative dates are literals.* ~due < +7d~ resolves at query time. SQL has no portable equivalent, and date arithmetic is the single most common thing a task query does.
+
+** What is deliberately absent
+
+Joins, subqueries, aggregate functions, and window functions are not in the language. They are what make SQL powerful and what make it hard to type, and they require a query planner rather than a filter.
+
+An application with a real database may of course use them internally. The language does not expose them.
+
+* Loading an AST
+
+The order an implementation should populate tables, since later ones depend on earlier.
+
+1. ~document~
+2. ~node~, walking the tree in document order, assigning ~id~ deterministically
+3. ~block~, ~entity~, ~task~ for each node of that kind
+4. ~ancestry~, derived from ~parent_id~
+5. ~reference~, one row per entity occurrence
+6. ~property~, resolving the fold, then marking ~is_current~ per ~(node_id, key)~
+7. Source resolution: pick the last declaration per name, accumulate properties, assign ~sequence~
+
+Steps 6 and 7 are where the language's resolution rules are applied. A conforming implementation must produce the same rows as a full parse of the Lair, whatever method it uses (see The Result Contract in *Indue Query Syntax*).
