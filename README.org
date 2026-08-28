@@ -3,10 +3,6 @@
 #+AUTHOR: Ike Ah-Loe
 #+STATUS: Pre-specification, exploratory design
 
-* Project Status
-Basically no status. This is a just a thought experiment at this point that I will be using as a goal as I learn more about lexers/interpreters/renderers, etc. I'm currently reading Crafting Interpreters and this has been a great tool to use as a companion.
-
-All of the ideas are manually written in a ton of notes at work but I've used AI to summarize for my own review and as a reference if I need. The final spec will be completely rewritten manually for consistency errors and my own satisfaction. 
 
 * Introduction
 
@@ -15,6 +11,9 @@ Indue is a markup language designed from scratch for outliner, task management, 
 The name "Indue" comes from the archaic English verb meaning "to put on as a garment", to clothe or endow something with qualities it did not previously have. Plain text puts on Indue and gains structure, tasks, tags, references, and hierarchy. Remove the markup and the text is still there, perfectly readable. This metaphor of equipping text with power runs through the entire language and its vocabulary.
 
 Indue files are plain text. They are readable and writable in any editor without special tooling. The markup is lightweight enough that it does not obscure the content it describes.
+
+* Project Status
+Basically no status. This is a just a thought experiment at this point that I will be using as a goal as I learn more about lexers/interpreters/renderers, etc. 
 
 * The Indue Specifications
 
