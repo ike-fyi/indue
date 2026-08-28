@@ -164,104 +164,6 @@ Some are about :topic: approaches to #[machine learning]
 <#work>.span-bg<#eef4ff>:
 #+end_example
 
-* Core Design Philosophy
-
-** Prefer unambiguous syntax
-
-Indue prefers syntax where every character's role is resolvable from local context. The parser should never need to look ahead through unbounded content or backtrack to determine meaning. Characters may appear in multiple roles (e.g. ~:~ opens a spell and terminates one), but context always disambiguates which role applies.
-
-** Glamours are for frequent writing; spells are for transforms
-
-The bar for earning a dedicated glamour is high: the feature must appear frequently enough in everyday writing that the ergonomic cost of a spell (function call) is genuinely burdensome. Anything that transforms content into a different form belongs in the spell system (~:func~). The glamour table is for things you type constantly.
-
-** Bracket types replace quoting
-
-No string literals with quote delimiters exist anywhere in Indue. Text is passed to spells using the appropriate bracket type: vessels ~()~ for values, scrolls ~[]~ for unparsed text, and conduits ~{}~ for rich parsed content. Quotes inside any bracket type are just literal characters.
-
-** Every spell is useful in isolation
-
-A spell that only makes sense composed with one specific other spell is a design smell. Those should be redesigned as a single spell with multiple ports. Each spell should carry clear meaning on its own.
-
-** Same spell overwrites, different spells compose
-
-When the same spell appears twice in a chain, the later instance wins. When different spells appear in a chain, they are additive:
-
-#+begin_example
-:color<red>.color<blue>:word    ; blue wins (same spell, later overwrites)
-:bold.italic:word               ; both apply (different spells, additive)
-#+end_example
-
-** Single-column renderability
-
-Indue defines no layout mechanism. A conforming application must be able to render any document in a single column without loss of meaning, so nothing in the core may require an application to place content side by side.
-
-The test is practical: an outliner with a one-column interface has no way to understand a column instruction, and a construct some conforming applications structurally cannot render is worse than no construct at all, because it breaks the guarantee that every compliant application reads a document correctly.
-
-Tables are the one exception, and they are not really an exception. A table is multi-column *internally* but occupies a single block-level slot, so a one-column application renders it as a unit (scrolling or wrapping as it sees fit) without understanding layout at all. The document's structure is identical either way. Mobile applications are encouraged to set breakpoints that collapse wide tables by default.
-
-Presentational properties are fine, because they inset or decorate a block rather than arrange blocks relative to each other: margins, padding, ~:radius~, ~:border~, and ~:stroke-color~ all apply to tables and blocks without portability risk. An application that cannot round a corner simply does not, and the content still reads.
-
-For genuine typesetting, page geometry, columns, page breaks, floats, export to Typst is the recommended path once tooling exists (see Relationship to Typst). A future version may revisit basic layout, but only for constructs that remain single-column viewable at every breakpoint.
-
-A useful guide while the language is young: if Org-mode does not have it, Indue almost certainly should not have it yet.
-
-** Spells are renderer-agnostic at core tier
-
-Core formatting spells must have clear meaning regardless of rendering target (screen, print, plain text, accessibility). CSS-specific behavior belongs in the ~:ext.css~ extension namespace, not in core spells.
-
-** Explicit targeting over implicit
-
-Every scope level in Indue has an unambiguous syntactic form. A target is always a container, or a bare word glued to the right of a spell, never something inferred from position. Places are named by stations (~^name~), entities and type markers are targeted with ~<...>~, text through scrolls and conduits, and paired regions through shells. Whether an effect lands on text or on a block is decided by the spell's own nature, never guessed from context. A spell with no target paints its enclosing scope, which is a stated behavior rather than a guess.
-
-Explicit targeting also gives failure a single answer. Because every spell has a target slot, an unrecognised spell degrades the same way regardless of what it was: drop the spell, render the target. A parser needs no per-spell knowledge of which part was meant to survive, which is what lets the vocabulary grow without ever breaking an older implementation.
-
-** Scrolls and conduits are the default carriers
-
-Most content flows through scrolls ~[]~ (unparsed) or conduits ~{}~ (rich parsed content). Vessels ~<>~ carry the values a spell computes with: a number, a date, a color, a setting, and become *targets* when marked with ~@~ or ~&~. Parentheses are deliberately unreserved, a parenthetical in prose must stay a parenthetical. When designing a spell, reach for scrolls or conduits first; use vessels only when the input is a specific ingredient the spell needs to evaluate. Since ~[~ and ~{~ share the same physical key, muscle memory stays simple.
-
-** Names public, behavior private
-
-Indue's visibility defaults follow a single principle: *names need to be findable, behavior needs to be opt-in*. Entities (sigils, signets, stations) are vault-public by default because a name that cannot be resolved is useless. Configuration (codexes, schemas, satchel-hosted spells) is file-local by default because shared styling is a deliberate choice, silent cross-file styling is a debugging nightmare. The beacon (~!~) is the single mechanism that promotes a private codex to the vault's public layer; everything else follows from these two defaults.
-
-** Logical scope, OS-enforced security
-
-Indue declares /logical/ scope, what is visible to what, where names resolve, how the public layer composes. It does not enforce access control. Filesystem permissions, ACLs, encryption, and sandboxing are the OS's domain and operate on Indue files as on any plain text. Tools should be permission-aware (handle failures gracefully, surface them clearly) but never attempt to duplicate security in markup.
-
-** The nick (~\~)
-
-~\~ is reserved as an escape character. Its primary use is rendering a literal glamour character that would otherwise be interpreted as markup:
-
-#+begin_example
-The price is 50\% off       ; literal %, not strikethrough
-Use \*asterisks\* literally ; literal *, not bold
-#+end_example
-
-~\~ before a non-glamour character renders as a literal backslash.
-
-** Parse, don't fail
-
-Indue parsers should never throw errors at the user for malformed markup. Unclosed glamour delimiters apply to the single word they touch (single-word rule), or render as literal text if not touching a word. Unknown spell names render their content as plain text. The no-errors philosophy follows HTML's error recovery model rather than Typst's strict compilation model.
-
-Strict validation belongs in the linter and export pipeline, not in the core parser that runs while someone is writing notes at midnight.
-
-** Recover forward
-
-Parse-don't-fail is the floor: the parser never throws an error at the writer. This principle is the ceiling built on top of it. In Indue the absence of a referent is a *first-class state, not an exception*. "Not yet resolved," "not yet known," and "not yet defined" are legal, meaningful, and frequently useful conditions rather than degraded ones. An unresolved signet still carries meaning and upgrades itself the moment its target appears. An unknown spell renders its conduit as rich content, so a future spell and a not-yet-known one produce coherent output today. A station with no sibling is still a navigable anchor. A cauldron may target an entity that does not exist yet and simply activates when it does. This is what makes incremental, out-of-order authoring, thinking of a tag before defining its behavior, referencing a person before making their page, sketching a trail before its stops exist, feel native to Indue rather than error-prone. This is closer to how a spreadsheet treats a reference to an empty cell (a real value you can build on) than to how a compiler treats an undefined symbol.
-
-Because these fallbacks are the same primitives resolving differently, not ad-hoc repairs, their results are *legible*: a surprising outcome is a combination the writer can understand and then reach for on purpose. And a feature's default is continuous with its advanced form, so the writer enters at the zero-config end of a ramp they did not know was a ramp. Three identically named stations cycle as a trail on their own; discovering that cycle leads directly to ~| n~ ordering and the ~| x~ terminator, the same construct one parameter further along:
-
-#+begin_example
-^argument          ; three of these auto-cycle: an undefined trail
-^argument
-^argument          ; look it up, and the fix is the same construct, ordered:
-^argument | 1
-^argument | 2
-^argument | x      ; ordered, terminated. the accident taught the feature.
-#+end_example
-
-The default is the on-ramp to the depth. Investigating "what actually happened" tends to level the writer up rather than send them back to a wall. The mistakes are the tutorial.
-
-This principle *raises* the specification bar rather than lowering it. A behavior discovered in one application must be the behavior every compliant application produces, and "look it up" must terminate in a documented answer, otherwise an accident is merely a bug that has not recurred yet. Every fallback path is therefore defined behavior, specified to the same rigor as the success path. Determinism is what turns a happy accident into a feature; cross-application agreement is what makes it worth learning. The permission to play is earned by pinning down exactly what play does.
 
 * Vocabulary
 
@@ -2698,11 +2600,104 @@ Every form of a name, ~#name~, ~@name~, ~^name~, and the block handle ~^name~, r
 
 The namespace boundary is the *vault*. Names resolve vault-wide: a station or entity named in one file is reachable from a reference in another file of the same vault. Collisions produce a set (set semantics); navigation to a multi-member set is a disambiguation the app surfaces. The unique machine handle is the disambiguator of last resort. Cross-vault resolution happens only through the explicit import/export rules in the *Indue Vault Specification*.
 
-** Open questions for entity configuration
+* Core Design Philosophy
 
-- If a block carries several entities (~#project~ and ~#urgent~), do both cauldrons apply, and in what order? (Likely: in the order the entities appear, last wins on conflict, per the specificity rule.)
-- Should there be an intersection selector, a cauldron that fires only when two entities are both present?
+** Prefer unambiguous syntax
 
+Indue prefers syntax where every character's role is resolvable from local context. The parser should never need to look ahead through unbounded content or backtrack to determine meaning. Characters may appear in multiple roles (e.g. ~:~ opens a spell and terminates one), but context always disambiguates which role applies.
+
+** Glamours are for frequent writing; spells are for transforms
+
+The bar for earning a dedicated glamour is high: the feature must appear frequently enough in everyday writing that the ergonomic cost of a spell (function call) is genuinely burdensome. Anything that transforms content into a different form belongs in the spell system (~:func~). The glamour table is for things you type constantly.
+
+** Bracket types replace quoting
+
+No string literals with quote delimiters exist anywhere in Indue. Text is passed to spells using the appropriate bracket type: vessels ~()~ for values, scrolls ~[]~ for unparsed text, and conduits ~{}~ for rich parsed content. Quotes inside any bracket type are just literal characters.
+
+** Every spell is useful in isolation
+
+A spell that only makes sense composed with one specific other spell is a design smell. Those should be redesigned as a single spell with multiple ports. Each spell should carry clear meaning on its own.
+
+** Same spell overwrites, different spells compose
+
+When the same spell appears twice in a chain, the later instance wins. When different spells appear in a chain, they are additive:
+
+#+begin_example
+:color<red>.color<blue>:word    ; blue wins (same spell, later overwrites)
+:bold.italic:word               ; both apply (different spells, additive)
+#+end_example
+
+** Single-column renderability
+
+Indue defines no layout mechanism. A conforming application must be able to render any document in a single column without loss of meaning, so nothing in the core may require an application to place content side by side.
+
+The test is practical: an outliner with a one-column interface has no way to understand a column instruction, and a construct some conforming applications structurally cannot render is worse than no construct at all, because it breaks the guarantee that every compliant application reads a document correctly.
+
+Tables are the one exception, and they are not really an exception. A table is multi-column *internally* but occupies a single block-level slot, so a one-column application renders it as a unit (scrolling or wrapping as it sees fit) without understanding layout at all. The document's structure is identical either way. Mobile applications are encouraged to set breakpoints that collapse wide tables by default.
+
+Presentational properties are fine, because they inset or decorate a block rather than arrange blocks relative to each other: margins, padding, ~:radius~, ~:border~, and ~:stroke-color~ all apply to tables and blocks without portability risk. An application that cannot round a corner simply does not, and the content still reads.
+
+For genuine typesetting, page geometry, columns, page breaks, floats, export to Typst is the recommended path once tooling exists (see Relationship to Typst). A future version may revisit basic layout, but only for constructs that remain single-column viewable at every breakpoint.
+
+A useful guide while the language is young: if Org-mode does not have it, Indue almost certainly should not have it yet.
+
+** Spells are renderer-agnostic at core tier
+
+Core formatting spells must have clear meaning regardless of rendering target (screen, print, plain text, accessibility). CSS-specific behavior belongs in the ~:ext.css~ extension namespace, not in core spells.
+
+** Explicit targeting over implicit
+
+Every scope level in Indue has an unambiguous syntactic form. A target is always a container, or a bare word glued to the right of a spell, never something inferred from position. Places are named by stations (~^name~), entities and type markers are targeted with ~<...>~, text through scrolls and conduits, and paired regions through shells. Whether an effect lands on text or on a block is decided by the spell's own nature, never guessed from context. A spell with no target paints its enclosing scope, which is a stated behavior rather than a guess.
+
+Explicit targeting also gives failure a single answer. Because every spell has a target slot, an unrecognised spell degrades the same way regardless of what it was: drop the spell, render the target. A parser needs no per-spell knowledge of which part was meant to survive, which is what lets the vocabulary grow without ever breaking an older implementation.
+
+** Scrolls and conduits are the default carriers
+
+Most content flows through scrolls ~[]~ (unparsed) or conduits ~{}~ (rich parsed content). Vessels ~<>~ carry the values a spell computes with: a number, a date, a color, a setting, and become *targets* when marked with ~@~ or ~&~. Parentheses are deliberately unreserved, a parenthetical in prose must stay a parenthetical. When designing a spell, reach for scrolls or conduits first; use vessels only when the input is a specific ingredient the spell needs to evaluate. Since ~[~ and ~{~ share the same physical key, muscle memory stays simple.
+
+** Names public, behavior private
+
+Indue's visibility defaults follow a single principle: *names need to be findable, behavior needs to be opt-in*. Entities (sigils, signets, stations) are vault-public by default because a name that cannot be resolved is useless. Configuration (codexes, schemas, satchel-hosted spells) is file-local by default because shared styling is a deliberate choice, silent cross-file styling is a debugging nightmare. The beacon (~!~) is the single mechanism that promotes a private codex to the vault's public layer; everything else follows from these two defaults.
+
+** Logical scope, OS-enforced security
+
+Indue declares /logical/ scope, what is visible to what, where names resolve, how the public layer composes. It does not enforce access control. Filesystem permissions, ACLs, encryption, and sandboxing are the OS's domain and operate on Indue files as on any plain text. Tools should be permission-aware (handle failures gracefully, surface them clearly) but never attempt to duplicate security in markup.
+
+** The nick (~\~)
+
+~\~ is reserved as an escape character. Its primary use is rendering a literal glamour character that would otherwise be interpreted as markup:
+
+#+begin_example
+The price is 50\% off       ; literal %, not strikethrough
+Use \*asterisks\* literally ; literal *, not bold
+#+end_example
+
+~\~ before a non-glamour character renders as a literal backslash.
+
+** Parse, don't fail
+
+Indue parsers should never throw errors at the user for malformed markup. Unclosed glamour delimiters apply to the single word they touch (single-word rule), or render as literal text if not touching a word. Unknown spell names render their content as plain text. The no-errors philosophy follows HTML's error recovery model rather than Typst's strict compilation model.
+
+Strict validation belongs in the linter and export pipeline, not in the core parser that runs while someone is writing notes at midnight.
+
+** Recover forward
+
+Parse-don't-fail is the floor: the parser never throws an error at the writer. This principle is the ceiling built on top of it. In Indue the absence of a referent is a *first-class state, not an exception*. "Not yet resolved," "not yet known," and "not yet defined" are legal, meaningful, and frequently useful conditions rather than degraded ones. An unresolved signet still carries meaning and upgrades itself the moment its target appears. An unknown spell renders its conduit as rich content, so a future spell and a not-yet-known one produce coherent output today. A station with no sibling is still a navigable anchor. A cauldron may target an entity that does not exist yet and simply activates when it does. This is what makes incremental, out-of-order authoring, thinking of a tag before defining its behavior, referencing a person before making their page, sketching a trail before its stops exist, feel native to Indue rather than error-prone. This is closer to how a spreadsheet treats a reference to an empty cell (a real value you can build on) than to how a compiler treats an undefined symbol.
+
+Because these fallbacks are the same primitives resolving differently, not ad-hoc repairs, their results are *legible*: a surprising outcome is a combination the writer can understand and then reach for on purpose. And a feature's default is continuous with its advanced form, so the writer enters at the zero-config end of a ramp they did not know was a ramp. Three identically named stations cycle as a trail on their own; discovering that cycle leads directly to ~| n~ ordering and the ~| x~ terminator, the same construct one parameter further along:
+
+#+begin_example
+^argument          ; three of these auto-cycle: an undefined trail
+^argument
+^argument          ; look it up, and the fix is the same construct, ordered:
+^argument | 1
+^argument | 2
+^argument | x      ; ordered, terminated. the accident taught the feature.
+#+end_example
+
+The default is the on-ramp to the depth. Investigating "what actually happened" tends to level the writer up rather than send them back to a wall. The mistakes are the tutorial.
+
+This principle *raises* the specification bar rather than lowering it. A behavior discovered in one application must be the behavior every compliant application produces, and "look it up" must terminate in a documented answer, otherwise an accident is merely a bug that has not recurred yet. Every fallback path is therefore defined behavior, specified to the same rigor as the success path. Determinism is what turns a happy accident into a feature; cross-application agreement is what makes it worth learning. The permission to play is earned by pinning down exactly what play does.
 * Parser Architecture Notes
 
 ** Three-phase evaluation
