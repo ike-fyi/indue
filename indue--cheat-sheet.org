@@ -1,0 +1,316 @@
+#+TITLE: Indue Cheatsheet
+#+SUBTITLE: The Everyday Forms
+#+AUTHOR: Ike Ah-Loe
+
+* Start Here
+
+Everything below is what you need for ordinary writing: notes, outlines, tasks, and dates. None of it requires knowing how Indue works underneath.
+
+If you already write Markdown or Org, most of your habits carry over. Three things are different, and they are worth knowing before anything else:
+
+| You may expect | Indue uses | Why                                          |
+|----------------+------------+----------------------------------------------|
+| ~# Heading~      | ~= Heading~  | ~#~ is a tag, as it is everywhere else online  |
+| ~_italic_~       | ~/italic/~   | ~_~ is underline, which Markdown lacks         |
+| ~- [ ] task~     | ~- :o task~  | ~[ ]~ also works, and is listed under Goety    |
+| ~```~ fence      | ~`:::~       | ~`~ is an ordinary mark, so repeats mean nothing |
+
+* Text
+
+** The five marks
+
+| Write        | Get           |
+|--------------+---------------|
+| ~*bold*~       | *bold*        |
+| ~/italic/~     | /italic/      |
+| ~_underline_~  | underlined    |
+| ~%strike%~     | struck out    |
+| ~`code`~       | code          |
+
+** Extra marks are free
+
+Repeating a mark means the same as one, so you can lean on them for emphasis:
+
+#+begin_example
+***WOW***     is the same as    *WOW*
+#+end_example
+
+** Three ways to mark text
+
+Each mark works three ways. Pick whichever suits.
+
+| Form           | Covers                        |
+|----------------+-------------------------------|
+| ~*word~          | One word, stops at the space  |
+| ~*bold text*~    | Everything between the pair   |
+| ~*[bold text]~   | Everything in the brackets    |
+
+#+begin_example
+This is *important and this is not.
+This has *several words* marked.
+And this uses *[brackets to be explicit].
+#+end_example
+
+** Stacking
+
+Put different marks together, then use brackets. The bracket is required:
+
+#+begin_example
+*/[bold and italic]
+_%[underlined and struck out]
+#+end_example
+
+** Mid-word
+
+Brackets work anywhere, including inside a word:
+
+#+begin_example
+abso*[lutely]
+the 4:sup:th time
+H:sub:2O
+#+end_example
+
+* Structure
+
+** Headings
+
+~=~ makes a heading. Nesting comes from indentation, not from repeating the mark.
+
+#+begin_example
+= Project Notes
+  = Research
+  = Implementation
+#+end_example
+
+** Lists
+
+~-~ for bullets, ~+~ for numbered.
+
+#+begin_example
+- first
+- second
+  - nested
++ step one
++ step two
+#+end_example
+
+** Headings inside lists
+
+A heading marker after a list marker makes that item a heading. This is how an outline gets structure without giving up the list.
+
+#+begin_example
+- = Chapter One
+  - a point
+  - another point
+- = Chapter Two
+#+end_example
+
+** Quotes and code
+
+#+begin_example
+:q A single quoted line.
+
+`inline code`
+
+`:::
+a block of code, safe for any content
+:::
+#+end_example
+
+* Tasks
+
+** The three states
+
+| Write   | Means   | Also        |
+|---------+---------+-------------|
+| ~:o~      | open    | ~[]~ or ~[ ]~ |
+| ~:>~      | active  | ~[>]~         |
+| ~:x~      | closed  | ~[x]~         |
+
+#+begin_example
+- :o Buy groceries
+- :> Read the papers
+- :x Fix the sink
+#+end_example
+
+There is no "blocked" state, on purpose. Blocked is a tag, so it works with any state:
+
+#+begin_example
+- :> Rewrite the parser #blocked
+- :o Ship the beta #blocked #[waiting on legal]
+#+end_example
+
+** Tasks anywhere
+
+A task is not tied to a list item. Any block can be one.
+
+#+begin_example
+:o A paragraph that is also a task.
+- = :o A heading that is also a task
+#+end_example
+
+** Several tasks in one line
+
+#+begin_example
+- When you get home, [feed the cats].o and [let out the dogs].o
+#+end_example
+
+* Dates and Repetition
+
+** Dates
+
+| Write               | Means             |
+|---------------------+-------------------|
+| ~:due<2026-04-15>~    | A deadline        |
+| ~:scheduled<...>~     | A planned start   |
+| ~:on<...>~            | An event date     |
+
+#+begin_example
+- :o Summarize findings :due<2026-04-01>
+#+end_example
+
+** Times
+
+Times are separate from the date, which gives you a duration for free.
+
+#+begin_example
+- :o Standup :on<2026-04-07>.start<09:00>.end<09:15>
+#+end_example
+
+** Repeating
+
+~:repeat~ takes a pattern written the way you would say it.
+
+| Pattern                            | Means                      |
+|------------------------------------+----------------------------|
+| ~daily~ ~weekly~ ~monthly~ ~yearly~      | The obvious                |
+| ~weekdays~ ~weekends~                 | Those days                 |
+| ~every 2 weeks~                      | Any interval               |
+| ~every month on 1st friday~          | A position in the month    |
+| ~every month on last day~            | The end of the month       |
+| ~every year on 3rd wednesday of march~ | A position in a month    |
+
+#+begin_example
+- :o Pay rent :due<2026-04-01> :repeat[monthly]
+- :o Standup :on<2026-04-07> :repeat[weekdays]
+- :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
+#+end_example
+
+*** From the completion date instead
+
+Some things should repeat from when you actually did them, not from the schedule.
+
+#+begin_example
+- :o Haircut :scheduled<2026-04-15> :repeat[6 weeks].after<completion>
+#+end_example
+
+*** Stopping, and skipping
+
+#+begin_example
+:repeat[weekly] :until<2026-12-31>
+:repeat[yearly] :skip<2027-03-15>
+#+end_example
+
+* Naming Things
+
+Four marks, four intents. All four share one namespace, so ~#alice~ and ~@alice~ are the same Alice.
+
+| Mark      | Is       | Use for                         |
+|-----------+----------+---------------------------------|
+| ~#work~     | a tag    | Categories, topics              |
+| ~@alice~    | a mention | People, places, things         |
+| ~^intro~    | a station | A spot you can link to         |
+| ~&alice&~   | a source | Where facts about it live      |
+
+Multi-word names use brackets:
+
+#+begin_example
+#[machine learning]
+@[Saint Vellum]
+#+end_example
+
+** Keeping facts about something
+
+A source holds a record. It does not render; a mention navigates to it.
+
+#+begin_example
+&alice&
+:info[
+role   | Engineer
+team   | Platform
+email  | alice@example.com
+]
+#+end_example
+
+Read one value back with a dot:
+
+#+begin_example
+Her role is &alice.role.
+#+end_example
+
+* Links
+
+#+begin_example
+[the docs](https://example.com)
+:link[https://example.com]:the docs
+:link[https://example.com]:{the *docs*}
+#+end_example
+
+The first is the familiar form. The others let you style the label or link to a station instead of a URL.
+
+* Comments
+
+~;~ starts a comment. It never renders.
+
+#+begin_example
+Some text.   ; this note is for you, not the reader
+;; use more semicolons for bigger asides if you like
+#+end_example
+
+* Configuration at the Bottom
+
+Put settings in a satchel near the end. It applies to the whole document wherever it sits, so the top of your file stays readable.
+
+#+begin_example
+= My Notes
+
+Content starts right away.
+More content.
+
+~~~~~~~~~~
+Anything written in here is a note to yourself. It never renders.
+
+:step[I.]::
+<#work>.span-bg<#eef4ff>:
+#+end_example
+
+Open a satchel with a run of ~~~ and leave it unclosed; it ends at the end of the file.
+
+* Goety: The Borrowed Forms
+
+These are shapes taken from other markup because you already know them. They work, they are the complete list, and they do not follow Indue's own rules.
+
+| Write            | Same as             |
+|------------------+---------------------|
+| ~[label](url)~     | ~:link[url]:label~    |
+| ~[]~ or ~[ ]~        | ~:o~                  |
+| ~[>]~              | ~:>~                  |
+| ~[x]~              | ~:x~                  |
+
+The checkbox forms only work at the start of a block, after any list marker.
+
+* When You Want More
+
+Everything above is the everyday surface. Underneath, all of it is one mechanic: a *spell*, written with ~:~, that does something to a target.
+
+~*word~ is shorthand for ~:bold:word~. ~[x]~ is shorthand for ~:task<closed>~. You never have to know that, but when you want something the shorthand does not cover, the long form is there:
+
+#+begin_example
+:span-bg<yellow>.span-radius<8>:[a highlighted phrase]
+<#project>.card:
+:query[SELECT block WHERE task = open AND due < +7d]
+#+end_example
+
+A useful habit: when you are doing something uncommon, start with ~:~. It costs one character and puts you in the right frame of mind.
+
+See *Indue, Language Specification* for how it works, and *The Indue Spellbook* for what else exists.
