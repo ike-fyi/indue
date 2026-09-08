@@ -1,0 +1,953 @@
+#+TITLE: Indue Language Reference
+#+SUBTITLE: Practical Reference for Indue v0
+#+AUTHOR: Ike Ah-Loe
+
+* About
+
+Indue is a plain-text markup language inspired by Org-mode, Typst, CSS, and Markdown, aimed at giving personal knowledge management apps one consistent syntax for the features they all need.
+
+Indue combines a lot of common devices like property drawers, attributes, functions, supertags, etc into a single device called a spell that has a flexible format.
+
+A spell can:
+- *style* a span or a block
+- *embed* content like styled text, media, or references (queries, transclusions, etc)
+- *store* property data on a block, by either adding or modifying existing properties (task state, scheduling, priority, etc)
+
+Power users will likely use a larger variety of spells using the full spell format, but for speed and familiarity, there are shorthand aliases called glamours to make the most common text styling spells work like many users are already used to from other markups.
+
+Below is the practical reference: what each construct is and how to write it. For rationale and the reasoning behind these choices, see *Indue, Design Philosophy*.
+
+** Spec map
+
+| Topic                                  | Document                      |
+|----------------------------------------+-------------------------------|
+| Grammar and semantics                  | *Indue, Language Specification* |
+| Rationale and design reasoning         | *Indue, Design Philosophy*      |
+| The spell catalogue                    | *The Indue Spellbook*           |
+| Multi-document collections, visibility | *Indue Lair Specification*     |
+| Finding and reading data               | *Indue Query Syntax*            |
+| Tables an AST maps onto                | *Indue Reference Schema*        |
+| The everyday forms, for a new writer   | *Indue Cheatsheet*              |
+
+* Structure
+
+** Sockets
+
+Syntax: ~-~ unordered, ~+~ ordered, at line start followed by a space.
+
+#+begin_example
+- first
+- second
+  - nested
++ step one
++ step two
+#+end_example
+
+Nesting is by indentation. Tabs recommended.
+
+** Headings
+
+Syntax: ~=~ followed by a space, at line start or after a socket.
+
+#+begin_example
+= Project Notes
+  = Research
+
+- = Chapter One
+  - a point
+#+end_example
+
+Inside a nested structure, level comes from ancestry: each ~=~ takes the
+level of the nearest heading above it, plus one. Repeating the mark is
+unnecessary there.
+
+In a flat document, where every heading sits at the same margin, level comes
+from the count instead:
+
+#+begin_example
+= Heading 1
+== Heading 2
+=== Heading 3
+#+end_example
+
+A heading after a socket promotes that list item to a heading. The item remains a list item.
+
+** Dash mode
+
+Syntax: repeated ~-~ prefixes encode depth instead of indentation.
+
+#+begin_example
+Indented:          Dash-mode:
+- = Project        - = Project
+  - = Goals        -- = Goals
+    - Item A       --- Item A
+  + = Timeline     -+ = Timeline
+    + Q1           --+ Q1
+#+end_example
+
+- Both produce the same AST.
+- One mode per list; different lists in one document may differ.
+- Use dash mode where indentation will not survive: chat clients, email, form fields.
+
+** Blocks
+
+A *block* is a unit of content: a paragraph, a list item, or a heading.
+
+Blocks nest. A block *owns* the blocks nested under it, but it is not them: a
+heading and the paragraphs beneath it are separate blocks standing in an
+ownership relation. That relation is what a block spell reaches by default and
+what ~:shallow~ stops at.
+
+| State    | Is                                              |
+|----------+-------------------------------------------------|
+| material | Renders content                                 |
+| astral   | Renders nothing; a spell sitting between blocks |
+| table    | Its rendered content is one ~:table~              |
+| spell    | Its only rendered content is one spell's target |
+
+These are *states*, not kinds. Every block has the same structure and the same
+property table; a state is a fact about what the block renders, and it changes
+the moment the rendered content does.
+
+A block begins at a socket, at a heading, or at the first line after a blank
+line. It continues through every following non-blank line that does not itself
+begin a block. A blank line ends the block and is not part of it. A heading does
+not continue: a heading block is its own line, and prose beneath it is a separate
+block that the heading owns.
+
+#+begin_example
+= Project Alpha            ; heading: a block of one line
+The line beneath it        ; a separate block, owned by the heading
+
+- Buy stock                ; socket: a block begins
+  before the market opens  ; no socket: same block, second line
+- Call the vet             ; socket: a new block begins
+#+end_example
+
+So a newline alone is not a boundary. Leading whitespace on a continuation line
+is cosmetic and stripped. An application writes a socket or a blank line where
+the writer pressed ~Enter~, and a plain newline where they pressed ~Shift+Enter~.
+
+Line breaks inside a block are preserved in rendering, never collapsed to a
+space. Prose meant to flow is written on one source line.
+
+* Text
+
+** Glamours
+
+| Write       | Effect        | Spell      |
+|-------------+---------------+------------|
+| ~*bold*~      | Bold          | ~:bold~      |
+| ~/italic/~    | Italic        | ~:italic~    |
+| ~_underline_~ | Underline     | ~:underline~ |
+| ~%strike%~    | Strikethrough | ~:strike~    |
+| ~`code`~      | Code          | ~:code~      |
+
+Three forms each:
+
+#+begin_example
+*word              ; one word, stops at whitespace
+*several words*    ; paired, same line
+*[explicit]        ; bracketed
+#+end_example
+
+** Runs collapse
+
+Repeating a mark means what one means.
+
+#+begin_example
+***WOW***          ; identical to *WOW*
+#+end_example
+
+A run is one character repeated. It stops when the character changes.
+
+#+begin_example
+***///word*        ; bold; "///word" is literal
+#+end_example
+
+** Stacking
+
+Syntax: different marks together, then a bracket. The bracket is required.
+
+#+begin_example
+*/[bold and italic]
+_%[underlined and struck]
+#+end_example
+
+Without a bracket, only the first mark applies: ~*/word~ is bold applied to ~/word~.
+
+** Position
+
+A glamour opens only at a *glamour position*: at line start, after whitespace, or after a closing bracket. A mark glued to the right of a preceding character is ordinary text.
+
+- ~and/or~, ~3/15~, ~src/main.rs~, ~50%~ are unaffected: the mark follows a character.
+- Glamours are inline. A mark alone at end of line opens nothing.
+- A lone mark, opening and closing nothing, is an untargeted spell taking its
+  scope *only in first position* in that scope. Anywhere else it is literal.
+- A paired closer must be glued to the right of its content, on the same line.
+- For regions across lines, use a shell.
+
+The one relaxation is a bracket: a glamour followed immediately by ~[~, ~{~, or ~<~ opens wherever it sits, because prose never produces those shapes.
+
+** Mid-word
+
+A glamour or wall followed immediately by a container is an opener anywhere.
+
+#+begin_example
+abso*[lutely]
+16:[th].sup:
+#+end_example
+
+Only container shapes work here. ~16:sup:th~ is not a spell: ~word:word~ is an
+ordinary prose shape, so the grab rule needs its wall at a whitespace,
+line-start, or closing-bracket position. Mid-word, put the target in a container.
+
+** Escaping
+
+Syntax: ~\~ before a character renders it literally.
+
+#+begin_example
+\*not bold
+#+end_example
+
+* Tasks
+
+** The three states
+
+| Write | State  | Goety     |
+|-------+--------+-----------|
+| ~:o~    | open   | ~[]~ or ~[ ]~ |
+| ~:>~    | active | ~[>]~       |
+| ~:x~    | closed | ~[x]~       |
+
+#+begin_example
+- :o Buy groceries
+- :> Read the papers
+- :x Fix the sink
+#+end_example
+
+The set is closed. Applications must not add a fourth.
+
+Goety forms work only at the start of a *material* block, after any socket and
+its space.
+
+Reasons a task is not moving are tags, not states:
+
+#+begin_example
+- :> Rewrite the parser #blocked #[waiting on review]
+#+end_example
+
+** Block and span tasks
+
+A task targeting a *block* is a block property and shadows: one per block.
+
+A task targeting a *span* is its own task; these accumulate.
+
+#+begin_example
+- When you get home, [feed the cats].o and [let out the dogs].o
+#+end_example
+
+Span tasks are contained by their block but do not determine its state.
+
+** Custom states
+
+Syntax: an ordinary class definition declaring which lifecycle position it occupies.
+
+#+begin_example
+<:todo>.task<open>:
+<:doing>.task<active>:
+<:done>.task<closed>:
+#+end_example
+
+~.task<state>~ is mandatory: it is what keeps custom vocabulary portable.
+
+No user-defined spell may contain ~>~ in its name.
+
+** Cycles
+
+Syntax: ~:cycle[name]<:a :b :c>~
+
+#+begin_example
+:cycle[org]<:todo :doing :done>
+:cycle[gtd]<:todo :next :waiting :shipped>
+#+end_example
+
+- Name is a scroll; states are a vessel of referenced spell names.
+- Last declaration wins, both for a cycle and for a state's membership.
+- Without a declared cycle, advancing follows open → active → closed.
+
+* Scheduling
+
+Six axes. No spell carries two of them, and nothing is composite.
+
+| Axis          | Spells                |
+|---------------+-----------------------|
+| Date          | ~:on~, ~:due~, ~:scheduled~ |
+| Time of day   | ~:start~, ~:end~          |
+| Repetition    | ~:repeat~               |
+| Series bounds | ~:from~, ~:until~         |
+| Exceptions    | ~:skip~                 |
+| Completion    | ~:completions~          |
+
+#+begin_example
+- :o Standup :on<2026-04-07>.start<09:00>.end<09:15> :repeat[weekdays] :until<2026-12-31>
+#+end_example
+
+Scheduling spells are block properties: one schedule per block, shadowing. Idiomatically written at the end of a block.
+
+** Dates
+
+ISO 8601, recognised by shape, so vessels rather than scrolls.
+
+#+begin_example
+:due<2026-04-15>
+:on<2026-04-07>
+#+end_example
+
+** Times
+
+#+begin_example
+:on<2026-04-07>.start<09:00>.end<09:15>     ; fifteen minutes
+:on<2026-04-07>                             ; all day
+#+end_example
+
+~:start~ and ~:end~ are clock times. Series bounds are ~:from~ and ~:until~.
+
+** Repeat patterns
+
+Syntax: three clauses, always in this order, each optional.
+
+#+begin_example
+every <count> <period>   on <ordinal> <day>   of <month>
+#+end_example
+
+| Clause  | Takes                                            |
+|---------+--------------------------------------------------|
+| ~every~   | optional count, then ~day~/~week~/~month~/~year~     |
+| ~on~      | ~1st~–~5th~ or ~last~, then a day name, ~day~, ~weekday~, or ~weekend-day~ |
+| ~of~      | a month name, which makes the interval yearly    |
+
+#+begin_example
+:repeat[every 2 weeks]
+:repeat[every month on 1st friday]
+:repeat[every month on last day]
+:repeat[every 2 years on 3rd wednesday of march]
+:repeat[every week on mon wed fri]
+#+end_example
+
+Shorthands, matched whole: ~daily~, ~weekly~, ~monthly~, ~yearly~, ~weekdays~, ~weekends~.
+
+There is no ~quarter~. Use ~every 3 months~.
+
+** Anchoring
+
+A pattern says how often, never when. The anchor is the date spell on the same item.
+
+Where pattern and anchor disagree, the pattern wins.
+
+#+begin_example
+- :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
+#+end_example
+
+Produces third Saturdays, not the 20th.
+
+** Completion anchoring
+
+#+begin_example
+:repeat[weekly]                     ; from the schedule
+:repeat[6 weeks].after<completion>  ; from when it was last finished
+#+end_example
+
+** Completion history
+
+Syntax: ~:completions[dates]~, on the task's line or the line immediately below.
+
+#+begin_example
+- :o Water plants :repeat[weekly].after<completion>
+:completions[2026-04-07 2026-04-14]
+#+end_example
+
+- Application-maintained.
+- Binds by adjacency; the line below is an astral block and renders nothing.
+
+* Entities
+
+Four marks, one shared namespace. Same name means the same thing.
+
+| Mark      | Is      | Goes to                    |
+|-----------+---------+----------------------------|
+| ~#work~     | sigil   | the station: a named place |
+| ~@alice~    | signet  | the source: the record     |
+| ~^intro~    | station | that spot, and its trail   |
+| ~&alice&~   | source  | (endpoint only)            |
+
+Three forms each:
+
+#+begin_example
+#work              ; bare, stops at whitespace
+#work#             ; manually closed
+#[machine learning] ; bracketed, for multi-word
+#+end_example
+
+A bare ~#~ at line start sigils the whole line.
+
+** Stations
+
+Syntax: ~^name~, visible, may repeat.
+
+Repeated stations form a *trail*, cycling in document order. Ordering and termination:
+
+#+begin_example
+^argument           ; three of these auto-cycle
+^argument
+^argument
+
+^argument | 1       ; explicitly ordered
+^argument | 2
+^argument | x       ; terminator
+#+end_example
+
+Several stations on one block are aliases resolving to one identity.
+
+** Sources
+
+Syntax: ~&name&~, not rendered, shadows.
+
+#+begin_example
+&alice&
+:info[
+role  | Engineer
+email | alice@example.com
+]
+#+end_example
+
+- Linking goes to the *last* declaration.
+- Properties *accumulate* across all declarations, in document order.
+- Repeated keys form a history; a read returns the latest.
+- Machine-generated block identifiers are sources: ~&n3b7c2&~.
+
+Keep the whole record on the last source unless tracking milestones: a simple renderer shows only that block's properties.
+
+** Versions
+
+Syntax: ~|value~ after a name, authored rather than positional.
+
+#+begin_example
+&goblin|1&
+&goblin|2&
+
+@goblin|1           ; reach a specific version
+#argument|2         ; reach a specific station
+#+end_example
+
+Shorthand for a ~version~ property.
+
+** Stations and sources compared
+
+|            | Station ~^~            | Source ~&~              |
+|------------+----------------------+-----------------------|
+| Duplicates | cycle, forming a trail | accumulate into one record |
+| Rendering  | visible              | not rendered          |
+| For        | going                | knowing               |
+
+Both on one block:
+
+#+begin_example
+^&[alice]
+:info[role | Engineer]
+#+end_example
+
+* Metadata
+
+Syntax: ~:info[pairs]~ — pipes separate key from value, newlines separate pairs.
+
+#+begin_example
+:info[
+role       | Engineer
+homepage   | https://alice.example
+charter    | ^project-charter
+joined     | 2024-03-01
+level      | 4
+]
+#+end_example
+
+- Whitespace around pipes is trimmed; columns may be aligned.
+- Values recognised by shape: URL, station, source, date, number, text.
+- Cast at the point of use; inert if the cast fails.
+- Keys share one namespace with spell-written properties: ~:due<...>~ and ~:info[due | ...]~ both set ~due~.
+
+Read one value with a dot:
+
+#+begin_example
+Their role is &alice.role.
+&goblin|1.hp
+#+end_example
+
+Dotted access works on sources only.
+
+* Comments
+
+A comment is a *whisper*. Syntax: ~;~ to end of line.
+
+#+begin_example
+Some text.   ; a note to yourself
+;; a standalone note about the lines below
+;;; a section-level note
+;;;; a top-of-file banner
+#+end_example
+
+Repetition is convention, not parsed. All levels comment to end of line.
+
+Never renders. Inside a scroll, ~;~ is a literal semicolon; elsewhere ~\;~ escapes one.
+
+* Goety
+
+Borrowed shapes, matched whole, not derived from the grammar. This is the complete list.
+
+| Write          | Same as              |
+|----------------+----------------------|
+| ~[label](url)~   | ~:link[url]:{label}~   |
+| ~[]~ / ~[ ]~       | ~:task<open>~          |
+| ~[>]~            | ~:task<active>~        |
+| ~[x]~            | ~:task<closed>~        |
+
+The checkbox forms map to the three lifecycle values *directly*, never through
+the aliases ~:o~ and ~:x~, so they mean the same thing whether or not those
+definitions are present.
+
+Checkbox forms work only at the start of a *material* block, after any socket
+and its space.
+
+~:link[url]:label~ is exact only for a single-word label, since the grab rule
+stops at whitespace. A conduit carries any label.
+
+* Spells
+
+Everything above is shorthand for a spell. A spell is a named transform.
+
+** Spell world
+
+Indue text is either *material* (content) or *spell world* (syntax).
+
+Opens:
+
+| Form            | Example        |
+|-----------------+----------------|
+| the wall ~:~      | ~:bold:word~     |
+| a leading container | ~{text}.bold~ |
+| a bond continuing a chain | ~.spell~ on a new line |
+
+Closes:
+
+- whitespace outside a container
+- a line break outside a container, unless the next line continues the chain
+- the closing wall ~:~
+
+The wall is optional where a leading container already opens spell world. Write it mid-word, where no whitespace precedes.
+
+#+begin_example
+16:[th].sup:       ; mid-word needs the wall
+#+end_example
+
+** Line breaks
+
+| Case                              | Effect                    |
+|-----------------------------------+---------------------------|
+| inside a container                | ends nothing              |
+| next line starts with a bond ~.~    | chain continues           |
+| next line starts with a wall ~:~    | fresh construct           |
+| anything else                     | construct ends            |
+
+** Spell slots
+
+A slot is what sits between two bonds.
+
+| Slot              | Is                                     |
+|-------------------+----------------------------------------|
+| ~spell~, ~spell<in>~  | an effect, acting on construct targets |
+| ~<x>~, ~[x]~, ~{x}~     | a construct target                     |
+| ~spell@<x>~         | an effect acting on that target alone  |
+
+** Shapes
+
+Same construct, two orders. Both are valid; neither is preferred.
+
+#+begin_example
+:bold.{this text}          ; cast shape: spell first
+{this text}.bold           ; offering shape: target first
+#+end_example
+
+Written out:
+
+#+begin_example
+:spell1.spell2.{target}.<target>.[target]:
+:{target1}.<target2>.spell1.spell2:
+#+end_example
+
+Position carries no meaning, so interleaving is legal but not written in practice.
+
+** Containers
+
+| Container | Is                    | Glued to a spell | Bonded          |
+|-----------+-----------------------+------------------+-----------------|
+| ~<a b c>~   | vessel, value list    | input            | construct target |
+| ~[text]~    | scroll, unparsed      | input            | construct target |
+| ~{text}~    | conduit, rich parsed  | input            | construct target |
+
+#+begin_example
+:span-bg<red>              ; input, glued
+:bold.<@alice>             ; target, bonded
+#+end_example
+
+A spell takes at most one vessel and one scroll *or* conduit. Order between kinds is free.
+
+Scrolls are *unparsed*: nothing inside is Indue syntax. A scroll is always one bracket pair; brackets inside are literal.
+
+#+begin_example
+[[see appendix]]           ; renders literal brackets
+#+end_example
+
+** Vessel values
+
+| Kind            | Example                  |
+|-----------------+--------------------------|
+| literal         | ~2~, ~50%~, ~#f0f0f0~, ~2cm~ |
+| reference       | ~^wp~, ~#tag~, ~@person~     |
+| keyword         | ~red~, ~center~            |
+| spell name      | ~:bold~ in ~:strip<:bold>~   |
+| quoted string   | ~"a b"~                    |
+| scroll          | ~[a b]~                    |
+
+Space-separated. Commas are accepted and treated as whitespace.
+
+** Targets
+
+| Form        | Target is                          |
+|-------------+------------------------------------|
+| ~:spell:word~ | the glued word (grab rule)         |
+| ~.<ref>~      | the construct's target             |
+| ~@<ref>~      | that slot's target alone           |
+| none        | the enclosing scope, entire          |
+
+The *grab rule*: a bare word glued to the right of a spell is its target. Right only, glued only. This is what makes ~*word~ work.
+
+*** Sub-spell targets
+
+~@~ confines a slot's *direct* effect to its own target. It does not remove that target from anything else.
+
+#+begin_example
+<@>.bold.color<green>@<@nancy>
+#+end_example
+
+All signets go bold. Nancy goes green. Nancy is also bold, because she is a signet.
+
+Mainly for letting a class reach its own internal parts.
+
+** Chains
+
+Syntax: ~.~ bonds spells.
+
+#+begin_example
+:bold.underline:word
+:color<red>.mix<blue 50%>
+#+end_example
+
+A chain is an ordered fold over property state. Order matters where spells govern the same property.
+
+~:strip~ resets: bare resets everything, ~:strip<:bold>~ resets one property.
+
+** Reach
+
+Block spells reach the block *and what it owns*. Span spells reach their own run only.
+
+| Spell               | Effect                        |
+|---------------------+-------------------------------|
+| ~:deep~               | both tiers reach owned blocks |
+| ~:shallow~            | both tiers stop at the block  |
+| ~:deep<block>~        | one tier, other untouched     |
+| ~:shallow<span>~      | one tier, other untouched     |
+| ~:deep<span block>~   | both, stated explicitly       |
+
+#+begin_example
+<=>.bg<red>.radius<8>.shallow:     ; a banner on each heading
+#+end_example
+
+Reach is ordinary property state: position in the chain does not matter.
+
+** Spell blocks
+
+A block whose only rendered content is one spell's target.
+
+#+begin_example
+:code<rust>[fn main() {
+    println!("hi");
+}]
+#+end_example
+
+- Whitespace inside the block counts as content: a trailing space opts out.
+- Material outside the block does not affect the test.
+- Astral spells and declarations are never spell blocks.
+
+** Astral blocks
+
+A block with no rendered content. Astral is a state, not a kind.
+
+| Effect category | On an astral block               |
+|-----------------+----------------------------------|
+| styling         | aliases the enclosing scope      |
+| data            | sets the block's own property    |
+| embedding       | promotes the block to material   |
+
+#+begin_example
+:serif                     ; sets the default from here on
+#+end_example
+
+* Shells
+
+A shell applies effects over an open-ended region.
+
+Syntax: a spell chain or glamour run, then a colon run. Closed by a matching run.
+
+#+begin_example
+:span-bg<red>:: ... ::span-bg
+:bold.italic:: ... ::
+*:: ... ::*
+#+end_example
+
+** Closing
+
+| Closer     | Effect                                              |
+|------------+-----------------------------------------------------|
+| ~::~         | closes *all* open shells of that length             |
+| ~::name~     | stops that effect only, in the innermost shell      |
+
+A shell closes when it has no active effects left.
+
+Closer length must match opener length.
+
+#+begin_example
+:bold.italic::
+Both here.
+::bold             ; bold stops, italic continues
+::italic           ; nothing left, so the shell closes
+#+end_example
+
+** Auto-close
+
+- Opened at a socket's block-start position: closes when structure outdents past that depth.
+- Any open shell closes at end of document.
+
+** Overlap
+
+Shells overlap without nesting.
+
+#+begin_example
+:bold:: ... :italic:: ... ::bold ... ::italic
+#+end_example
+
+Renders as consecutively-nested zones: a new zone at each open or close, with the effects in force over that span.
+
+** Hypershells
+
+Syntax: a colon run of *three or more*. Length-matched, so content cannot close it early.
+
+#+begin_example
+:code:::
+std::cout << Foo::Bar;
+:::
+#+end_example
+
+- The closer must be alone on its own line.
+- Block only; there is no inline form.
+- Escape ladder is unbounded: content with ~:::~ uses four.
+
+Use for content Indue must not read. A bare ~::~ inside an ordinary shell would close every open shell.
+
+* Configuration
+
+** Classes
+
+Syntax: ~<:name>~ followed by a chain.
+
+#+begin_example
+<:smart-tips>
+.card
+.bg<#f0f7ff>
+.bold@<=>
+.span-bg<#fff3cd>@<#>:
+#+end_example
+
+Used like any spell:
+
+#+begin_example
+{
+- tip one
+- tip two
+}.smart-tips
+#+end_example
+
+- ~<name>~ selects the entity ~name~; ~<:name>~ defines the spell ~name~.
+- The body carries no construct target; sub-spell targets (~@~) are how a class reaches its internal parts.
+- A class may embed content *before* its target, never after.
+
+** Targeting entities
+
+Syntax: ~<selector>~ followed by a chain.
+
+#+begin_example
+<#project>.card:
+<=>.bg<#eef>.shallow:
+<@alice>.bold:
+#+end_example
+
+Type selectors: ~<=>~ headings, ~<->~ unordered items, ~<+>~ ordered items,
+~<^>~ blocks, ~<#>~ sigils, ~<@>~ signets, ~<*>~ the bold glamour.
+
+A bare marker is the type selector and sets that type's default forward from its
+position. A marker with a name (~<#project>~) is more specific and overrides one
+object without disturbing the running default.
+
+** Satchels
+
+Syntax: a run of one or more ~~~ at line start, closed by another run or by end
+of file. Run length is decoration, not identity: unlike a shell, a satchel's
+closer need not match its opener.
+
+#+begin_example
+= My Notes
+
+Content starts right away.
+
+~~~~~~~~~~
+Prose in here is a note to yourself. It never renders.
+
+:step[I.]::
+<#work>.span-bg<#eef4ff>:
+#+end_example
+
+- Contents are hoisted and run before the body, wherever the satchel sits.
+- Several satchels run in document order; later shadows earlier.
+- A footer satchel needs no closer.
+- Idiomatically at the end, so the document opens on its content.
+
+** Beacons
+
+Syntax: ~!~ prefixing a satchel or a declaration.
+
+#+begin_example
+!~~~~~~~~~~
+<:rust>.code<rust>:
+#+end_example
+
+Promotes contents to the lair's public layer. Without a beacon, configuration is file-local.
+
+** Markers and stepping
+
+| Spell            | Sets                                    |
+|------------------+-----------------------------------------|
+| ~:list<symbols>~   | marker symbols for unordered items      |
+| ~:step[pattern]~   | stepping pattern, shown as its first marker |
+
+#+begin_example
+:step[I.]::                ; I., II., III.
+:step[a)]::                ; a), b), c)
+:list<- + *>::             ; three depths of symbols
+:list<[]>::                ; invisible markers
+#+end_example
+
+Both are shells and scope to their subtree.
+
+*** Depth chains
+
+A pattern implies a chain of markers, one per depth. Listing several overrides depth by depth, first value at the declaration's own depth.
+
+#+begin_example
+:step<[A.] [a.] [A.] [a.]>::
+#+end_example
+
+A *void* ~[]~ means ditto: continue the chain from the last explicit value.
+
+#+begin_example
+:step<[A.] [] [] [i.]>::   ; A., two of A.'s chain, then roman
+:step<[] [] [i.]>::        ; defaults for two depths, then roman
+#+end_example
+
+Chains cycle when nesting runs past their length.
+
+*** User-typed markers
+
+Where a pattern is in effect, markers may be typed directly and are corrected.
+
+#+begin_example
+:step[a)]::
+a) hello
+b) what's up
+#+end_example
+
+* Files and Lairs
+
+** Extensions
+
+| Extension | Publishes                          |
+|-----------+------------------------------------|
+| ~.indue~    | whatever the file's syntax says    |
+| ~.avow~     | everything, regardless of beacons  |
+| ~.veil~     | nothing, regardless of beacons     |
+
+- ~.avow~: spell packs and shared configuration.
+- ~.veil~: drafts and scratch notes whose names should not enter the namespace.
+- Overrides do not rewrite in-file syntax; renaming restores intent.
+- Participation, not security.
+
+** Visibility
+
+| Kind          | Default                          |
+|---------------+----------------------------------|
+| content       | never crosses a file boundary    |
+| entities      | lair-public                     |
+| configuration | file-local unless beaconed       |
+
+* Queries
+
+Syntax: SQL over the reference schema.
+
+#+begin_example
+:query[SELECT block WHERE task = open]
+:query[SELECT text, due WHERE tag = work AND due < +7d ORDER BY due]
+#+end_example
+
+The same string works at a prompt:
+
+#+begin_example
+$ indue query "SELECT block WHERE task = open"
+#+end_example
+
+Result shape determines rendering: one value inline, a list as a list, a matrix as a table.
+
+See *Indue Query Syntax* for the grammar and *Indue Reference Schema* for the fields.
+
+* Reserved characters
+
+| Character | Status                                      |
+|-----------+---------------------------------------------|
+| ~:~         | wall, spell prefix                          |
+| ~.~         | bond                                        |
+| ~<>~        | vessel                                      |
+| ~[]~        | scroll                                      |
+| ~{}~        | conduit                                     |
+| ~#~         | sigil                                       |
+| ~@~         | signet in text; slot target in spell world  |
+| ~^~         | station                                     |
+| ~&~         | source                                      |
+| ~|~         | version, trail order, ~:info~ pair, table cell |
+| ~;~         | whisper                                     |
+| ~!~         | beacon                                      |
+| ~~~         | satchel                                     |
+| ~\~         | nick, escape                                |
+| ~*~ ~/~ ~_~ ~%~ ~`~ | glamours                              |
+| ~-~ ~+~ ~=~     | sockets and headings                        |
+| ~()~        | available; too common in prose to reserve   |
+| ~>~         | available in text; reserved in spell names  |
+| ~$~         | free in prose; only ~:$~ is a spell           |
+
+A character reserved in the material world is not thereby spent in spell world, and the reverse also holds.
