@@ -22,7 +22,7 @@ Indue is specified across five companion documents. Each is complete on its own 
 |---------------------------------------+-----------------------------------------------------|
 | *Indue, Language Specification* (this) | Syntax, conventions, and the semantic model         |
 | *The Indue Spellbook*                  | Every spell, by category, with its quirks           |
-| *Indue Lair Specification*            | Multi-document collections: visibility, scoping, import and export |
+| *Lair Specification*            | Multi-document collections: visibility, scoping, import and export |
 | *Indue Query Syntax*                   | Finding and reading data, in SQL             |
 | *Indue Reference Schema*               | The tables an AST maps onto, which queries address |
 
@@ -1560,13 +1560,15 @@ This distinction matters for portability. An open natural-language parser would 
 
 ** The pattern says how often, never when
 
-A pattern carries no date. The anchor comes from the date spell on the same item, and where the two appear to disagree, the pattern wins and the anchor supplies only a starting point.
+A pattern carries no date. The date spell on the same item is the anchor, and the anchor is an occurrence: the first one, and after a completion the next one. The pattern says only how to get from one occurrence to the one after it.
 
 #+begin_example
 - :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
 #+end_example
 
-That produces third Saturdays. The anchor says when to begin looking, not which day of the month to use.
+That produces the 20th, then third Saturdays after it. An anchor is never discarded; where a pattern does not match it, the pattern takes effect from the following occurrence onward, so a mismatch resolves itself after one completion.
+
+A repeater is used two ways, and they must not be confused. An application *advances* the anchor when the task is completed, rewriting the date in the document. A query *projects* from the anchor without changing anything. The first mutates, the second does not.
 
 ** One schedule per block
 
@@ -1580,22 +1582,22 @@ Because position is semantically irrelevant under shadowing, scheduling is idiom
 
 ~.after<completion>~ needs to know when the task was last completed, and that is the one piece of scheduling a document cannot supply by authoring alone: it is written back by an application.
 
-~:completions~ carries it, either on the task's own line or on the line immediately below:
+~:completions~ carries it, anywhere in the task's block:
 
 #+begin_example
 - :o Water plants :on<2026-04-07> :repeat[weekly].after<completion>
 :completions[2026-04-07 2026-04-14 2026-04-21]
 #+end_example
 
-The second line is an astral block: it has no material content, so it renders nothing. The dates are visible to anyone reading the file directly and absent from the rendered document.
+The dates are visible to anyone reading the file. Whether they reach the render is an application choice, and a marker on a completed task is more usual than the list itself.
 
-*** Why adjacency rather than a name
+*** Why the block rather than a name
 
-~:completions~ binds to the block it sits on, or to the block immediately above it. It could instead have named its task through a station, which would survive reordering, but that would tax the writer with supplying a handle for something they never asked for. Adjacency sets it up for free.
+~:completions~ binds to the block it sits on. It could instead have named its task through a station, which would survive reordering, but that would tax the writer with supplying a handle for something they never asked for. Adjacency sets it up for free.
 
-A second ~:completions~ below the first does not compete: it binds to the astral block above it, which has no task and no completion state, so it is inert. There is nothing to search for and nothing to disambiguate.
+A second ~:completions~ in the same block shadows the first, like any repeated property write.
 
-Content inserted between a task and its completions detaches them, and the schedule stops advancing. This is deliberate: the failure is visible rather than silent. An application that maintains the log should keep the two together, and may reattach or regenerate a detached one.
+A blank line or a new socket between them ends the block and detaches the log, and the schedule stops advancing. This is deliberate: the failure is visible rather than silent. An application that maintains the log should keep the two together, and may reattach or regenerate a detached one.
 
 *** Authored and maintained state
 
@@ -2716,7 +2718,7 @@ The beacon attaches to the cauldron as a whole, in both inline and multiline for
 
 Beacons govern *codex* visibility only. Entities (sigils, signets, stations) are public by default and unaffected by the beacon. Content and spell invocations at content sites are always local and are never exported by it.
 
-This is a *latent compatibility device*. An application that deals in single documents can parse and preserve the beacon without acting on it, nothing in a single file changes meaning because of it. Applications that do implement multi-document collections use it as the promotion mechanism; the full visibility model, lair scoping, and import/export rules are specified in the *Indue Lair Specification*.
+This is a *latent compatibility device*. An application that deals in single documents can parse and preserve the beacon without acting on it, nothing in a single file changes meaning because of it. Applications that do implement multi-document collections use it as the promotion mechanism; the full visibility model, lair scoping, and import/export rules are specified in the *Lair Specification*.
 
 
 ** The satchel (~)
@@ -2786,11 +2788,11 @@ Because hoisting runs a satchel before the body wherever it sits, a footer satch
 3. The body is then parsed with full knowledge of all codexes.
 4. Inline codexes (not in satchels) override hoisted ones when encountered in document order.
 
-By default, satchel contents are *file-local*, they configure only the file that contains them. To make a satchel's codexes available to the rest of the lair, mark it with a beacon (~!~). See "Beacons and the public layer" below, and the *Indue Lair Specification* for the full visibility model. Application developers should document their lair scanning behavior, including how cross-file public layers are surfaced.
+By default, satchel contents are *file-local*, they configure only the file that contains them. To make a satchel's codexes available to the rest of the lair, mark it with a beacon (~!~). See "Beacons and the public layer" below, and the *Lair Specification* for the full visibility model. Application developers should document their lair scanning behavior, including how cross-file public layers are surfaced.
 
 *** Beacons on satchels (~!~)
 
-A satchel prefixed with ~!~ is a *beacon satchel*, its contents join the lair's public layer and are available to every other file in the lair (modulo lair scope and import/export rules, specified in the *Indue Lair Specification*). This is the common pattern for lair-wide configuration:
+A satchel prefixed with ~!~ is a *beacon satchel*, its contents join the lair's public layer and are available to every other file in the lair (modulo lair scope and import/export rules, specified in the *Lair Specification*). This is the common pattern for lair-wide configuration:
 
 #+begin_example
 !~~~~~~~~~~
@@ -2849,7 +2851,7 @@ More specific wins; inline beats named beats type; explicit beats inherited; las
 
 Every form of a name, ~#name~, ~@name~, ~^name~, and ~&name&~, resolves in *one shared namespace* (see the role matrix in Stations). A cauldron defined for ~<name>~ applies to every rendered form; the form communicates intent (tag, mention, anchor, block), not scope.
 
-The namespace boundary is the *lair*. Names resolve lair-wide: a station or entity named in one file is reachable from a reference in another file of the same lair. Collisions produce a set (set semantics); navigation to a multi-member set is a disambiguation the app surfaces. The unique machine handle is the disambiguator of last resort. Cross-lair resolution happens only through the explicit import/export rules in the *Indue Lair Specification*.
+The namespace boundary is the *lair*. Names resolve lair-wide: a station or entity named in one file is reachable from a reference in another file of the same lair. Collisions produce a set (set semantics); navigation to a multi-member set is a disambiguation the app surfaces. The unique machine handle is the disambiguator of last resort. Cross-lair resolution happens only through the explicit import/export rules in the *Lair Specification*.
 
 ** Open questions for entity configuration
 
@@ -3031,7 +3033,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - One schedule per block: scheduling spells set block properties and shadow
 - ~:completions~ binds by adjacency, on the task's line or the line below; application-maintained
 - Recurrence patterns are a closed grammar with a fixed clause order, not natural-language parsing
-- A pattern carries no date; the anchor comes from the date spell on the same item
+- A pattern carries no date; the anchor comes from the date spell on the same item and is itself an occurrence
 - Every pattern maps to exactly one RRULE; export is deterministic and import is not
 
 *Queries*
@@ -3046,7 +3048,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 
 *Specified in the companion documents*
 
-The catalogue of spells an implementation must support, task states, scheduling and recurrence, queries, transclusion, presentation spells, tables, and layout, is enumerated by category in *The Indue Spellbook*. Multi-document behaviour, the public/private visibility model, lair declarations and types, and import and export, is specified in the *Indue Lair Specification*. An application that handles only single documents is still compliant with this specification; it must parse and preserve the beacon, but need not act on it.
+The catalogue of spells an implementation must support, task states, scheduling and recurrence, queries, transclusion, presentation spells, tables, and layout, is enumerated by category in *The Indue Spellbook*. Multi-document behaviour, the public/private visibility model, lair declarations and types, and import and export, is specified in the *Lair Specification*. An application that handles only single documents is still compliant with this specification; it must parse and preserve the beacon, but need not act on it.
 
 ** Extensions
 
