@@ -155,6 +155,130 @@ spell at the head of a line is the shortest way to affect exactly that line's
 block, and it reads well because the annotation arrives before the content. That
 is a habit worth teaching, not a mechanism worth specifying.
 
+* Why Newlines Survive
+
+Markdown collapses newlines inside a paragraph, so an address, a stanza, or a
+deliberately broken sentence needs a separate hard-break construct, and the
+writer has to learn that what they typed is not what they meant. Two trailing
+spaces is the standard example of how not to solve it, because it rests the
+meaning of a line on whitespace nobody can see.
+
+Indue takes the typed break at face value. This is the whitespace case of
+preferring the unambiguous over the convenient.
+
+The cost is real and worth stating plainly: prose meant to flow lives on one
+source line, and hard-wrapping a paragraph at column 72 will render wrapped,
+because those newlines are real. What that buys is that ~fmt~, ~gq~, and any
+other reflowing tool change how a document looks without changing what it is.
+For a language whose premise is that a document keeps its meaning without the
+program that wrote it, a change to line endings must not change the parse.
+
+Pairing this with the blank-line boundary rule is what removes the need for a
+hard-break construct at all. Org needs ~\\~ and Markdown needs two trailing
+spaces precisely because they collapse.
+
+* Why a Document Must Fit One Column
+
+The test is practical. An outliner with a one-column interface has no way to
+understand a column instruction, and a construct that some conforming
+applications structurally cannot render is worse than no construct at all,
+because it breaks the guarantee that every compliant application reads a
+document correctly.
+
+An application that cannot round a corner simply does not, and the content still
+reads. An application that cannot place two blocks side by side loses the
+author's meaning. That is the line.
+
+For genuine typesetting, page geometry, columns, page breaks, and floats, export
+to Typst is the recommended path once tooling exists. A future version may
+revisit basic layout, but only for constructs that stay single-column viewable
+at every breakpoint.
+
+A useful guide while the language is young: if Org-mode does not have it, Indue
+almost certainly should not have it yet.
+
+* Recovering Forward
+
+Parse-don't-fail is the floor: the parser never throws an error at the writer.
+Recovering forward is the ceiling built on top of it. "Not yet resolved," "not
+yet known," and "not yet defined" are legal and useful conditions rather than
+degraded ones, which is closer to how a spreadsheet treats a reference to an
+empty cell than to how a compiler treats an undefined symbol.
+
+That is what makes out-of-order authoring feel native: thinking of a tag before
+defining its behaviour, referencing a person before making their page, sketching
+a trail before its stops exist.
+
+Because these fallbacks are the same primitives resolving differently rather
+than ad-hoc repairs, their results are *legible*. A surprising outcome is a
+combination the writer can understand and then reach for on purpose, and a
+feature's default is continuous with its advanced form, so the writer enters at
+the zero-config end of a ramp they did not know was a ramp:
+
+#+begin_example
+^argument          ; three of these auto-cycle: an undefined trail
+^argument
+^argument          ; look it up, and the fix is the same construct, ordered:
+^argument | 1
+^argument | 2
+^argument | x      ; ordered, terminated. the accident taught the feature.
+#+end_example
+
+The default is the on-ramp to the depth, and investigating what actually
+happened tends to level the writer up rather than send them back to a wall. The
+mistakes are the tutorial.
+
+This *raises* the specification bar rather than lowering it. "Look it up" must
+terminate in a documented answer, or an accident is merely a bug that has not
+recurred yet. Determinism is what turns a happy accident into a feature, and
+cross-application agreement is what makes it worth learning. The permission to
+play is earned by pinning down exactly what play does.
+
+* How Unrecognised Spells Degrade
+
+Every spell has a target slot, so an unrecognised spell degrades the same way
+regardless of what it was: drop the spell, render the target. A parser needs no
+per-spell knowledge of which part was meant to survive.
+
+That single rule is what lets the vocabulary grow without ever breaking an older
+implementation, and it is the reason targeting is explicit rather than inferred
+from position. A target that had to be guessed could not be preserved by a
+parser that did not recognise the spell holding it.
+
+* Inspirations
+
+*** Typst
+
+Typst is a modern typesetting language with a clean, consistent syntax. Indue borrows directly from it:
+
+- Bold (~*text*~) and the general aesthetic of lightweight paired delimiters.
+- List markers (~-~ for unordered, ~+~ for ordered).
+- Heading syntax (~=~ / ~==~ / ~===~).
+- Labels (~^label~) and references (~@ref~).
+- The principle that functions and evaluation should have a clear, single prefix character.
+
+Where Indue parts ways with Typst:
+
+- Typst reserves ~#~ for function calls. Tags, one of the most natural and important constructs in PKM, require a function call like ~#tag("work")~. Indue reclaims ~#~ for native tag syntax and moves functions to ~:~.
+- Typst has no built-in concept of tasks, checkboxes, or task states. These must be added through packages and show rules. Indue makes them native.
+- Typst is a strict compiler: malformed input is an error. Indue follows an HTML-style error recovery model where malformed markup renders as literal text rather than failing.
+
+*** Org-mode
+
+Org-mode is the most powerful plain-text outliner and task system in existence, but its spec and runtime are so entangled with Emacs that every non-Emacs implementation is permanently incomplete. Neovim and Helix users are permanently second-class citizens.
+
+Indue borrows the /idea/ that tasks, scheduling, and metadata belong in the markup itself. It does not inherit Org's property drawers, babel blocks, or export dispatcher. More importantly, Indue is deliberately designed to be fully and correctly implementable by anyone, a Rust reference CLI, a tree-sitter grammar, and a clean formal spec mean that any editor gets first-class support from day one, not as an afterthought.
+
+*** CommonMark
+
+Indue is not trying to be CommonMark. CommonMark is purely presentational with no opinion about what content /means/. Indue is positioned between CommonMark and Org-mode: richer than CommonMark in semantic content (tasks, tags, entities, scheduling), simpler and more portable than Org-mode, and without Org's assumption of a specific runtime.
+
+*** Everyday conventions
+
+- ~#~ as tag comes from social media and is universally understood.
+- ~:~ as function/evaluation is lightweight and familiar from emoji shortcodes, YAML keys, and general programming conventions.
+
+
 * Notes for the Split
 
 Material that arrived during design and has not yet been placed:
