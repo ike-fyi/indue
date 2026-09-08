@@ -17,17 +17,17 @@ Power users will likely use a larger variety of spells using the full spell form
 
 Below is the practical reference: what each construct is and how to write it. For rationale and the reasoning behind these choices, see *Indue, Design Philosophy*.
 
-** Spec map
+** Document map
 
-| Topic                                  | Document                      |
-|----------------------------------------+-------------------------------|
-| Grammar and semantics                  | *Indue, Language Specification* |
-| Rationale and design reasoning         | *Indue, Design Philosophy*      |
-| The spell catalogue                    | *The Indue Spellbook*           |
-| Multi-document collections, visibility | *Indue Lair Specification*     |
-| Finding and reading data               | *Indue Query Syntax*            |
-| Tables an AST maps onto                | *Indue Reference Schema*        |
-| The everyday forms, for a new writer   | *Indue Cheatsheet*              |
+| Topic                                  | Document                                                        |
+|----------------------------------------+-----------------------------------------------------------------|
+| Grammar and semantics                  | [[./indue--language-spec.org][Indue, Language Specification]]    |
+| The everyday forms, for a new writer   | [[./indue--cheatsheet.org][Indue Cheatsheet]]                    |
+| The spell catalogue                    | [[./indue--spellbook.org][The Indue Spellbook]]                  |
+| Rationale and design reasoning         | [[./indue--philosophy.org][Indue, Design Philosophy]]             |
+| Finding and reading data               | [[./indue--query-spec.org][Indue Query Syntax]]                   |
+| Tables an AST maps onto                | [[./indue--schema.org][Indue Reference Schema]]                   |
+| Multi-document collections, visibility | [[./lair--spec.org][Lair Specification]]                          |
 
 * Structure
 
@@ -101,12 +101,15 @@ what ~:shallow~ stops at.
 |----------+-------------------------------------------------|
 | material | Renders content                                 |
 | astral   | Renders nothing; a spell sitting between blocks |
-| table    | Its rendered content is one ~:table~              |
-| spell    | Its only rendered content is one spell's target |
 
 These are *states*, not kinds. Every block has the same structure and the same
 property table; a state is a fact about what the block renders, and it changes
 the moment the rendered content does.
+
+A material block whose only rendered content is one spell's target is a *spell
+block*. That is a fact recorded about the block rather than a third state, and it
+is how a table, a code block, and a standalone quote are all represented: the
+block is material, and the spell it holds is ~:table~, ~:code~, or ~:quote~.
 
 A block begins at a socket, at a heading, or at the first line after a blank
 line. It continues through every following non-blank line that does not itself
@@ -340,15 +343,15 @@ There is no ~quarter~. Use ~every 3 months~.
 
 ** Anchoring
 
-A pattern says how often, never when it starts. The anchor is the date spell on the same item, and it supplies the series start.
+A pattern says how often, never when it starts. The date spell on the same item is the anchor, and the anchor is an occurrence: the first one, and after a completion the next one.
 
-Where pattern and anchor disagree, the pattern wins and the anchor supplies only the starting point.
+Where a pattern does not match its anchor, the pattern takes effect from the following occurrence.
 
 #+begin_example
 - :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
 #+end_example
 
-Produces third Saturdays from April 2026 onward, not the 20th of each month. The anchor is not discarded; it is where counting begins. Use ~:from~ where a series should start later than its anchor.
+Produces the 20th, then third Saturdays after it. The anchor is never discarded. ~:from~ and ~:until~ clip the series, the anchor included.
 
 ** Completion anchoring
 
@@ -359,15 +362,14 @@ Produces third Saturdays from April 2026 onward, not the 20th of each month. The
 
 ** Completion history
 
-Syntax: ~:completions[dates]~, on the task's line or the line immediately below.
+Syntax: ~:completions[dates]~, anywhere in the task's block.
 
 #+begin_example
 - :o Water plants :repeat[weekly].after<completion>
 :completions[2026-04-07 2026-04-14]
 #+end_example
 
-- Application-maintained.
-- Binds by adjacency; the line below is an astral block and renders nothing.
+- Application-maintained. Rendering is an application choice, and a marker is more usual than the dates.
 
 * Entities
 
