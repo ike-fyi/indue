@@ -3,6 +3,8 @@
 #+AUTHOR: Ike Ah-Loe
 #+STATUS: Pre-specification, exploratory design
 
+* Project Status
+Basically no status. This is a just a thought experiment at this point. There is nothing usable here but feel free to share ideas to me at ike@ike.fyi if this topic interests you.
 
 * Introduction
 
@@ -12,9 +14,6 @@ The name "Indue" comes from the archaic English verb meaning "to put on as a gar
 
 Indue files are plain text. They are readable and writable in any editor without special tooling. The markup is lightweight enough that it does not obscure the content it describes.
 
-* Project Status
-Basically no status. This is a just a thought experiment at this point that I will be using as a goal as I learn more about lexers/interpreters/renderers, etc. 
-
 * The Indue Specifications
 
 Indue is specified across five companion documents. Each is complete on its own terms and can be read and implemented without the others open; cross-references between them are recommendations, not dependencies.
@@ -23,9 +22,15 @@ Indue is specified across five companion documents. Each is complete on its own 
 |---------------------------------------+-----------------------------------------------------|
 | *Indue, Language Specification* (this) | Syntax, conventions, and the semantic model         |
 | *The Indue Spellbook*                  | Every spell, by category, with its quirks           |
-| *Indue Vault Specification*            | Multi-document collections: visibility, scoping, import and export |
+| *Indue Lair Specification*            | Multi-document collections: visibility, scoping, import and export |
 | *Indue Query Syntax*                   | Finding and reading data, in SQL             |
 | *Indue Reference Schema*               | The tables an AST maps onto, which queries address |
+
+Two further documents are *derived presentations* of the same material and are
+not normative: the *Indue Language Reference*, which states each construct and
+its form without rationale, and the *Indue Cheatsheet*, which covers the
+everyday surface for a new writer. Where either disagrees with a specification,
+the specification governs.
 
 This document is what an implementer builds a parser against: the characters, the structures they form, and the rules that decide what a construct means. It defines the *mechanics* of spells (how they take inputs, where their effects land, how they compose) but not the catalogue of individual spells, which lives in the Spellbook.
 
@@ -69,11 +74,10 @@ Superscript (~:sup~), subscript (~:sub~), and maths (~:math~, aliased ~:$~) are 
 |----------------+----------------------+--------------|
 | ~#tag~         | Tag (single word)    | Sigil        |
 | ~#[multi word]~ | Tag (multi-word)    | Sigil        |
-| ~#multi word# | Tag (multi-word)    | Sigil        |
 | ~#~            | Tag whole line       | Sigil        |
 | ~@name~        | Entity reference     | Signet       |
 | ~^label~       | Anchor (a named place) | Station   |
-| ~&name~       | Canonical record       | Source     |
+| ~&name&~       | Canonical record       | Source     |
 
 
 ** Spells and containers
@@ -100,7 +104,30 @@ Superscript (~:sup~), subscript (~:sub~), and maths (~:math~, aliased ~:$~) are 
 | ~!~      | Public marker        | Beacon     |
 | ~;~ / ~;;~ / ~;;;~ | Comment (level by count) | Whisper |
 
+** Reserved and available characters
 
+| Character | Status                                 |
+|-----------+----------------------------------------|
+| ~<>~        | Vessel (value argument, and target when marked) |
+| ~^~         | Station (anchors a place; nature comes from the spell) |
+| ~@~         | Signet in text; target marker in spell world |
+| ~&~         | Source (canonical record)              |
+| ~|~         | Version after a name, trail ordering, ~:info~ pair separator, table cell separator |
+| ~()~        | Available (too common in prose to reserve) |
+| ~>~         | Available in material text; reserved inside spell world, where a vessel closes on it |
+| ~$~         | Free in prose; only ~:$~ is a spell (aliasing ~:math~) |
+| ~`~         | Glamour for ~:code~                       |
+| ~;~         | Comment (Whisper), level by repetition |
+
+*** A character can be spent twice
+
+A character reserved in the material world is not thereby spent in spell world, and the reverse also holds. The two are separate namespaces, so the same glyph may carry unrelated meanings in each without ambiguity: the parser always knows which world it is reading.
+
+~@~ is the working example. In material text it is a signet, summoning an entity by name. Inside spell world it marks a bond's target. Those are different jobs, and neither constrains the other, because a signet is never read inside a chain and a target marker is never read in running prose.
+
+This is why "available" in the table above should be read narrowly. It means *available in the material world*, where a character must survive contact with ordinary prose. A glamour character, a socket, or a sigil is unavailable there, since it already carries meaning a reader would trip over, but it remains free as a mechanical device inside spell world, where prose conventions no longer apply and the only constraint is not colliding with spell syntax already in use.
+
+The practical consequence: when a new mechanism is needed inside spell world, the candidate pool is much larger than the "Available" rows suggest. It includes every character already spent on material-world syntax, provided the new use sits entirely within a spell.
 
 * Full Example
 
@@ -164,10 +191,137 @@ Some are about :topic: approaches to #[machine learning]
 <#work>.span-bg<#eef4ff>:
 #+end_example
 
+* Core Design Philosophy
+
+** Prefer unambiguous syntax
+
+Indue prefers syntax where every character's role is resolvable from local context. The parser should never need to look ahead through unbounded content or backtrack to determine meaning. Characters may appear in multiple roles (e.g. ~:~ opens a spell and terminates one), but context always disambiguates which role applies.
+
+** Glamours are for frequent writing; spells are for transforms
+
+The bar for earning a dedicated glamour is high: the feature must appear frequently enough in everyday writing that the ergonomic cost of a spell (function call) is genuinely burdensome. Anything that transforms content into a different form belongs in the spell system (~:func~). The glamour table is for things you type constantly.
+
+** Bracket types replace quoting
+
+There is no string *type* in Indue, and no construct is delimited by quotes. Text is passed to spells by bracket: vessels ~<>~ for values, scrolls ~[]~ for unparsed text, and conduits ~{}~ for rich parsed content. Quotes inside a scroll or a conduit are ordinary characters.
+
+The single exception is inside a vessel, where arguments are separated by whitespace and a value containing a space must therefore be marked off. Quoting is accepted there for familiarity; a scroll does the same job without quotes and is the documented form (see Arguments inside a vessel).
+
+** Every spell is useful in isolation
+
+A spell that only makes sense composed with one specific other spell is a design smell. Those should be redesigned as a single spell with multiple ports. Each spell should carry clear meaning on its own.
+
+** Same spell overwrites, different spells compose
+
+When the same spell appears twice in a chain, the later instance wins. When different spells appear in a chain, they are additive:
+
+#+begin_example
+:color<red>.color<blue>:word    ; blue wins (same spell, later overwrites)
+:bold.italic:word               ; both apply (different spells, additive)
+#+end_example
+
+** Single-column renderability
+
+Indue defines no layout mechanism. A conforming application must be able to render any document in a single column without loss of meaning, so nothing in the core may require an application to place content side by side.
+
+The test is practical: an outliner with a one-column interface has no way to understand a column instruction, and a construct some conforming applications structurally cannot render is worse than no construct at all, because it breaks the guarantee that every compliant application reads a document correctly.
+
+Tables are the one exception, and they are not really an exception. A table is multi-column *internally* but occupies a single block-level slot, so a one-column application renders it as a unit (scrolling or wrapping as it sees fit) without understanding layout at all. The document's structure is identical either way. Mobile applications are encouraged to set breakpoints that collapse wide tables by default.
+
+Presentational properties are fine, because they inset or decorate a block rather than arrange blocks relative to each other: margins, padding, ~:radius~, ~:border~, and ~:stroke-color~ all apply to tables and blocks without portability risk. An application that cannot round a corner simply does not, and the content still reads.
+
+For genuine typesetting, page geometry, columns, page breaks, floats, export to Typst is the recommended path once tooling exists (see Relationship to Typst). A future version may revisit basic layout, but only for constructs that remain single-column viewable at every breakpoint.
+
+A useful guide while the language is young: if Org-mode does not have it, Indue almost certainly should not have it yet.
+
+** Spells are renderer-agnostic at core tier
+
+Core formatting spells must have clear meaning regardless of rendering target (screen, print, plain text, accessibility). CSS-specific behavior belongs in the ~:ext.css~ extension namespace, not in core spells.
+
+** Explicit targeting over implicit
+
+Every scope level in Indue has an unambiguous syntactic form. A target is always a container, or a bare word glued to the right of a spell, never something inferred from position. Places are named by stations (~^name~), entities and type markers are targeted with ~<...>~, text through scrolls and conduits, and paired regions through shells. Whether an effect lands on text or on a block is decided by the spell's own nature, never guessed from context. A spell with no target paints its enclosing scope, which is a stated behavior rather than a guess.
+
+Explicit targeting also gives failure a single answer. Because every spell has a target slot, an unrecognised spell degrades the same way regardless of what it was: drop the spell, render the target. A parser needs no per-spell knowledge of which part was meant to survive, which is what lets the vocabulary grow without ever breaking an older implementation.
+
+** Scrolls and conduits are the default carriers
+
+Most content flows through scrolls ~[]~ (unparsed) or conduits ~{}~ (rich parsed content). Vessels ~<>~ carry the values a spell computes with: a number, a date, a color, a setting, and become *targets* when marked with ~@~ or ~&~. Parentheses are deliberately unreserved, a parenthetical in prose must stay a parenthetical. When designing a spell, reach for scrolls or conduits first; use vessels only when the input is a specific ingredient the spell needs to evaluate. Since ~[~ and ~{~ share the same physical key, muscle memory stays simple.
+
+** Names public, behavior private
+
+Indue's visibility defaults follow a single principle: *names need to be findable, behavior needs to be opt-in*. Entities (sigils, signets, stations) are lair-public by default because a name that cannot be resolved is useless. Configuration (codexes, schemas, satchel-hosted spells) is file-local by default because shared styling is a deliberate choice, silent cross-file styling is a debugging nightmare. The beacon (~!~) is the single mechanism that promotes a private codex to the lair's public layer; everything else follows from these two defaults.
+
+** Logical scope, OS-enforced security
+
+Indue declares /logical/ scope, what is visible to what, where names resolve, how the public layer composes. It does not enforce access control. Filesystem permissions, ACLs, encryption, and sandboxing are the OS's domain and operate on Indue files as on any plain text. Tools should be permission-aware (handle failures gracefully, surface them clearly) but never attempt to duplicate security in markup.
+
+** The nick (~\~)
+
+~\~ is reserved as an escape character. Its primary use is rendering a literal glamour character that would otherwise be interpreted as markup:
+
+#+begin_example
+The price is 50\% off       ; literal %, not strikethrough
+Use \*asterisks\* literally ; literal *, not bold
+#+end_example
+
+~\~ before a non-glamour character renders as a literal backslash.
+
+** Newlines are never destroyed
+
+A line break the writer typed is a line break the reader sees. Within a block,
+source lines render as separate lines; the parser never joins them into flowing
+text.
+
+This is the whitespace case of preferring the unambiguous over the convenient.
+Markdown collapses newlines inside a paragraph, so an address, a stanza, or a
+deliberately broken sentence needs a separate hard-break construct, and the
+writer must learn that what they typed is not what they meant. Indue takes the
+typed break at face value.
+
+The consequence is that prose meant to flow is written on one source line.
+Hard-wrapping a paragraph at column 72 will render wrapped, because those
+newlines are real. Tools that reflow text (~fmt~, ~gq~, a formatter) change how a
+document *looks*, though not what it *is*: block boundaries, identifiers, closure
+rows, spell targets, and query results are all unaffected, because a newline
+inside a block is content rather than structure.
+
+Newlines already carry meaning elsewhere in the language for the same reason.
+~:table~ separates rows by newline and ~:info~ separates pairs by newline, so a
+line break is load-bearing wherever it appears, not only inside prose.
+
+** Parse, don't fail
+
+Indue parsers should never throw errors at the user for malformed markup. Unclosed glamour delimiters apply to the single word they touch (single-word rule), or render as literal text if not touching a word. Unknown spell names render their content as plain text. The no-errors philosophy follows HTML's error recovery model rather than Typst's strict compilation model.
+
+Strict validation belongs in the linter and export pipeline, not in the core parser that runs while someone is writing notes at midnight.
+
+** Recover forward
+
+Parse-don't-fail is the floor: the parser never throws an error at the writer. This principle is the ceiling built on top of it. In Indue the absence of a referent is a *first-class state, not an exception*. "Not yet resolved," "not yet known," and "not yet defined" are legal, meaningful, and frequently useful conditions rather than degraded ones. An unresolved signet still carries meaning and upgrades itself the moment its target appears. An unknown spell renders its conduit as rich content, so a future spell and a not-yet-known one produce coherent output today. A station with no sibling is still a navigable anchor. A cauldron may target an entity that does not exist yet and simply activates when it does. This is what makes incremental, out-of-order authoring, thinking of a tag before defining its behavior, referencing a person before making their page, sketching a trail before its stops exist, feel native to Indue rather than error-prone. This is closer to how a spreadsheet treats a reference to an empty cell (a real value you can build on) than to how a compiler treats an undefined symbol.
+
+Because these fallbacks are the same primitives resolving differently, not ad-hoc repairs, their results are *legible*: a surprising outcome is a combination the writer can understand and then reach for on purpose. And a feature's default is continuous with its advanced form, so the writer enters at the zero-config end of a ramp they did not know was a ramp. Three identically named stations cycle as a trail on their own; discovering that cycle leads directly to ~| n~ ordering and the ~| x~ terminator, the same construct one parameter further along:
+
+#+begin_example
+^argument          ; three of these auto-cycle: an undefined trail
+^argument
+^argument          ; look it up, and the fix is the same construct, ordered:
+^argument | 1
+^argument | 2
+^argument | x      ; ordered, terminated. the accident taught the feature.
+#+end_example
+
+The default is the on-ramp to the depth. Investigating "what actually happened" tends to level the writer up rather than send them back to a wall. The mistakes are the tutorial.
+
+This principle *raises* the specification bar rather than lowering it. A behavior discovered in one application must be the behavior every compliant application produces, and "look it up" must terminate in a documented answer, otherwise an accident is merely a bug that has not recurred yet. Every fallback path is therefore defined behavior, specified to the same rigor as the success path. Determinism is what turns a happy accident into a feature; cross-application agreement is what makes it worth learning. The permission to play is earned by pinning down exactly what play does.
 
 * Vocabulary
 
-Indue uses a thematic vocabulary inspired by RPG and medieval conventions to name its syntactic concepts. These names are optional, the common markup names are always valid and appear alongside the Indue terms throughout this specification. The thematic vocabulary exists to make the concepts memorable, teachable, and distinct from other markup languages.
+Indue uses a thematic vocabulary inspired by RPG and medieval conventions to name its concepts. The common markup names in the third column are given so that the table can be read by someone arriving from another language, but they are a *glossary, not a synonym set*: this specification uses the Indue term throughout when describing syntax, semantics, or implementation.
+
+That is deliberate. A colloquial name carries the assumptions of wherever it was borrowed from, and a reader who sees "vault" or "class" will supply the behaviour of the tool they learned it in. A distinct name carries only what this document gives it, which is what a specification needs.
+
+Indue terms are ordinary common nouns in prose, so they are lowercase except where a sentence or a heading begins: a sigil, a station, a scroll, a lair.
 
 The core metaphor: plain text is your base character. Indue is the gear system. You equip your text with markup and it gains new abilities. Strip the gear off and the character is still there, still whole.
 
@@ -184,22 +338,21 @@ The core metaphor: plain text is your base character. Indue is the gear system. 
 | ~:::~ and longer | *Hypershell* | Content-safe region           |
 | ~<>~             | *Vessel*     | Value argument           |
 | ~@<>~            | *Summons*    | Targets one spell in a chain |
-
-| ~()~             | *Vessel*     | Value argument       |
-| ~[]~             | *Scroll*     | Verbatim block       |
+| ~[]~             | *Scroll*     | Unparsed content     |
 | ~{}~             | *Conduit*    | Rich content block   |
 | ~^label~         | *Station*   | Anchor (a named place)       |
 | ~&name&~         | *Source*    | Canonical record for a name  |
 | ~\~              | *Nick*       | Escape character     |
 | ~\~~             | *Satchel*    | Hoisted config block |
 | Config block   | *Codex*      | Inherited properties |
+| ~.lair~ marker   | *Lair*       | Vault / workspace / collection |
 | ~!~              | *Beacon*     | Public marker        |
 | ~;~ / ~;;~ / ~;;;~ | *Whisper*  | Comment              |
 | ~[label](url)~   | *Goety*      | Borrowed familiar shape |
 | ~[]~             | *Void*       | A value-shaped absence   |
 | (positional)     | *Spell block* | A block rendering only one spell's target |
 
-A one-sentence summary of the entire system: sockets create slots; glamours, sigils, signets, and spells equip the content sitting on those slots; bonds chain spells together; shells open paired scopes with independent termination; vessels carry values, and become targets when summoned; scrolls, and conduits carry data between them; and beacons promote private codexes into a vault's public layer. Codexes configure how glamours, sockets, and entities bestow their properties; styling follows rendering, an a spell's nature decides whether it paints a block or a span, and sigils, signets, and stations style their rendered expressions.
+A one-sentence summary of the entire system: sockets create slots; glamours, sigils, signets, and spells equip the content sitting on those slots; bonds chain spells together; shells open paired scopes with independent termination; vessels carry values, and become targets when summoned; scrolls, and conduits carry data between them; and beacons promote private codexes into a lair's public layer. Codexes configure how glamours, sockets, and entities bestow their properties; styling follows rendering, an a spell's nature decides whether it paints a block or a span, and sigils, signets, and stations style their rendered expressions.
 
 * Inspirations
 
@@ -318,7 +471,7 @@ A line break is the one terminator with cases, because it is where a construct m
 
 :repeat[every week on thursday]
 :after<completion>
-:completions<>             ; rule 3: each wall starts a new construct
+:completions[2026-04-07]   ; rule 3: each wall starts a new construct
 #+end_example
 
 The third case is worth noticing for how it reads. Stacking constructs on their own lines gives a block a drawer-like appearance, one property per line, without any drawer syntax existing: these are ordinary spells, laid out.
@@ -346,6 +499,12 @@ Write the wall when you want it: mid-word, where no whitespace precedes the cons
 #+begin_example
 16:[th].sup:               ; superscript on part of a word
 #+end_example
+
+Only the container shapes are safe there. A bare-word target *mid-word* is not
+recognised: ~16:sup:th~ is ordinary prose, because ~word:word~ is a shape prose
+produces constantly. The grab rule applies only where the wall itself sits at a
+line start, after whitespace, or after a closing bracket. Mid-word, the target
+goes in a container.
 
 A useful habit: when doing something uncommon, lead with the wall. It costs one character and puts you and the parser in the same frame of mind.
 
@@ -549,7 +708,7 @@ Adjacent summons on one spell are additive; the single-vessel form is preferred:
 
 A block spell reaches the block *and everything it owns*, because a block encloses its subtree. A span spell reaches only its own run, because a span encloses nothing.
 
-Those defaults serve the usual case: a card frames a heading and its body, and bolding a heading does not bold the paragraphs beneath it. Where the default is wrong, ~:deep~ and ~:shallow~ set reach explicitly.
+Those defaults serve the usual case: a card frames a heading and its body, because deep reach follows ownership. Bolding a heading does not bold the paragraphs beneath it, but that is not reach doing the work: a heading block is its own line, and the prose below is a child rather than part of it (see A heading is one line). Where the default is wrong, ~:deep~ and ~:shallow~ set reach explicitly.
 
 #+begin_example
 <=>.bg<red>.radius<8>.shallow:     ; a banner on each heading, not its body
@@ -578,7 +737,7 @@ Colours, sizes, dates, languages, and settings are inputs. Text, blocks, and ref
 | ~[unparsed]~   | unparsed content, nothing inside is syntax        |
 | ~{rich}~       | rich parsed content (nests)                      |
 | ~<reference>~  | a value or reference (entity, marker, station)  |
-| none           | the enclosing scope, painted forward             |
+| none           | the enclosing scope, entire                      |
 
 *** Generated targets: embedding spells
 
@@ -598,19 +757,16 @@ A target that resolves to text and carries no chain is therefore an embed:
 
 If the value is not text, nothing embeds, which is what distinguishes values usable as configuration from values usable as content.
 
-*** No target: painting forward
+*** No target: the whole scope
 
-A spell that resolves no target applies its properties *from that point to the end of its enclosing scope*, the way a fill tool floods to the boundary of a shape:
-
-#+begin_example
-Regular text :serif and everything after this in the block is serif.
-#+end_example
-
-So a spell at the start of a block paints the whole block, because there is nothing before it to leave alone. There is no separate positional rule for this; it falls out of having no target:
+A spell that resolves no target applies its properties to its *entire enclosing scope*, not to the part of it that follows the spell:
 
 #+begin_example
-:card                      ; untargeted, so it paints the block
+:card                      ; untargeted, so it takes the block
+This block is :serif entire, not from the spell onward.
 #+end_example
+
+Position within the scope is not significant: a spell written at the end of a block reaches what one written at the start reaches. Where an effect should begin partway through a scope, use a shell.
 
 This is especially useful inside lists, where content length may change:
 
@@ -620,7 +776,7 @@ This is especially useful inside lists, where content length may change:
   - Normal item
 #+end_example
 
-An untargeted spell cannot outlive its scope: it ends at the block boundary, so it needs no explicit closer. A property applies until shadowed by a later write to the same property, after which the earlier spell has no remaining observable effect.
+An untargeted spell cannot outlive its scope, so it needs no explicit closer. Where two untargeted spells in one scope write the same property, the later shadows the earlier, after which the earlier has no remaining observable effect.
 
 *** Astral blocks
 
@@ -628,7 +784,7 @@ A block with no rendered content is *astral*. A spell sitting between blocks occ
 
 Astral is a *state*, not a kind of block. Structurally an astral block is an ordinary block with the ordinary property table; what differs is only how each effect category behaves on it, and that follows from the categories rather than from any rule about astral blocks:
 
-- *Styling* properties are aliases into the enclosing scope's properties. Writing one on an astral block therefore sets the scope's default from that point, which is what paint-forward looks like from the inside:
+- *Styling* properties are aliases into the enclosing scope's properties. Writing one on an astral block sets the scope's *running default* from that point forward, by the same mechanism as a bare type-selector (see Presets and Defaults). An astral block has no content for reach to act on, so this is its only observable effect:
 
 #+begin_example
 :serif                     ; astral; serif is the default from here on
@@ -848,7 +1004,7 @@ Order therefore carries meaning. Reversing that chain produces a different resul
 
 The outer chain sets italic and bold across the whole target. The inner scroll carries its own chain, ~.strip<:bold>~, which clears just the bold property for that word, leaving it italic-only while the rest of the passage stays bold and italic.
 
-The argument is a *referenced* spell name, not an invocation, the same way ~:cycle<new selected processing>~ references state names as vessel values.
+The argument is a *referenced* spell name, not an invocation, the same way ~:cycle[gtd]<:todo :doing :shipped>~ references state names as vessel values.
 
 *** A note for readers coming from CSS
 
@@ -964,6 +1120,25 @@ Two rules generate every glamour form:
 
 Everything else follows from the targeting rules already given.
 
+** Where a glamour opens
+
+A glamour opens only at a *glamour position*: at the start of a line, after whitespace, or after a closing bracket. A mark glued to the right of a preceding character is ordinary text and opens nothing.
+
+#+begin_example
+and/or                     ; no italic: / follows "d"
+3/15                       ; no italic
+src/main.rs                ; no italic
+50% off                    ; no strikethrough: % follows "0"
+#+end_example
+
+This is what keeps five common characters usable in ordinary prose without escaping. Dates, paths, ratios, percentages, and units all glue their mark to a preceding character, so none of them fire, and the nick is needed only where a mark genuinely does sit at a glamour position (~\*minute~).
+
+The rule is a single lookbehind of one character, so it costs the parser nothing and never needs backtracking.
+
+*The one relaxation is a bracket.* A glamour followed immediately by ~[~, ~{~, or ~<~ is an opener wherever it sits, including mid-word, because prose does not produce those shapes (see Mid-word glamours).
+
+A *closer* has the mirror requirement: a paired glamour's closing mark must be glued to the right of its content, and on the same line. A mark satisfying neither condition opens nothing, closes nothing, and renders as itself.
+
 ** Runs collapse
 
 A run of the *same* glamour character means what one means. ~***~ is ~*~, and ~```~ is ~`~.
@@ -1030,14 +1205,17 @@ This has *bold words* in it
 
 The parser scans the current line for a closer. Found one, paired mode. No closer, the grab rule applies instead.
 
-*** Untargeted glamours paint their scope
+*** A lone glamour is untargeted only in first position
 
-A glamour with no target behaves like any untargeted spell: it paints from where it sits to the end of its enclosing scope.
+A glamour mark that opens nothing and closes nothing is a spell with no target, and like any untargeted spell it takes its whole scope. It is read that way *only in first position* in its scope. Anywhere else it is ordinary text.
 
 #+begin_example
 ,* This whole block is bold
-Plain text * and everything after this in the block is bold.
+Plain text * and this asterisk is literal.
+5 * 3                      ; literal; nothing opens
 #+end_example
+
+A spell carries a wall and is unambiguous anywhere; a glamour has none, so position does for a glamour what the wall does for a spell. The restriction applies only to the lone form: paired glamours and the grab rule are self-delimiting and are recognised wherever they sit.
 
 ** Stacking requires a bracket
 
@@ -1343,13 +1521,13 @@ Interaction design is not specified. Tap to toggle, hold to advance, keyboard cy
 
 * The Scheduling Model
 
-Scheduling is the second reason Indue exists, and like the task model it is specified here rather than catalogued, because it is a guarantee: two applications must resolve the same document to the same dates, or a shared vault means nothing.
+Scheduling is the second reason Indue exists, and like the task model it is specified here rather than catalogued, because it is a guarantee: two applications must resolve the same document to the same dates, or a shared lair means nothing.
 
 The catalogue of scheduling spells, and the full recurrence grammar, are in *The Indue Spellbook*. What belongs here is the shape of the model and the guarantees it makes.
 
 ** One axis per spell
 
-Scheduling is carried by five separate concerns, and no spell carries two of them.
+Scheduling is carried by six separate concerns, and no spell carries two of them. Several concerns are served by more than one spell, but no spell serves two concerns.
 
 | Axis          | Carries                          |
 |---------------+----------------------------------|
@@ -1378,7 +1556,7 @@ It looks like English, and that is deliberate: a scheduling rule should be legib
 
 But it is *not* natural language parsing. The grammar is closed: three clauses in a fixed order, each introduced by its own keyword, with closed vocabularies for periods, ordinals, days, and months. There is exactly one reading of any valid pattern, and phrasings outside the grammar are not accepted rather than being guessed at.
 
-This distinction matters for portability. An open natural-language parser would mean two applications could legitimately disagree about what a string means, which is precisely what a shared vault cannot tolerate.
+This distinction matters for portability. An open natural-language parser would mean two applications could legitimately disagree about what a string means, which is precisely what a shared lair cannot tolerate.
 
 ** The pattern says how often, never when
 
@@ -1603,7 +1781,8 @@ Sigils (tags) use ~#~, the universal tagging character:
 #+end_example
 
 - Single-word sigil: ~#errand~
-- Multi-word sigil: ~#[machine learning]~ (closing ~#~ needed only for multi-word sigils)
+- Multi-word sigil: ~#[machine learning]~ (a scroll, so no closing ~#~ is needed)
+- Explicitly bounded sigil: ~#work#~, which ends the name before the next word, exactly as ~^name^~ does for a station
 - Whole-line sigil: ~#~ at line start sigils the entire line
 
 A sigil marks a tag or category. Semantically, it identifies the block it appears within as belonging to that category, much like a Markdown hashtag. A block tagged ~#meeting~ is "about" meetings; a list item tagged ~#errand~ is an errand.
@@ -1829,11 +2008,11 @@ That is the test for what a source should hold: *could an application compute th
 
 An application is free to maintain its own entity index rather than using sources, and doing so does not affect document validity. The text still parses, the marks still resolve, and another application reading the same file sees the same content.
 
-What is lost is portability of the derived data. Records held in an application's database rather than in the document are unavailable to anything else reading the vault. That may be a reasonable trade for a hosted service; it should be a decision rather than an oversight.
+What is lost is portability of the derived data. Records held in an application's database rather than in the document are unavailable to anything else reading the lair. That may be a reasonable trade for a hosted service; it should be a decision rather than an oversight.
 
-*** Queries resolve against the whole Lair
+*** Queries resolve against the whole lair
 
-A query's result is defined as if the entire Lair had been parsed, whatever an application actually does to compute it. Incremental parsing, indexes, and caches are all permitted; returning a different answer than a full parse would is not.
+A query's result is defined as if the entire lair had been parsed, whatever an application actually does to compute it. Incremental parsing, indexes, and caches are all permitted; returning a different answer than a full parse would is not.
 
 That is what makes the query language part of the format rather than part of one program, and it is why the reference implementation can be used to check another. See *Indue Query Syntax*.
 
@@ -1866,7 +2045,7 @@ Like the rest of Indue, the meaning scales with the count of the marker. This mi
 
 #+begin_example
 ;;;; project-config.indue
-;;;; vault-wide entity definitions, edit with care
+;;;; lair-wide entity definitions, edit with care
 
 ;;; People
 ;; canonical contacts, names must match the directory
@@ -1901,6 +2080,76 @@ The ratio is 3\;1 in plain prose.   ; renders "3;1", then a real whisper
 ** Whispers and parse-don't-fail
 
 Whispers are removed in a lexical pass before the socket, glamour, and entity layers run. There is no such thing as an unterminated whisper, the end of the line always closes it, so the no-errors philosophy is preserved trivially. A whisper never spans lines; multi-line notes are simply multiple whisper lines.
+
+* Block Boundaries
+
+A block begins at a socket, at a heading, or at the first line after a blank
+line. It continues through every following *non-blank* line that does not itself
+begin a block. A blank line ends the block and is not part of it. A heading does
+not continue: a heading block is its own line, and prose beneath it is a separate
+block that the heading owns.
+
+That is the whole rule, and it needs one line of lookbehind.
+
+#+begin_example
+= Project Alpha            ; heading: a block of one line
+The line beneath it        ; a separate block, owned by the heading
+
+- Buy stock                ; socket: a block begins
+  before the market opens  ; no socket: same block, second line
+- Call the vet             ; socket: a new block begins
+
+The first paragraph                 ; after a blank line: a block begins
+runs across three
+source lines.                       ; no socket, no blank line: same block
+
+The second paragraph.               ; blank line: a new block begins
+#+end_example
+
+Leading whitespace on a continuation line is cosmetic and is stripped, so a
+continuation may be aligned under its socket for readability without affecting
+the parse. That is the same alignment an outliner writes when a bullet wraps.
+
+Line breaks within a block are *preserved in rendering*. Two source lines in one
+block render as two lines, never joined into flowing text (see Newlines are never
+destroyed). Leading whitespace is the exception because it is structural: it
+establishes depth, so it cannot also be content.
+
+** Why a newline is not a boundary
+
+The obvious alternative is to make every newline begin a block. It is simpler to
+state, and it gives every line a stable identity. It also makes reflowing text a
+*semantic* operation: ~fmt~, ~gq~, a formatter, or an editor that rewraps on save
+would turn one paragraph into six blocks, with six identifiers, six closure rows,
+and six separate landing sites for a block spell. Nothing in the rendered
+document would look different. For a language whose premise is that a document
+keeps its meaning without the program that wrote it, a change to line endings
+must not change the parse.
+
+It would also remove the multi-line block, which addresses, stanzas, and
+deliberately broken quotes all need. A scroll or a spell can hold several lines,
+but a scroll stands the grammar down and a spell makes the block a spell block;
+neither yields an ordinary material block that happens to contain a line break.
+
+** What an application writes
+
+Writers arrive expecting the behaviour of Word, Logseq, Roam, and Notion, where
+~Enter~ starts a new item and ~Shift+Enter~ adds a line to the current one. Indue
+expresses that distinction with no invisible characters, because the boundary is
+the *socket* rather than the newline:
+
+| Gesture           | Written                                     |
+|-------------------+---------------------------------------------|
+| ~Enter~ in a list   | a newline and a socket at the current depth |
+| ~Enter~ in prose    | a blank line                                |
+| ~Shift+Enter~       | a plain newline                             |
+
+The division of labour is that an application writes the boundary the writer
+asked for, and the format never invents one the writer did not. That is what lets
+the same file be edited in a structural editor and in ~vi~ without either
+surprising the other. Markdown's two-trailing-spaces convention solves the same
+problem and is the standard example of how not to, since it rests the meaning of
+a line on whitespace nobody can see.
 
 * List Nesting: Two Modes
 
@@ -2021,7 +2270,7 @@ For flat document-mode writing (no list structure), standalone headings use ~=~ 
 === Heading 3
 #+end_example
 
-Multiple ~=~ symbols only matter in flat files where all headings are at the same physical margin. In indented structures, a single ~=~ is sufficient because depth is calculated from ancestry.
+Multiple ~=~ symbols are how a standalone heading states its level. A standalone heading is written at line start; it is not indented. Inside a *list*, a single ~=~ is sufficient, because depth is calculated from the list's ancestry.
 
 * Folding and Outline: Two Independent Features
 
@@ -2035,7 +2284,9 @@ Standalone headings (~=~, ~==~, ~===~ at the document level, outside of any list
 
 #+begin_example
 = Introduction                    ← folds until next =
-Some paragraph text.
+Some paragraph text that wraps
+across two source lines.
+
 Another paragraph.
 
 == Background                     ← folds until next == or =
@@ -2300,7 +2551,7 @@ Everything a configuration chain can target is a set (a set of one is not specia
 | ~<#project>~    | only the ~#project~ tag form                           |
 | ~<@project>~    | only the ~@project~ mention form                       |
 | ~<^project>~    | only the ~^project~ station form                      |
-| ~<^project>~   | the place anchored by the station ~project~           |
+| ~<&project>~    | only the ~&project&~ source form                      |
 | ~<#>~           | every sigil                                          |
 | ~<@>~           | every signet                                         |
 | ~<=>~           | every heading (a type/marker target)                 |
@@ -2390,10 +2641,10 @@ Headers, badges, labels, and icons are what this covers, and they are most of wh
 
 *** Spell packs
 
-Because a class definition is just a declaration, a file of them is a *spell pack*: a shared vocabulary that any document in the same Lair can use. Beacon the definitions and they join the public layer; nothing further is required, and no application needs to know the pack exists.
+Because a class definition is just a declaration, a file of them is a *spell pack*: a shared vocabulary that any document in the same lair can use. Beacon the definitions and they join the public layer; nothing further is required, and no application needs to know the pack exists.
 
 #+begin_example
-; languages.indue, in a Lair
+; languages.indue, in a lair
 !<:rust>.code<rust>:
 !<:python>.code<python>:
 !<:zig>.code<zig>:
@@ -2458,14 +2709,14 @@ By default, a codex configures only the file it appears in. The *beacon* (~!~) p
 #+begin_example
 <project> .bg<#f0f0f0> :        ; file-local: only this file sees it
 
-!<project> .bg<#f0f0f0> :       ; public: other files in the vault see it
+!<project> .bg<#f0f0f0> :       ; public: other files in the lair see it
 #+end_example
 
 The beacon attaches to the cauldron as a whole, in both inline and multiline forms, and may also prefix a satchel to publish everything inside it. A cauldron is the unit of beaconing: its accumulated spells are public together or private together.
 
 Beacons govern *codex* visibility only. Entities (sigils, signets, stations) are public by default and unaffected by the beacon. Content and spell invocations at content sites are always local and are never exported by it.
 
-This is a *latent compatibility device*. An application that deals in single documents can parse and preserve the beacon without acting on it, nothing in a single file changes meaning because of it. Applications that do implement multi-document collections use it as the promotion mechanism; the full visibility model, vault scoping, and import/export rules are specified in the *Indue Vault Specification*.
+This is a *latent compatibility device*. An application that deals in single documents can parse and preserve the beacon without acting on it, nothing in a single file changes meaning because of it. Applications that do implement multi-document collections use it as the promotion mechanism; the full visibility model, lair scoping, and import/export rules are specified in the *Indue Lair Specification*.
 
 
 ** The satchel (~)
@@ -2530,16 +2781,16 @@ Because hoisting runs a satchel before the body wherever it sits, a footer satch
 
 *** Satchel evaluation order
 
-1. Applications scan all files in the vault scope.
+1. Applications scan all files in the lair scope.
 2. Satchel contents are hoisted and evaluated before body parsing within each file. Where a file has several satchels, they run in document order, so a later one shadows an earlier one.
 3. The body is then parsed with full knowledge of all codexes.
 4. Inline codexes (not in satchels) override hoisted ones when encountered in document order.
 
-By default, satchel contents are *file-local*, they configure only the file that contains them. To make a satchel's codexes available to the rest of the vault, mark it with a beacon (~!~). See "Beacons and the public layer" below, and the *Indue Vault Specification* for the full visibility model. Application developers should document their vault scanning behavior, including how cross-file public layers are surfaced.
+By default, satchel contents are *file-local*, they configure only the file that contains them. To make a satchel's codexes available to the rest of the lair, mark it with a beacon (~!~). See "Beacons and the public layer" below, and the *Indue Lair Specification* for the full visibility model. Application developers should document their lair scanning behavior, including how cross-file public layers are surfaced.
 
 *** Beacons on satchels (~!~)
 
-A satchel prefixed with ~!~ is a *beacon satchel*, its contents join the vault's public layer and are available to every other file in the vault (modulo vault scope and import/export rules, specified in the *Indue Vault Specification*). This is the common pattern for vault-wide configuration:
+A satchel prefixed with ~!~ is a *beacon satchel*, its contents join the lair's public layer and are available to every other file in the lair (modulo lair scope and import/export rules, specified in the *Indue Lair Specification*). This is the common pattern for lair-wide configuration:
 
 #+begin_example
 !~~~~~~~~~~
@@ -2596,108 +2847,15 @@ More specific wins; inline beats named beats type; explicit beats inherited; las
 
 ** Entity namespace and its boundary
 
-Every form of a name, ~#name~, ~@name~, ~^name~, and the block handle ~^name~, resolves in *one shared namespace* (see the role matrix in Stations). A cauldron defined for ~<name>~ applies to every rendered form; the form communicates intent (tag, mention, anchor, block), not scope.
+Every form of a name, ~#name~, ~@name~, ~^name~, and ~&name&~, resolves in *one shared namespace* (see the role matrix in Stations). A cauldron defined for ~<name>~ applies to every rendered form; the form communicates intent (tag, mention, anchor, block), not scope.
 
-The namespace boundary is the *vault*. Names resolve vault-wide: a station or entity named in one file is reachable from a reference in another file of the same vault. Collisions produce a set (set semantics); navigation to a multi-member set is a disambiguation the app surfaces. The unique machine handle is the disambiguator of last resort. Cross-vault resolution happens only through the explicit import/export rules in the *Indue Vault Specification*.
+The namespace boundary is the *lair*. Names resolve lair-wide: a station or entity named in one file is reachable from a reference in another file of the same lair. Collisions produce a set (set semantics); navigation to a multi-member set is a disambiguation the app surfaces. The unique machine handle is the disambiguator of last resort. Cross-lair resolution happens only through the explicit import/export rules in the *Indue Lair Specification*.
 
-* Core Design Philosophy
+** Open questions for entity configuration
 
-** Prefer unambiguous syntax
+- If a block carries several entities (~#project~ and ~#urgent~), do both cauldrons apply, and in what order? (Likely: in the order the entities appear, last wins on conflict, per the specificity rule.)
+- Should there be an intersection selector, a cauldron that fires only when two entities are both present?
 
-Indue prefers syntax where every character's role is resolvable from local context. The parser should never need to look ahead through unbounded content or backtrack to determine meaning. Characters may appear in multiple roles (e.g. ~:~ opens a spell and terminates one), but context always disambiguates which role applies.
-
-** Glamours are for frequent writing; spells are for transforms
-
-The bar for earning a dedicated glamour is high: the feature must appear frequently enough in everyday writing that the ergonomic cost of a spell (function call) is genuinely burdensome. Anything that transforms content into a different form belongs in the spell system (~:func~). The glamour table is for things you type constantly.
-
-** Bracket types replace quoting
-
-No string literals with quote delimiters exist anywhere in Indue. Text is passed to spells using the appropriate bracket type: vessels ~()~ for values, scrolls ~[]~ for unparsed text, and conduits ~{}~ for rich parsed content. Quotes inside any bracket type are just literal characters.
-
-** Every spell is useful in isolation
-
-A spell that only makes sense composed with one specific other spell is a design smell. Those should be redesigned as a single spell with multiple ports. Each spell should carry clear meaning on its own.
-
-** Same spell overwrites, different spells compose
-
-When the same spell appears twice in a chain, the later instance wins. When different spells appear in a chain, they are additive:
-
-#+begin_example
-:color<red>.color<blue>:word    ; blue wins (same spell, later overwrites)
-:bold.italic:word               ; both apply (different spells, additive)
-#+end_example
-
-** Single-column renderability
-
-Indue defines no layout mechanism. A conforming application must be able to render any document in a single column without loss of meaning, so nothing in the core may require an application to place content side by side.
-
-The test is practical: an outliner with a one-column interface has no way to understand a column instruction, and a construct some conforming applications structurally cannot render is worse than no construct at all, because it breaks the guarantee that every compliant application reads a document correctly.
-
-Tables are the one exception, and they are not really an exception. A table is multi-column *internally* but occupies a single block-level slot, so a one-column application renders it as a unit (scrolling or wrapping as it sees fit) without understanding layout at all. The document's structure is identical either way. Mobile applications are encouraged to set breakpoints that collapse wide tables by default.
-
-Presentational properties are fine, because they inset or decorate a block rather than arrange blocks relative to each other: margins, padding, ~:radius~, ~:border~, and ~:stroke-color~ all apply to tables and blocks without portability risk. An application that cannot round a corner simply does not, and the content still reads.
-
-For genuine typesetting, page geometry, columns, page breaks, floats, export to Typst is the recommended path once tooling exists (see Relationship to Typst). A future version may revisit basic layout, but only for constructs that remain single-column viewable at every breakpoint.
-
-A useful guide while the language is young: if Org-mode does not have it, Indue almost certainly should not have it yet.
-
-** Spells are renderer-agnostic at core tier
-
-Core formatting spells must have clear meaning regardless of rendering target (screen, print, plain text, accessibility). CSS-specific behavior belongs in the ~:ext.css~ extension namespace, not in core spells.
-
-** Explicit targeting over implicit
-
-Every scope level in Indue has an unambiguous syntactic form. A target is always a container, or a bare word glued to the right of a spell, never something inferred from position. Places are named by stations (~^name~), entities and type markers are targeted with ~<...>~, text through scrolls and conduits, and paired regions through shells. Whether an effect lands on text or on a block is decided by the spell's own nature, never guessed from context. A spell with no target paints its enclosing scope, which is a stated behavior rather than a guess.
-
-Explicit targeting also gives failure a single answer. Because every spell has a target slot, an unrecognised spell degrades the same way regardless of what it was: drop the spell, render the target. A parser needs no per-spell knowledge of which part was meant to survive, which is what lets the vocabulary grow without ever breaking an older implementation.
-
-** Scrolls and conduits are the default carriers
-
-Most content flows through scrolls ~[]~ (unparsed) or conduits ~{}~ (rich parsed content). Vessels ~<>~ carry the values a spell computes with: a number, a date, a color, a setting, and become *targets* when marked with ~@~ or ~&~. Parentheses are deliberately unreserved, a parenthetical in prose must stay a parenthetical. When designing a spell, reach for scrolls or conduits first; use vessels only when the input is a specific ingredient the spell needs to evaluate. Since ~[~ and ~{~ share the same physical key, muscle memory stays simple.
-
-** Names public, behavior private
-
-Indue's visibility defaults follow a single principle: *names need to be findable, behavior needs to be opt-in*. Entities (sigils, signets, stations) are vault-public by default because a name that cannot be resolved is useless. Configuration (codexes, schemas, satchel-hosted spells) is file-local by default because shared styling is a deliberate choice, silent cross-file styling is a debugging nightmare. The beacon (~!~) is the single mechanism that promotes a private codex to the vault's public layer; everything else follows from these two defaults.
-
-** Logical scope, OS-enforced security
-
-Indue declares /logical/ scope, what is visible to what, where names resolve, how the public layer composes. It does not enforce access control. Filesystem permissions, ACLs, encryption, and sandboxing are the OS's domain and operate on Indue files as on any plain text. Tools should be permission-aware (handle failures gracefully, surface them clearly) but never attempt to duplicate security in markup.
-
-** The nick (~\~)
-
-~\~ is reserved as an escape character. Its primary use is rendering a literal glamour character that would otherwise be interpreted as markup:
-
-#+begin_example
-The price is 50\% off       ; literal %, not strikethrough
-Use \*asterisks\* literally ; literal *, not bold
-#+end_example
-
-~\~ before a non-glamour character renders as a literal backslash.
-
-** Parse, don't fail
-
-Indue parsers should never throw errors at the user for malformed markup. Unclosed glamour delimiters apply to the single word they touch (single-word rule), or render as literal text if not touching a word. Unknown spell names render their content as plain text. The no-errors philosophy follows HTML's error recovery model rather than Typst's strict compilation model.
-
-Strict validation belongs in the linter and export pipeline, not in the core parser that runs while someone is writing notes at midnight.
-
-** Recover forward
-
-Parse-don't-fail is the floor: the parser never throws an error at the writer. This principle is the ceiling built on top of it. In Indue the absence of a referent is a *first-class state, not an exception*. "Not yet resolved," "not yet known," and "not yet defined" are legal, meaningful, and frequently useful conditions rather than degraded ones. An unresolved signet still carries meaning and upgrades itself the moment its target appears. An unknown spell renders its conduit as rich content, so a future spell and a not-yet-known one produce coherent output today. A station with no sibling is still a navigable anchor. A cauldron may target an entity that does not exist yet and simply activates when it does. This is what makes incremental, out-of-order authoring, thinking of a tag before defining its behavior, referencing a person before making their page, sketching a trail before its stops exist, feel native to Indue rather than error-prone. This is closer to how a spreadsheet treats a reference to an empty cell (a real value you can build on) than to how a compiler treats an undefined symbol.
-
-Because these fallbacks are the same primitives resolving differently, not ad-hoc repairs, their results are *legible*: a surprising outcome is a combination the writer can understand and then reach for on purpose. And a feature's default is continuous with its advanced form, so the writer enters at the zero-config end of a ramp they did not know was a ramp. Three identically named stations cycle as a trail on their own; discovering that cycle leads directly to ~| n~ ordering and the ~| x~ terminator, the same construct one parameter further along:
-
-#+begin_example
-^argument          ; three of these auto-cycle: an undefined trail
-^argument
-^argument          ; look it up, and the fix is the same construct, ordered:
-^argument | 1
-^argument | 2
-^argument | x      ; ordered, terminated. the accident taught the feature.
-#+end_example
-
-The default is the on-ramp to the depth. Investigating "what actually happened" tends to level the writer up rather than send them back to a wall. The mistakes are the tutorial.
-
-This principle *raises* the specification bar rather than lowering it. A behavior discovered in one application must be the behavior every compliant application produces, and "look it up" must terminate in a documented answer, otherwise an accident is merely a bug that has not recurred yet. Every fallback path is therefore defined behavior, specified to the same rigor as the success path. Determinism is what turns a happy accident into a feature; cross-application agreement is what makes it worth learning. The permission to play is earned by pinning down exactly what play does.
 * Parser Architecture Notes
 
 ** Three-phase evaluation
@@ -2792,17 +2950,24 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - Whispers (comments): ~;~ to end of line, stripped in a scroll-aware pre-pass. Literal ~;~ inside scrolls ~[]~ and via the nick (~\;~). Graduated levels (~;~/~;;~/~;;;~/~;;;;~) strip identically; level is a reader/tooling convention, not a parser distinction.
 
 *Structure*
-- Sockets: ~-~, ~+~, ~=~ with indentation-based and dash-mode nesting
+- Sockets: ~-~ and ~+~ with indentation-based and dash-mode nesting; ~=~ heads a block, standalone at line start with level by count, or promoted by a socket with level from list depth
 - Heading promotion: ~- =~ / ~+ =~
+- A heading block ends at its own line; following body prose is an ordinary child of the heading, not part of its content
 - Schema declarations: ~:list~ and ~:step~, with void ditto and cycling depth chains
 - Folding and heading outline
 
 *Glamours*
 - All five (~*~, ~/~, ~_~, ~%~, ~`~) expand to spells: a single glamour is ~:spell:~, a pair is ~:spell.{~ … ~}:~
 - Untargeted, grab-rule, paired, and bracket forms
+- An untargeted spell takes its entire enclosing scope, not the part following it; position within the scope is not significant
+- A styling property sets the enclosing scope's running default from its position forward; this is distinct from reach, which is entire within the spell's own node
+- A lone glamour mark is untargeted only in first position in its scope; elsewhere it is literal text
 - Runs of one repeated character collapse to one; a run stops when the character changes
 - Stacking different marks requires a bracket immediately after the run
+- A block begins at a socket, a heading, or the first line after a blank line, and continues through every non-blank line that does not itself begin a block; a blank line ends the block and is not part of it
+- Line breaks inside a block are preserved in rendering and are never collapsed to spaces
 - Glamours are glued and inline; regions across lines are shells
+- A glamour opens only at a glamour position (line start, after whitespace, or after a closing bracket), except where a container immediately follows the run
 
 *Goety*
 - The closed set: ~[label](url)~ and ~[]~ / ~[ ]~ / ~[>]~ / ~[x]~ at block start, each matched as a fixed whole pattern
@@ -2817,7 +2982,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - Signets: ~@ref~
 - Stations: ~^name~ with trails (undefined, portals, defined, terminated), aliases, last-write-wins; always visible
 - Cauldron matching matrix: entity name × sigil form (~<name>~, ~<#name>~, ~<@name>~, ~<^name>~, ~<^name>~, ~<#>~, ~<@>~, ~<=>~, and ~<:class>~ definitions)
-- Cauldron bestowal escalation: three-colon paints inline tokens by and the spell's nature selects block or span ( ~#~/~@~/~^~ select their rendered expression)
+- Bestowal tier is decided by the spell's nature, never by the target: ~#~, ~@~, and a visible ~^~ style their own rendered expression, and a block-natural spell paints the block that holds it
 - Entity codex cascade: form-only → identity → form-specific → inline
 
 *Spell system*
@@ -2827,7 +2992,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - A shell closes when it has no active effects left
 - Structural auto-close when opened at a socket's leading position, and auto-close at end of document
 - Hypershells: a run of three or more, length-matched, with the closer alone on its own line, for content Indue must not read
-- Spell world: entered by ~:~ or by a container (~<>~, ~{}~, ~[]~); vessels ~()~ never open it
+- Spell world: entered by ~:~ or by a container (~<>~, ~{}~, ~[]~); parentheses ~()~ never open it
 - Spell world ends at whitespace outside a container, at a line break with no glued bond following, or at a closing wall ~:~
 - Vessel ~<>~: value arguments when glued, targets when bonded; ~@~ narrows a target to one spell
 - Reach: block spells deep, span spells shallow, with ~:deep~ and ~:shallow~ to set either tier explicitly
@@ -2845,7 +3010,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - Spell blocks: a block whose only rendered content is one spell's target; a positional fact, with presentation left to configuration
 - Astral blocks: a spell with no material content to grip passes its effects to the enclosing scope; between blocks that is the document
 - Trailing whitespace elision for spells with no target and no embedding effect
-- Inputs: at most one of each kind, vessel ~()~ plus either scroll ~[]~ or conduit ~{}~, identified by bracket rather than position so order is free; two containers of the same kind are invalid
+- Inputs: at most one of each kind, vessel ~<>~ plus either scroll ~[]~ or conduit ~{}~, identified by bracket rather than position so order is free; two containers of the same kind are invalid
 - Multiline chain form (the cauldron layout)
 - Maths: ~:math[...]~ with ~:$~ as an alias
 - Nick: ~\~ escaping
@@ -2871,7 +3036,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 
 *Queries*
 - ~:query~ takes a SQL query as a scroll, unparsed; the grammar belongs to the query language
-- A query resolves *as if the whole Lair had been parsed*. Indexing and caching are free, provided results are identical to a full parse
+- A query resolves *as if the whole lair had been parsed*. Indexing and caching are free, provided results are identical to a full parse
 - Node identifiers are deterministic for a given input, and are not stable across edits; durable identity comes from sources
 
 *Entity configuration*
@@ -2881,7 +3046,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 
 *Specified in the companion documents*
 
-The catalogue of spells an implementation must support, task states, scheduling and recurrence, queries, transclusion, presentation spells, tables, and layout, is enumerated by category in *The Indue Spellbook*. Multi-document behaviour, the public/private visibility model, vault declarations and types, and import and export, is specified in the *Indue Vault Specification*. An application that handles only single documents is still compliant with this specification; it must parse and preserve the beacon, but need not act on it.
+The catalogue of spells an implementation must support, task states, scheduling and recurrence, queries, transclusion, presentation spells, tables, and layout, is enumerated by category in *The Indue Spellbook*. Multi-document behaviour, the public/private visibility model, lair declarations and types, and import and export, is specified in the *Indue Lair Specification*. An application that handles only single documents is still compliant with this specification; it must parse and preserve the beacon, but need not act on it.
 
 ** Extensions
 
@@ -2899,7 +3064,7 @@ A *spell block* is a defined position (see Spells), but there is no selector syn
 
 ** Term/definition lists
 
-~/~ is used for italic, so Typst's ~/ term: definition~ is not available. The leading candidate is a spell like ~:def<term>{definition}~. A bare delimiter character is harder to find now that ~;~ has been claimed for whispers (comments) and ~&~ remains the main unreserved punctuation; a spell form avoids consuming scarce single-character real estate.
+~/~ is used for italic, so Typst's ~/ term: definition~ is not available. The leading candidate is a spell like ~:def<term>{definition}~. A bare delimiter character is harder to find now that ~;~ has been claimed for whispers and ~&~ for sources, leaving ~()~ as the only substantial unreserved punctuation and one deliberately kept for prose; a spell form avoids consuming scarce single-character real estate.
 
 ** Document-level metadata and frontmatter
 
@@ -2932,5 +3097,5 @@ Building Indue as a real language requires:
 - A comprehensive test suite covering nesting, ambiguity, edge cases, and round-trip fidelity.
 - Documentation of every syntactic interaction and edge case.
 - A Flutter/Dart application (OUST, name pending) consuming the Rust implementation via Flutter Rust Bridge, targeting MechanixOS, Android, iOS, and desktop Linux.
-- A vault scanner that locates ~.vault~ markers, builds the public layer for each vault, applies import/export overrides, and exposes the resolved namespace to consuming tools. Galleries should be processable as a separate prior pass to enable caching of hermetic public layers.
+- A lair scanner that locates ~.lair~ markers, builds the public layer for each lair, applies import/export overrides, and exposes the resolved namespace to consuming tools. Galleries should be processable as a separate prior pass to enable caching of hermetic public layers.
 - Permission-aware filesystem traversal: graceful handling of read failures, clear surfacing of write failures, and explicit reporting of unreachable files rather than silent omission.
