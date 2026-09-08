@@ -1,0 +1,167 @@
+#+TITLE: Indue Design Philosophy
+#+OPTIONS: toc:2 num:nil
+
+* About This Document
+
+Non-normative. Nothing here defines syntax or behaviour; the language
+specification does that, and where the two disagree the specification wins.
+
+This document holds the reasoning: why a rule is the way it is, what was
+considered and rejected, and which problems in other formats a given decision is
+answering. It exists so the specification can stay short. A rule that needs a
+page of justification gets one sentence there and the page here.
+
+* Spells Are One Mechanism
+
+Most markup formats grow a separate construct for each kind of annotation, and
+the constructs do not compose. Org has TODO keywords, priority cookies, tags,
+property drawers, and ~#+ATTR_~ lines. Markdown has front matter for document
+metadata, HTML attributes for anything structural, and nothing at all for
+styling. Each is a different syntax with a different placement rule and a
+different set of things it can attach to.
+
+Indue has spells. One syntax, attaching to any block or span, carrying data,
+metadata, styling, and embedding alike. What other formats spread across five
+constructs, Indue does with placement and argument.
+
+The clearest case is the property drawer. Org restricts TODO state to headlines,
+and the reason is not semantic: a drawer under a list item would look terrible,
+so the syntax constrained what the feature could apply to. Indue has no drawer to
+place. A spell attaches to a block, and task semantics do not care what kind of
+block it is, so a list item takes a due date as readily as a heading does:
+
+#+begin_example
+- Tasks :bg<yellow>
+  - Buy milk :due<2026-04-15>
+#+end_example
+
+The drawer *appearance* is still available where it helps, through the ordinary
+line-break rule rather than a construct: consecutive wall-initial lines stack
+into a block that reads like a drawer. The look is free; the machinery is not
+there.
+
+The same mechanism covers what other tools call supertags. A cauldron
+(~<#project>~) attaches behaviour to a tag, which is what Tana and Notion do with
+types, except that in Indue the tag is optional. Nothing has to be declared
+before it can be used, and a document that wants one date on one block writes one
+date on one block. That is the same trade as ~:info~: free-text keys, where a
+typo makes a new key rather than an error.
+
+Because the annotation travels on the line it describes, it also survives leaving
+Indue. ~:due<2026-04-15>~ still reads as a date to a program that has never heard
+of this language.
+
+* Configuration Is Text
+
+Cycles, presets, classes, and control styling all live in a preamble rather than
+in an application's preference store. That is a deliberate cost: it is more
+verbose than a settings screen and it puts syntax in front of users who would
+rather click.
+
+What it buys is that settings diff in version control, travel with the lair, and
+survive switching editors. A team's status vocabulary lives in the repository
+instead of in each person's local config, and a document that renders one way for
+one person renders that way for everyone.
+
+The corollary is that an application should not generate boilerplate into a new
+lair. Defaults belong in the application; the preamble should record only
+*divergence* from them. An untouched lair then has an empty preamble and working
+keys, and a customised one has a short diff showing exactly what changed.
+
+* Reach and the Running Default
+
+Two mechanisms are easily confused because both were once described as painting
+forward.
+
+*Reach* is what a spell does inside its own node, and it is entire. A scope has
+no midpoint, so position within it is not significant, and an untargeted spell
+takes all of its scope regardless of where it sits.
+
+The *running default* is what a styling property does to the nodes that follow
+it, and it is forward. A bare type-selector, or a styling property on an astral
+block, sets a default from its position onward.
+
+The distinction is a matter of scale. A block fits on a screen, so painting all
+of it is not surprising: the reader can see what was affected. A scope may run
+for pages, so painting backward through one would change text that is off-screen,
+and a reader who sees ~:serif~ at line 40 has no reason to expect line 10 to be
+serif. Position is insignificant where the eye reaches and significant where it
+does not.
+
+Reach being entire is also what makes trailing spells work, and trailing is how
+people actually annotate: write the thing, then tag it.
+
+#+begin_example
+- Tasks :bg<yellow>
+#+end_example
+
+Under a forward-only rule this form is dead, because there is nothing after the
+spell for it to act on. Writers would have been pushed to ~- :bg<yellow> Tasks~,
+which puts the machinery in front of the content. Since position is now
+insignificant, the two are identical rather than merely both legal, so there is
+no placement rule to learn and none to get wrong.
+
+Safety falls out of the same rule. Nothing reaches further than the construct
+containing it, so a spell cannot run away down a document and a stray mark cannot
+silently claim the remainder of a block. Where an effect genuinely should begin
+partway through a scope, a shell names its own region, and opening one is
+deliberate.
+
+* Why a Lone Glamour Needs First Position
+
+A spell carries a wall, so ~:bold~ is unambiguous wherever it lands. A glamour
+has no wall: the mark *is* the whole syntax.
+
+Recognising a lone mark anywhere would mean any stray asterisk or underscore
+silently restyled its block, and the characters glamours use are ordinary
+punctuation that people type for their own sake. ~5 * 3~ is arithmetic. Position
+does for a glamour what the wall does for a spell.
+
+The restriction costs little because it applies only to the lone form. Paired
+glamours and the grab rule are self-delimiting and are recognised wherever they
+sit, and the case worth protecting, one keystroke at the head of a heading, is
+exactly the case first position covers.
+
+* A Heading Is Its Own Line
+
+The word means the line. Asked what a heading says, nobody reads out the
+paragraphs beneath it, and a subject line is a subject line rather than the
+subject plus the message. A model where the heading node contains the body has
+not described a heading; it has described a section and given it the wrong name.
+
+This is the definition taken literally: a heading is a block, not a heading and
+what it owns. Org needs both ~headline~ and ~section~ nodes to express the same
+structure, and inherits the confusion of having two things where users see one.
+
+The first paragraph under a heading is therefore just the first child. It holds
+no special position among the heading's other children and needs no ordering
+rule, because document position already orders it.
+
+Nothing renders differently as a result. Block reach is deep by default, so a
+card on a heading still frames the heading and everything under it. What changes
+is what the heading node *contains*: a query for heading text returns the line,
+which is the common ask, and the body becomes the join, which is the rarer one.
+~:shallow~ on a heading means the heading, which is what someone writing it
+intends.
+
+* Line-Start Is a Strategy, Not a Rule
+
+Indue has no line-start rule and never needed one. A spell at the start of a line
+is an untargeted spell taking its block; it only looked like a separate rule
+during the period when every line was its own block.
+
+It is still worth pointing out as a *strategy the design enables*. Putting a
+spell at the head of a line is the shortest way to affect exactly that line's
+block, and it reads well because the annotation arrives before the content. That
+is a habit worth teaching, not a mechanism worth specifying.
+
+* Notes for the Split
+
+Material that arrived during design and has not yet been placed:
+
+- Application design from the reference implementation: cycling keys, magic
+  windows, dropdowns as pinned windows, and control styling. This is real design
+  work but it is not grammar, and it should go in an application document rather
+  than here.
+- The terminology boundary between codex, cauldron, and class is not settled, and
+  all three appear in more than one specification.
