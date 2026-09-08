@@ -952,3 +952,40 @@ See *Indue Query Syntax* for the grammar and *Indue Reference Schema* for the fi
 | ~$~         | free in prose; only ~:$~ is a spell           |
 
 A character reserved in the material world is not thereby spent in spell world, and the reverse also holds.
+
+* Why Not Org or Markdown?
+
+** Org is not trying to be this
+
+Org fills many of the same needs, and fills them well. But there is no portable
+Org specification and no agreed set of features an implementation must provide,
+so every non-Emacs implementation is permanently partial. Org is a platform more
+than a format. Some in the community would like a portable spec; the community
+at large has not pursued one.
+
+** Nothing was built from the ground up for this
+
+PKM applications converge on the same handful of features, such as tasks,
+scheduling, block identifiers, tags, and transclusion, then bolt each one onto a
+markup language with no native syntax for any of it. Two programs reading the
+same file end up agreeing on the prose and disagreeing on everything else.
+
+Indue starts from those features rather than adding them, which also lets the
+devices collapse: one spell stands in for property drawers, attributes, front
+matter, supertags, and stylesheet rules.
+
+** It buys things the alternatives do not offer
+
+- Block effects apply evenly, so a task can sit on a list item, a heading, or a paragraph
+- Extensible named property sets, like CSS classes but inside the document rather than beside it
+- Heading promotion inside lists
+- Automatic stepping in ordered lists, with the numbering style easy to change
+- Overlapping shells, so two effects can cross without nesting
+- Several tasks in one block
+- Irregular recurrence, such as ~every month on 1st friday~
+- Native syntax for dynamic content
+- Scaffolding for a multi-document ecosystem
+- Dash mode, so an outline survives chat clients, email, and forms that destroy indentation
+- One namespace across ~#name~, ~@name~, and ~^name~
+- Line breaks preserved with no hard-break construct to learn
+- Unknown spells degrade predictably, so a newer document still reads in an older tool
