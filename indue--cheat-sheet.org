@@ -62,25 +62,27 @@ _%[underlined and struck out]
 
 ** Mid-word
 
-Brackets work anywhere, including inside a word:
+Brackets work anywhere, including inside a word. Mid-word, the target must be in brackets: a bare word will not do, because ~word:word~ is an ordinary prose shape.
 
 #+begin_example
 abso*[lutely]
-the 4:sup:th time
-H:sub:2O
+the 4:[th].sup: time
+H:[2].sub:O
 #+end_example
 
 * Structure
 
 ** Headings
 
-~=~ makes a heading. Nesting comes from indentation, not from repeating the mark.
+~=~ makes a heading. Add marks for deeper levels.
 
 #+begin_example
 = Project Notes
-  = Research
-  = Implementation
+== Research
+== Implementation
 #+end_example
+
+Inside a list you only ever need one ~=~; the level follows the nesting.
 
 ** Lists
 
@@ -252,11 +254,11 @@ Her role is &alice.role.
 
 #+begin_example
 [the docs](https://example.com)
-:link[https://example.com]:the docs
+:link[https://example.com]:docs
 :link[https://example.com]:{the *docs*}
 #+end_example
 
-The first is the familiar form. The others let you style the label or link to a station instead of a URL.
+The first is the familiar form. The others let you style the label or link to a station instead of a URL. A bare label stops at the first space, so anything longer than one word goes in braces.
 
 * Comments
 
@@ -290,12 +292,12 @@ Open a satchel with a run of ~~~ and leave it unclosed; it ends at the end of th
 
 These are shapes taken from other markup because you already know them. They work, they are the complete list, and they do not follow Indue's own rules.
 
-| Write            | Same as             |
-|------------------+---------------------|
-| ~[label](url)~     | ~:link[url].[label]~    |
-| ~[]~ or ~[ ]~        | ~:o~                  |
-| ~[>]~              | ~:>~                  |
-| ~[x]~              | ~:x~                  |
+| Write            | Same as                |
+|------------------+------------------------|
+| ~[label](url)~     | ~:link[url]:{label}~     |
+| ~[]~ or ~[ ]~        | ~:task<open>~            |
+| ~[>]~              | ~:task<active>~          |
+| ~[x]~              | ~:task<closed>~          |
 
 The checkbox forms only work at the start of a block, after any list marker.
 
