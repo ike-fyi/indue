@@ -21,6 +21,11 @@ conforming Indue tool need not implement it, and mandatory in the sense that
 a tool which *does* handle multi-document collections must implement it as
 written, or collections will not resolve consistently between applications.
 
+The model is described in Indue's terms throughout, and deliberately so. Little
+of it is bound to Indue's syntax, though: file disposition, a public layer, and
+a scoped namespace are ideas any plain-text system could adopt. Applying them
+elsewhere is not what this document specifies.
+
 ** What is specified here
 
 | Topic                       | Covers                                          |
@@ -64,7 +69,7 @@ The complete visibility model in four rules:
    findable for the language to be useful, so this is the default with no
    opt-in required.
 3. *Configuration is private by default.* Codex definitions
-   (~@<project> ... :~), schema declarations (~:+[a)]~), satchels, and
+   (~<#project> ... :~), schema declarations (~:step[a)]~), satchels, and
    any other configuration-shaped spell are file-local unless promoted
    with a beacon (~!~). The beacon prefix on a cauldron or satchel
    promotes it to the lair's public layer.
@@ -79,8 +84,8 @@ The four rules together, in one file:
 #+begin_example
 ; notes/projects/alpha.indue
 
-@<project> .bg<#f0f0f0> :   ; rule 3: private, styles only this file
-!@<client> .card :          ; rule 3: beaconed, styles the whole lair
+<#project>.bg<#f0f0f0>:     ; rule 3: private, styles only this file
+!<#client>.card:            ; rule 3: beaconed, styles the whole lair
 
 - = Project Alpha ^alpha #project
   Internal notes on the rollout.
@@ -223,13 +228,13 @@ By default, a codex configures only the file it appears in. The *beacon*
 namespace visible to every other file in the same lair.
 
 #+begin_example
-@<project> .bg<#f0f0f0> :        ; file-local: only this file sees it
+<#project>.bg<#f0f0f0>:          ; file-local: only this file sees it
 
-!@<project> .bg<#f0f0f0> :       ; lair-public: every file in the lair sees it
+!<#project>.bg<#f0f0f0>:         ; lair-public: every file in the lair sees it
 #+end_example
 
-The beacon attaches to the cauldron as a whole. Inline (~!@<project> .bg<#f0f0f0>.card :~)
-and multiline (~!@<project>~ followed by spell lines and a terminator)
+The beacon attaches to the cauldron as a whole. Inline (~!<#project>.bg<#f0f0f0>.card:~)
+and multiline (~!<#project>~ followed by spell lines and a terminator)
 forms both accept the prefix.
 
 There is no inline form that beacons a single property /inside/ a cauldron.
