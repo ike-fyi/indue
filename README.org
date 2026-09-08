@@ -341,15 +341,15 @@ There is no ~quarter~. Use ~every 3 months~.
 
 ** Anchoring
 
-A pattern says how often, never when. The anchor is the date spell on the same item.
+A pattern says how often, never when it starts. The anchor is the date spell on the same item, and it supplies the series start.
 
-Where pattern and anchor disagree, the pattern wins.
+Where pattern and anchor disagree, the pattern wins and the anchor supplies only the starting point.
 
 #+begin_example
 - :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
 #+end_example
 
-Produces third Saturdays, not the 20th.
+Produces third Saturdays from April 2026 onward, not the 20th of each month. The anchor is not discarded; it is where counting begins. Use ~:from~ where a series should start later than its anchor.
 
 ** Completion anchoring
 
