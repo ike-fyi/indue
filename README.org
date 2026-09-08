@@ -49,20 +49,7 @@ Nesting is by indentation. Tabs recommended.
 
 Syntax: ~=~ followed by a space, at line start or after a socket.
 
-#+begin_example
-= Project Notes
-  = Research
-
-- = Chapter One
-  - a point
-#+end_example
-
-Inside a nested structure, level comes from ancestry: each ~=~ takes the
-level of the nearest heading above it, plus one. Repeating the mark is
-unnecessary there.
-
-In a flat document, where every heading sits at the same margin, level comes
-from the count instead:
+A *standalone* heading sits at line start, and its level comes from the count:
 
 #+begin_example
 = Heading 1
@@ -70,7 +57,19 @@ from the count instead:
 === Heading 3
 #+end_example
 
-A heading after a socket promotes that list item to a heading. The item remains a list item.
+Inside a list, a heading after a socket promotes that item. Level comes from list
+depth, so a single ~=~ is enough and repeating the mark is unnecessary:
+
+#+begin_example
+- = Chapter One
+  - a point
+  - = A subsection
+#+end_example
+
+The promoted item remains a list item.
+
+A standalone heading is not indented. To indent without a visible marker, use a
+list with invisible markers (~:list<[]>~).
 
 ** Dash mode
 
