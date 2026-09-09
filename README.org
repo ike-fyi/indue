@@ -384,12 +384,18 @@ mark reaches it.
 |-----------+----------+-----------+----------------------------------------------------|
 | ~#work~     | sigil    | a tag     | to the first waypoint of that name                 |
 | ~@alice~    | signet   | a mention | to the last ledger of that name                    |
-| ~^intro~    | waypoint | a stop    | from a sigil, and on to the next waypoint          |
+| ~^intro~    | waypoint | a stop    | from a sigil or the previous waypoint, on to the next |
 | ~&alice&~   | ledger   | a record  | from any signet; an endpoint, so nothing leaves it |
 
 Two of these are links in different senses. A waypoint is a *multi-hop* link: it
 goes somewhere, and from there onward. A ledger is an *end-hop* link: it is
 where arrivals stop.
+
+Both build a sequence out of a repeated name, and the two sequences run in
+different directions. A waypoint trail is a path through the *document*, which
+is spatial: here, then there. A ledger is a path through a record's *history*,
+which is not spatial at all: what was known then, and what is known by now.
+Either can be read at a point along it.
 
 ** What a waypoint reaches
 
@@ -403,18 +409,19 @@ where arrivals stop.
 - From any signet of the same name.
 - Nothing onward. A ledger is where a lookup ends.
 
-** Why the two are different
+** Waypoints form trails
 
-Waypoints form *trails*. Repeat a name and the waypoints chain in document order,
-cycling by default, ordered where you number them, and stopping where you
-terminate them. That is a guided path through a document: three mentions of an
-argument become three stops a reader can walk.
+Repeat a name and the waypoints chain in document order, cycling by default,
+ordered where you number them, and stopping where you terminate them. Three
+mentions of an argument become three stops a reader can walk.
 
-Ledgers *accumulate*. Every declaration of a name adds to one record, so the
-last one renders the culmination, and a query can ask what the record held at
-any earlier point in the document. Character sheets that grow through a
-narrative, a project whose facts change as it proceeds, and a contact whose
-details get filled in over time all fall out of that one behaviour.
+** Ledgers keep a running record
+
+Every declaration of a name is an *entry*. Entries accumulate in document order,
+so the last one carries the running total and a query can ask what the record
+held at any earlier point. Character sheets that grow through a narrative, a
+project whose facts change as it proceeds, and a contact filled in over time all
+fall out of that one behaviour.
 
 Three forms each:
 
@@ -459,12 +466,12 @@ email | alice@example.com
 ]
 #+end_example
 
-- Linking goes to the *last* declaration.
-- Properties *accumulate* across all declarations, in document order.
-- Repeated keys form a history; a read returns the latest.
+- Linking goes to the *last* entry.
+- Properties *accumulate* across all entries, in document order.
+- Repeated keys form a history; a read returns the latest, which is the running balance.
 - Machine-generated block identifiers are ledgers: ~&n3b7c2&~.
 
-Keep the whole record on the last ledger unless tracking milestones: a simple renderer shows only that block's properties.
+Keep the whole record on the last entry unless you are deliberately tracking milestones: a simple renderer shows only that block's properties.
 
 ** Versions
 
