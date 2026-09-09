@@ -373,14 +373,48 @@ Syntax: ~:completions[dates]~, anywhere in the task's block.
 
 * Entities
 
-Four marks, one shared namespace. Same name means the same thing.
+Entities are how Indue names a person, a place, or a thing and then gets back to
+it. One mechanism covers tagging, linking, backlinks, contact cards, guided
+tours through a document, and metadata that accumulates as a document goes on.
 
-| Mark      | Is      | Goes to                    |
-|-----------+---------+----------------------------|
-| ~#work~     | sigil   | the station: a named place |
-| ~@alice~    | signet  | the source: the record     |
-| ~^intro~    | station | that spot, and its trail   |
-| ~&alice&~   | source  | (endpoint only)            |
+Four marks, one shared namespace. The same name means the same thing whichever
+mark reaches it.
+
+| Mark      | Name     | Commonly  | Links                                              |
+|-----------+----------+-----------+----------------------------------------------------|
+| ~#work~     | sigil    | a tag     | to the first waypoint of that name                 |
+| ~@alice~    | signet   | a mention | to the last ledger of that name                    |
+| ~^intro~    | waypoint | a stop    | from a sigil, and on to the next waypoint          |
+| ~&alice&~   | ledger   | a record  | from any signet; an endpoint, so nothing leaves it |
+
+Two of these are links in different senses. A waypoint is a *multi-hop* link: it
+goes somewhere, and from there onward. A ledger is an *end-hop* link: it is
+where arrivals stop.
+
+** What a waypoint reaches
+
+- From a sigil of the same name, landing on the first waypoint.
+- Back to the waypoint before it on the trail.
+- On to the next waypoint, or round to the first where the trail cycles.
+- Nowhere, where the trail is terminated with ~| x^~.
+
+** What a ledger reaches
+
+- From any signet of the same name.
+- Nothing onward. A ledger is where a lookup ends.
+
+** Why the two are different
+
+Waypoints form *trails*. Repeat a name and the waypoints chain in document order,
+cycling by default, ordered where you number them, and stopping where you
+terminate them. That is a guided path through a document: three mentions of an
+argument become three stops a reader can walk.
+
+Ledgers *accumulate*. Every declaration of a name adds to one record, so the
+last one renders the culmination, and a query can ask what the record held at
+any earlier point in the document. Character sheets that grow through a
+narrative, a project whose facts change as it proceeds, and a contact whose
+details get filled in over time all fall out of that one behaviour.
 
 Three forms each:
 
@@ -392,25 +426,28 @@ Three forms each:
 
 A bare ~#~ at line start sigils the whole line.
 
-** Stations
+** Waypoints
 
 Syntax: ~^name~, visible, may repeat.
 
-Repeated stations form a *trail*, cycling in document order. Ordering and termination:
+Repeated waypoints form a *trail*, cycling in document order. Ordering and termination:
 
 #+begin_example
 ^argument           ; three of these auto-cycle
 ^argument
 ^argument
 
-^argument | 1       ; explicitly ordered
-^argument | 2
-^argument | x       ; terminator
+^argument | 1^      ; explicitly ordered
+^argument | 2^
+^argument | x^      ; terminator
 #+end_example
 
-Several stations on one block are aliases resolving to one identity.
+A bare waypoint stops at whitespace, so an ordered waypoint must be closed (~^…^~)
+or bracketed (~^[argument | 1]~).
 
-** Sources
+Several waypoints on one block are aliases resolving to one identity.
+
+** Ledgers
 
 Syntax: ~&name&~, not rendered, shadows.
 
@@ -425,9 +462,9 @@ email | alice@example.com
 - Linking goes to the *last* declaration.
 - Properties *accumulate* across all declarations, in document order.
 - Repeated keys form a history; a read returns the latest.
-- Machine-generated block identifiers are sources: ~&n3b7c2&~.
+- Machine-generated block identifiers are ledgers: ~&n3b7c2&~.
 
-Keep the whole record on the last source unless tracking milestones: a simple renderer shows only that block's properties.
+Keep the whole record on the last ledger unless tracking milestones: a simple renderer shows only that block's properties.
 
 ** Versions
 
@@ -437,15 +474,15 @@ Syntax: ~|value~ after a name, authored rather than positional.
 &goblin|1&
 &goblin|2&
 
-@goblin|1           ; reach a specific version
-#argument|2         ; reach a specific station
+@goblin|1@          ; reach a specific version
+#argument|2#        ; reach a specific waypoint
 #+end_example
 
 Shorthand for a ~version~ property.
 
-** Stations and sources compared
+** Waypoints and ledgers compared
 
-|            | Station ~^~            | Source ~&~              |
+|            | Waypoint ~^~            | Ledger ~&~              |
 |------------+----------------------+-----------------------|
 | Duplicates | cycle, forming a trail | accumulate into one record |
 | Rendering  | visible              | not rendered          |
@@ -473,7 +510,7 @@ level      | 4
 #+end_example
 
 - Whitespace around pipes is trimmed; columns may be aligned.
-- Values recognised by shape: URL, station, source, date, number, text.
+- Values recognised by shape: URL, waypoint, ledger, date, number, text.
 - Cast at the point of use; inert if the cast fails.
 - Keys share one namespace with spell-written properties: ~:due<...>~ and ~:info[due | ...]~ both set ~due~.
 
@@ -481,10 +518,10 @@ Read one value with a dot:
 
 #+begin_example
 Their role is &alice.role.
-&goblin|1.hp
+&goblin|1&.hp
 #+end_example
 
-Dotted access works on sources only.
+Dotted access works on ledgers only.
 
 * Comments
 
@@ -1020,8 +1057,8 @@ See *Indue Query Syntax* for the grammar and *Indue Reference Schema* for the fi
 | ~{}~        | conduit                                     |
 | ~#~         | sigil                                       |
 | ~@~         | signet in text; slot target in spell world  |
-| ~^~         | station                                     |
-| ~&~         | source                                      |
+| ~^~         | waypoint                                     |
+| ~&~         | ledger                                      |
 | ~|~         | version, trail order, ~:info~ pair, table cell |
 | ~;~         | whisper                                     |
 | ~!~         | beacon                                      |
