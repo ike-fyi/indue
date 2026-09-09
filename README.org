@@ -206,11 +206,16 @@ line-start, or closing-bracket position. Mid-word, put the target in a container
 
 ** Escaping
 
-Syntax: ~\~ before a character renders it literally.
+Syntax: ~\~ before a character renders it literally. Works on glamour marks and
+on container marks.
 
 #+begin_example
 \*not bold
+\[sic]                     ; literal brackets
 #+end_example
+
+Escaping the opener is enough: a closing mark with nothing open is already
+ordinary text.
 
 * Tasks
 
@@ -449,8 +454,9 @@ Repeated waypoints form a *trail*, cycling in document order. Ordering and termi
 ^argument | x^      ; terminator
 #+end_example
 
-A bare waypoint stops at whitespace, so an ordered waypoint must be closed (~^…^~)
-or bracketed (~^[argument | 1]~).
+A bare waypoint stops at whitespace, so an ordered waypoint must be closed
+(~^…^~). The bracketed form cannot do this job: a scroll carries a multi-word
+*name*, so the pipe would be part of the name rather than an ordering.
 
 Several waypoints on one block are aliases resolving to one identity.
 
@@ -590,6 +596,12 @@ A spell takes at most one vessel and one scroll *or* conduit. Order between
 kinds is free.
 
 ** Scrolls are unparsed
+
+*Unparsed* means no Indue syntax inside: no glamours, no spells, no entities. It
+does not mean opaque. The receiving spell may interpret the text however it
+likes, which is how ~:info~ reads pipes and newlines, ~:repeat~ reads a pattern,
+and ~:query~ reads SQL. What such a spell reads is always marked explicitly, so
+content never decides whether it is an argument.
 
 A scroll is always one bracket pair, and brackets inside it are literal.
 
@@ -1052,32 +1064,6 @@ $ indue query "SELECT block WHERE task = open"
 Result shape determines rendering: one value inline, a list as a list, a matrix as a table.
 
 See *Indue Query Syntax* for the grammar and *Indue Reference Schema* for the fields.
-
-* Reserved characters
-
-| Character | Status                                      |
-|-----------+---------------------------------------------|
-| ~:~         | wall, spell prefix                          |
-| ~.~         | bond                                        |
-| ~<>~        | vessel                                      |
-| ~[]~        | scroll                                      |
-| ~{}~        | conduit                                     |
-| ~#~         | sigil                                       |
-| ~@~         | signet in text; slot target in spell world  |
-| ~^~         | waypoint                                     |
-| ~&~         | ledger                                      |
-| ~|~         | version, trail order, ~:info~ pair, table cell |
-| ~;~         | whisper                                     |
-| ~!~         | beacon                                      |
-| ~~~         | satchel                                     |
-| ~\~         | nick, escape                                |
-| ~*~ ~/~ ~_~ ~%~ ~`~ | glamours                              |
-| ~-~ ~+~ ~=~     | sockets and headings                        |
-| ~()~        | available; too common in prose to reserve   |
-| ~>~         | available in text; reserved in spell names  |
-| ~$~         | free in prose; only ~:$~ is a spell           |
-
-A character reserved in the material world is not thereby spent in spell world, and the reverse also holds.
 
 * Why Not Org or Markdown?
 
