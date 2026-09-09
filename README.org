@@ -522,87 +522,32 @@ and its space.
 ~:link[url]:label~ is exact only for a single-word label, since the grab rule
 stops at whitespace. A conduit carries any label.
 
-* Spells
+* Containers
 
-Everything above is shorthand for a spell. A spell is a named transform.
+Three bracket kinds carry text and values in spell world.
 
-** Spell world
+| Container | Is                   | Contents                        |
+|-----------+----------------------+---------------------------------|
+| ~<a b c>~   | vessel               | values, space-separated         |
+| ~[text]~    | scroll               | unparsed: nothing inside is syntax |
+| ~{text}~    | conduit              | rich parsed content             |
 
-Indue text is either *material* (content) or *spell world* (syntax).
+Each container does one of two jobs, and which one is decided by how it attaches:
 
-Opens:
+| Attached      | Job    | Example         |
+|---------------+--------+-----------------|
+| glued to a spell | *input* to that spell | ~:span-bg<red>~ |
+| bonded with ~.~   | a *target* the chain acts on | ~:bold.<@alice>~ |
 
-| Form            | Example        |
-|-----------------+----------------|
-| the wall ~:~      | ~:bold:word~     |
-| a leading container | ~{text}.bold~ |
-| a bond continuing a chain | ~.spell~ on a new line |
+That single distinction is what makes a long spell readable. A container never
+does both jobs at once.
 
-Closes:
+A spell takes at most one vessel and one scroll *or* conduit. Order between
+kinds is free.
 
-- whitespace outside a container
-- a line break outside a container, unless the next line continues the chain
-- the closing wall ~:~
+** Scrolls are unparsed
 
-The wall is optional where a leading container already opens spell world. Write it mid-word, where no whitespace precedes.
-
-#+begin_example
-16:[th].sup:       ; mid-word needs the wall
-#+end_example
-
-** Line breaks
-
-| Case                              | Effect                    |
-|-----------------------------------+---------------------------|
-| inside a container                | ends nothing              |
-| next line starts with a bond ~.~    | chain continues           |
-| next line starts with a wall ~:~    | fresh construct           |
-| anything else                     | construct ends            |
-
-** Spell slots
-
-A slot is what sits between two bonds.
-
-| Slot              | Is                                     |
-|-------------------+----------------------------------------|
-| ~spell~, ~spell<in>~  | an effect, acting on construct targets |
-| ~<x>~, ~[x]~, ~{x}~     | a construct target                     |
-| ~spell@<x>~         | an effect acting on that target alone  |
-
-** Shapes
-
-Same construct, two orders. Both are valid; neither is preferred.
-
-#+begin_example
-:bold.{this text}          ; cast shape: spell first
-{this text}.bold           ; offering shape: target first
-#+end_example
-
-Written out:
-
-#+begin_example
-:spell1.spell2.{target}.<target>.[target]:
-:{target1}.<target2>.spell1.spell2:
-#+end_example
-
-Position carries no meaning, so interleaving is legal but not written in practice.
-
-** Containers
-
-| Container | Is                    | Glued to a spell | Bonded          |
-|-----------+-----------------------+------------------+-----------------|
-| ~<a b c>~   | vessel, value list    | input            | construct target |
-| ~[text]~    | scroll, unparsed      | input            | construct target |
-| ~{text}~    | conduit, rich parsed  | input            | construct target |
-
-#+begin_example
-:span-bg<red>              ; input, glued
-:bold.<@alice>             ; target, bonded
-#+end_example
-
-A spell takes at most one vessel and one scroll *or* conduit. Order between kinds is free.
-
-Scrolls are *unparsed*: nothing inside is Indue syntax. A scroll is always one bracket pair; brackets inside are literal.
+A scroll is always one bracket pair, and brackets inside it are literal.
 
 #+begin_example
 [[see appendix]]           ; renders literal brackets
@@ -621,28 +566,68 @@ Scrolls are *unparsed*: nothing inside is Indue syntax. A scroll is always one b
 
 Space-separated. Commas are accepted and treated as whitespace.
 
-** Targets
+* Spells
 
-| Form        | Target is                          |
-|-------------+------------------------------------|
-| ~:spell:word~ | the glued word (grab rule)         |
-| ~.<ref>~      | the construct's target             |
-| ~@<ref>~      | that slot's target alone           |
-| none        | the enclosing scope, entire          |
+Everything above is shorthand for a spell. A spell is a named transform.
 
-The *grab rule*: a bare word glued to the right of a spell is its target. Right only, glued only. This is what makes ~*word~ work.
+** Anatomy of a spell
 
-*** Sub-spell targets
-
-~@~ confines a slot's *direct* effect to its own target. It does not remove that target from anything else.
+Every part of the syntax, in one construct:
 
 #+begin_example
-<@>.bold.color<green>@<@nancy>
+:spell1[input].spell2@<@nancy>.spell3{rich}.<@alice>.[plain].{styled}:
 #+end_example
 
-All signets go bold. Nancy goes green. Nancy is also bold, because she is a signet.
+| Fragment    | Role                                                        |
+|-------------+-------------------------------------------------------------|
+| ~:~ … ~:~       | the walls: open and close spell world                     |
+| ~spell1~      | an effect                                                   |
+| ~[input]~     | glued, so it is *input* to ~spell1~                           |
+| ~.~           | a bond, joining one slot to the next                        |
+| ~@<@nancy>~   | glued with ~@~: a *homing target*, which ~spell2~ alone acts on |
+| ~{rich}~      | glued, so it is input to ~spell3~                             |
+| ~<@alice>~    | bonded: a *construct target*, which the whole chain acts on   |
+| ~[plain]~     | bonded: a construct target of literal text                  |
+| ~{styled}~    | bonded: a construct target of rich text                     |
 
-Mainly for letting a class reach its own internal parts.
+Nothing there is common in practice. Most spells are one effect and one target.
+
+** Opening a spell
+
+| Form                      | Example                |
+|---------------------------+------------------------|
+| the wall ~:~                | ~:bold:word~             |
+| a leading container       | ~{text}.bold~            |
+| a bond continuing a chain | ~.spell~ on a new line   |
+
+Spell world closes at whitespace outside a container, at a line break outside a
+container unless the next line continues the chain, or at the closing wall ~:~.
+
+The wall is optional where a leading container already opens spell world. Write
+it mid-word, where no whitespace precedes:
+
+#+begin_example
+16:[th].sup:       ; mid-word needs the wall
+#+end_example
+
+*** Line breaks
+
+| Case                              | Effect                    |
+|-----------------------------------+---------------------------|
+| inside a container                | ends nothing              |
+| next line starts with a bond ~.~    | chain continues           |
+| next line starts with a wall ~:~    | fresh construct           |
+| anything else                     | construct ends            |
+
+** Slots
+
+A slot is what sits between two bonds.
+
+| Slot              | Is                                     |
+|-------------------+----------------------------------------|
+| ~spell~, ~spell<in>~  | an effect, acting on construct targets |
+| ~<x>~, ~[x]~, ~{x}~     | a construct target                     |
+| ~spell@<x>~         | an effect acting on that target alone  |
 
 ** Chains
 
@@ -653,13 +638,63 @@ Syntax: ~.~ bonds spells.
 :color<red>.mix<blue 50%>
 #+end_example
 
-A chain is an ordered fold over property state. Order matters where spells govern the same property.
+A chain is an ordered fold over property state. Order matters where spells
+govern the same property.
 
 ~:strip~ resets: bare resets everything, ~:strip<:bold>~ resets one property.
 
+** Aiming
+
+Aiming answers one question: what does this act on? Four answers are bounded by
+something already on the page. The fifth, a shell, is open-ended, which is the
+only reason it needs a closer.
+
+| Form        | Target is                          |
+|-------------+------------------------------------|
+| ~:spell:word~ | the glued word (grab rule)         |
+| ~.<ref>~      | the construct's target             |
+| ~@<ref>~      | that slot's target alone           |
+| none        | the enclosing scope, entire        |
+| ~:spell::~    | a region, until closed (see Shells) |
+
+*** No target
+
+A spell with no target takes its enclosing scope entire. Position inside that
+scope is not significant.
+
+*** The grab rule
+
+A bare word glued to the right of a spell is its target. Right only, glued only.
+This is what makes ~*word~ work.
+
+*** Explicit targets
+
+A container bonded with ~.~ is a construct target: every effect in the chain acts
+on it.
+
+#+begin_example
+:bold.<@alice>             ; target, bonded
+:span-bg<red>              ; input, glued
+#+end_example
+
+*** Homing sub-spells
+
+~@~ confines a slot's *direct* effect to its own target. It does not remove that
+target from anything else.
+
+#+begin_example
+<@>.bold.color<green>@<@nancy>
+#+end_example
+
+All signets go bold. Nancy goes green. Nancy is also bold, because she is a
+signet.
+
+Mainly for letting a class reach its own internal parts.
+
 ** Reach
 
-Block spells reach the block *and what it owns*. Span spells reach their own run only.
+Block spells reach the block *and what it owns*. Span spells reach their own run
+only.
 
 | Spell               | Effect                        |
 |---------------------+-------------------------------|
@@ -674,6 +709,79 @@ Block spells reach the block *and what it owns*. Span spells reach their own run
 #+end_example
 
 Reach is ordinary property state: position in the chain does not matter.
+
+** Shells
+
+A shell is a targeting form, not a separate mechanism: it names a *region*
+instead of a word, a container, or a scope. Because a region has no edge until
+one is written, a shell is the one target that must be closed.
+
+The colon run says how far. It is one dial, not three constructs:
+
+| Run      | Means                                        |
+|----------+----------------------------------------------|
+| ~:~        | a wall: the construct ends here              |
+| ~::~       | a shell: a region, bounded by its scope      |
+| ~:::~      | a hypershell: a region that crosses outward  |
+
+Syntax: a spell chain or glamour run, then a colon run. Closed by a matching run.
+
+#+begin_example
+:span-bg<red>:: ... ::span-bg
+:bold.italic:: ... ::
+*:: ... ::*
+#+end_example
+
+*** Closing
+
+| Closer     | Effect                                              |
+|------------+-----------------------------------------------------|
+| ~::~         | closes *all* open shells of that length             |
+| ~::name~     | stops that effect only, in the innermost shell      |
+
+A shell closes when it has no active effects left. Closer length must match
+opener length.
+
+#+begin_example
+:bold.italic::
+Both here.
+::bold             ; bold stops, italic continues
+::italic           ; nothing left, so the shell closes
+#+end_example
+
+*** Auto-close
+
+- Opened at a socket's block-start position: closes when structure outdents past that depth.
+- Any open shell closes at end of document.
+
+*** Overlap
+
+Shells overlap without nesting.
+
+#+begin_example
+:bold:: ... :italic:: ... ::bold ... ::italic
+#+end_example
+
+Renders as consecutively-nested zones: a new zone at each open or close, with
+the effects in force over that span.
+
+** Hypershells
+
+Syntax: a colon run of *three or more*. Length-matched, so content cannot close
+it early.
+
+#+begin_example
+:code:::
+std::cout << Foo::Bar;
+:::
+#+end_example
+
+- The closer must be alone on its own line.
+- Block only; there is no inline form.
+- Escape ladder is unbounded: content with ~:::~ uses four.
+
+Use for content Indue must not read. A bare ~::~ inside an ordinary shell would
+close every open shell.
 
 ** Spell blocks
 
@@ -703,66 +811,40 @@ A block with no rendered content. Astral is a state, not a kind.
 :serif                     ; sets the default from here on
 #+end_example
 
-* Shells
+** Forms compared
 
-A shell applies effects over an open-ended region.
-
-Syntax: a spell chain or glamour run, then a colon run. Closed by a matching run.
+Same construct, three ways to write it.
 
 #+begin_example
-:span-bg<red>:: ... ::span-bg
-:bold.italic:: ... ::
-*:: ... ::*
+:bold.{this text}          ; cast shape: spell first
+{this text}.bold           ; offering shape: target first
+*this text*                ; glamour: shorthand for the common case
 #+end_example
 
-** Closing
-
-| Closer     | Effect                                              |
-|------------+-----------------------------------------------------|
-| ~::~         | closes *all* open shells of that length             |
-| ~::name~     | stops that effect only, in the innermost shell      |
-
-A shell closes when it has no active effects left.
-
-Closer length must match opener length.
+Cast and offering shapes are both valid and neither is preferred. Position
+carries no meaning, so interleaving is legal but not written in practice:
 
 #+begin_example
-:bold.italic::
-Both here.
-::bold             ; bold stops, italic continues
-::italic           ; nothing left, so the shell closes
+:spell1.spell2.{target}.<target>.[target]:
+:{target1}.<target2>.spell1.spell2:
 #+end_example
 
-** Auto-close
+*** How a glamour maps to a spell
 
-- Opened at a socket's block-start position: closes when structure outdents past that depth.
-- Any open shell closes at end of document.
+| Glamour            | Spell            |
+|--------------------+------------------|
+| ~*word~ (grab rule)  | ~:bold:word~       |
+| ~*several words*~    | ~:bold.{several words}~ |
+| ~*[explicit]~        | ~:bold.[explicit]~ |
+| ~*~ alone, first in scope | ~:bold~ untargeted |
 
-** Overlap
+*** What a glamour cannot do
 
-Shells overlap without nesting.
-
-#+begin_example
-:bold:: ... :italic:: ... ::bold ... ::italic
-#+end_example
-
-Renders as consecutively-nested zones: a new zone at each open or close, with the effects in force over that span.
-
-** Hypershells
-
-Syntax: a colon run of *three or more*. Length-matched, so content cannot close it early.
-
-#+begin_example
-:code:::
-std::cout << Foo::Bar;
-:::
-#+end_example
-
-- The closer must be alone on its own line.
-- Block only; there is no inline form.
-- Escape ladder is unbounded: content with ~:::~ uses four.
-
-Use for content Indue must not read. A bare ~::~ inside an ordinary shell would close every open shell.
+- Carry an argument: there is no glamour form of ~:color<red>~.
+- Chain: use a spell, or stack marks with a bracket.
+- Control reach: ~:deep~ and ~:shallow~ have no marks.
+- Open anywhere: a lone mark is a spell only in first position in its scope.
+- Be extended: the set is closed, and a class defines a spell rather than a mark.
 
 * Configuration
 
