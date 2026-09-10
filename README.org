@@ -4,7 +4,7 @@
 
 * About
 
-Indue is a plain-text markup language inspired by Org-mode, Typst, CSS, and Markdown, aimed at giving personal knowledge management apps one consistent syntax for the features they all need.
+Indue is a plain-text programmable markup language inspired by Org-mode, Typst, CSS, and Markdown, aimed at giving personal knowledge management apps one consistent syntax for the features they all need.
 
 Indue combines a lot of common devices like property drawers, attributes, functions, supertags, etc into a single device called a spell that has a flexible format.
 
