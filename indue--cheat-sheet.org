@@ -12,7 +12,7 @@ If you already write Markdown or Org, most of your habits carry over. Three thin
 |----------------+------------+----------------------------------------------|
 | ~# Heading~      | ~= Heading~  | ~#~ is a tag, as it is everywhere else online  |
 | ~_italic_~       | ~/italic/~   | ~_~ is underline, which Markdown lacks         |
-| ~- [ ] task~     | ~- :o task~  | ~[ ]~ also works, and is listed under Goety    |
+| ~- [ ] task~     | ~- :o task~  | ~[ ]~ also works, and is a borrowed form    |
 | ~```~ fence      | ~`:::~       | ~`~ is an ordinary mark, so repeats mean nothing |
 
 * Text
@@ -83,6 +83,21 @@ H:[2].sub:O
 #+end_example
 
 Inside a list you only ever need one ~=~; the level follows the nesting.
+
+** Blocks and line breaks
+
+A *block* is a paragraph, a list item, or a heading. A blank line ends one.
+
+Line breaks you type are kept. Two lines stay two lines, so an address or a
+stanza needs no special mark:
+
+#+begin_example
+14 Bridge Street
+Camden
+#+end_example
+
+The trade is that prose meant to flow goes on one line. Wrapping a paragraph
+yourself will show up as wrapped.
 
 ** Lists
 
@@ -221,8 +236,8 @@ Four marks, four intents. All four share one namespace, so ~#alice~ and ~@alice~
 |-----------+----------+---------------------------------|
 | ~#work~     | a tag    | Categories, topics              |
 | ~@alice~    | a mention | People, places, things         |
-| ~^intro~    | a station | A spot you can link to         |
-| ~&alice&~   | a source | Where facts about it live      |
+| ~^intro~    | a waypoint | A spot you can link to         |
+| ~&alice&~   | a ledger | Where facts about it live      |
 
 Multi-word names use brackets:
 
@@ -233,32 +248,54 @@ Multi-word names use brackets:
 
 ** Keeping facts about something
 
-A source holds a record. It does not render; a mention navigates to it.
+A ledger holds a record. It does not render; a mention navigates to it.
 
 #+begin_example
 &alice&
-:info[
-role   | Engineer
-team   | Platform
-email  | alice@example.com
-]
+:role  = Engineer
+:team  = Platform
+:email = alice@example.com
 #+end_example
 
-Read one value back with a dot:
+Each line is just a spell. Any name works, so write down whatever you like:
 
 #+begin_example
-Her role is &alice.role.
+:calories = 420
+:mood     = restless
+:tags     = fighter | veteran
+#+end_example
+
+Use ~|~ when a value has several parts, so nothing needs quotes:
+
+#+begin_example
+:font = Helvetica Neue | Arial
+#+end_example
+
+Use ~+=~ to add to a value instead of replacing it, which is how a ledger keeps
+a running total:
+
+#+begin_example
+:hp += 15
+#+end_example
+
+Read one back:
+
+#+begin_example
+Her role is <@alice.role>.
 #+end_example
 
 * Links
 
 #+begin_example
-[the docs](https://example.com)
-:link[https://example.com]:docs
-:link[https://example.com]:{the *docs*}
+<the docs|https://example.com>
+[the docs].link<https://example.com>
+[[https://example.com|the docs]]
 #+end_example
 
-The first is the familiar form. The others let you style the label or link to a station instead of a URL. A bare label stops at the first space, so anything longer than one word goes in braces.
+The first is the everyday form: label, pipe, destination. The second is the same
+thing written out, and is the one to use when the link needs styling or points at
+a waypoint. The third is the wiki form, which puts the destination first because
+that is how wikis write it.
 
 * Comments
 
@@ -288,13 +325,13 @@ Anything written in here is a note to yourself. It never renders.
 
 Open a satchel with a run of ~~~ and leave it unclosed; it ends at the end of the file.
 
-* Goety: The Borrowed Forms
+* Borrowed Forms
 
 These are shapes taken from other markup because you already know them. They work, they are the complete list, and they do not follow Indue's own rules.
 
 | Write            | Same as                |
 |------------------+------------------------|
-| ~[label](url)~     | ~:link[url]:{label}~     |
+| ~[[url|label]]~      | ~<label|url>~            |
 | ~[]~ or ~[ ]~        | ~:task<open>~            |
 | ~[>]~              | ~:task<active>~          |
 | ~[x]~              | ~:task<closed>~          |
