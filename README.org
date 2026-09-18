@@ -219,13 +219,18 @@ ordinary text.
 
 * Tasks
 
-** The three states
+** Three positions, any vocabulary
 
-| Write | State  | Borrowed form      |
-|-------+--------+-----------|
-| ~:o~    | open   | ~[]~ or ~[ ]~ |
-| ~:>~    | active | ~[>]~       |
-| ~:x~    | closed | ~[x]~       |
+Every task sits at one of three *lifecycle positions*. That set is fixed, and
+fixing it is what lets a task written in one application mean the same thing in
+another: a tool that has never heard of your vocabulary still knows whether the
+work is waiting, running, or done.
+
+| Write | Position | Borrowed form |
+|-------+----------+---------------|
+| ~:o~    | open     | ~[]~ or ~[ ]~     |
+| ~:>~    | active   | ~[>]~           |
+| ~:x~    | closed   | ~[x]~           |
 
 #+begin_example
 - :o Buy groceries
@@ -233,7 +238,26 @@ ordinary text.
 - :x Fix the sink
 #+end_example
 
-The set is closed. Applications must not add a fourth.
+Those three names are the positions' own, usable directly when nothing more is
+wanted. The *vocabulary* is yours: name as many states as you like, say which
+position each occupies, and put them in the order you work in.
+
+#+begin_example
+<:todo>.task<open>:
+<:next>.task<open>:
+<:waiting>.task<open>:
+<:done>.task<closed>:
+
+:cycle[gtd]<:todo :next :waiting :done>
+#+end_example
+
+Four states, three positions, one order. That is how a Kanban board, a GTD list,
+and a bug tracker all live in the same format without any of them having to
+agree on words — and a query can ask for the position, the state name, or the
+cycle order, whichever suits.
+
+What cannot grow is the set of positions, because that is the part other tools
+rely on. See Custom states and Cycles below.
 
 Borrowed forms work only at the start of a *material* block, after any list item and
 its space.
@@ -282,6 +306,9 @@ Syntax: ~:cycle[cycle]<:a :b :c>~
 - Name is a scroll; states are a vessel of referenced spell names.
 - Last declaration wins, both for a cycle and for a state's membership.
 - Without a declared cycle, advancing follows open → active → closed.
+
+A cycle is an ordered, enumerable list, so it is what an application advances
+through and what a query sorts by. Order is authored rather than inferred.
 
 * Scheduling
 
