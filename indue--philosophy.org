@@ -40,16 +40,46 @@ line-break rule rather than a construct: consecutive wall-initial lines stack
 into a block that reads like a drawer. The look is free; the machinery is not
 there.
 
-The same mechanism covers what other tools call supertags. A cauldron
+The same mechanism covers what other tools call supertags. An indued element
 (~<#project>~) attaches behaviour to a tag, which is what Tana and Notion do with
 types, except that in Indue the tag is optional. Nothing has to be declared
 before it can be used, and a document that wants one date on one block writes one
-date on one block. That is the same trade as ~:info~: free-text keys, where a
-typo makes a new key rather than an error.
+date on one block. That is the same trade free names make everywhere in the
+language: a typo becomes a new property rather than an error.
 
 Because the annotation travels on the line it describes, it also survives leaving
 Indue. ~:due<2026-04-15>~ still reads as a date to a program that has never heard
 of this language.
+
+* Spell Names and Property Names Are One Namespace
+
+A spell is a property write. ~:due<2026-04-15>~ writes ~due~; ~:bold~ writes
+~bold~. What "known" means is only that an application has display behaviour
+attached to that name, so an unrecognised spell is not a failure. It is a
+property write with nothing watching it.
+
+That collapses what other formats keep apart. Front matter, property drawers,
+attributes, and inline metadata are four syntaxes writing one conceptual store;
+here there is one syntax and one store, and the question of whether a name is
+"real" never arises.
+
+It is also recover-forward applied to the spell namespace. "Not yet defined" is
+a legal and useful state that upgrades when a referent appears: a document
+written today using a spell your parser has never heard of still carries the
+value, and a parser that later learns the name renders it. The alternative is
+discarding data because nothing was listening yet.
+
+The trade is stated rather than hidden. A misspelled spell name becomes a new
+property rather than an error, and no amount of care in the grammar can catch
+it, because there is nothing to catch it against. What is bought is that a
+document never loses what it was told, and that the vocabulary can grow without
+any document being invalidated.
+
+Two limits keep it safe. An unrecognised spell writes a *block property* and
+never a styling property, because styling aliases into the enclosing scope and
+could change rendering at a distance with nothing to trace it to. And the write
+is silent: a spell renders nothing unless it embeds, so metadata never costs a
+visible word on the page.
 
 * Configuration Is Text
 
@@ -107,18 +137,18 @@ silently claim the remainder of a block. Where an effect genuinely should begin
 partway through a scope, a shell names its own region, and opening one is
 deliberate.
 
-* Why a Lone Glamour Needs First Position
+* Why a Lone Sigil Needs First Position
 
-A spell carries a wall, so ~:bold~ is unambiguous wherever it lands. A glamour
+A spell carries a wall, so ~:bold~ is unambiguous wherever it lands. A sigil
 has no wall: the mark *is* the whole syntax.
 
 Recognising a lone mark anywhere would mean any stray asterisk or underscore
-silently restyled its block, and the characters glamours use are ordinary
+silently restyled its block, and the characters sigils use are ordinary
 punctuation that people type for their own sake. ~5 * 3~ is arithmetic. Position
-does for a glamour what the wall does for a spell.
+does for a sigil what the wall does for a spell.
 
 The restriction costs little because it applies only to the lone form. Paired
-glamours and the grab rule are self-delimiting and are recognised wherever they
+sigils and the grab rule are self-delimiting and are recognised wherever they
 sit, and the case worth protecting, one keystroke at the head of a heading, is
 exactly the case first position covers.
 
@@ -219,9 +249,9 @@ the zero-config end of a ramp they did not know was a ramp:
 ^argument          ; three of these auto-cycle: an undefined trail
 ^argument
 ^argument          ; look it up, and the fix is the same construct, ordered:
-^argument | 1
-^argument | 2
-^argument | x      ; ordered, terminated. the accident taught the feature.
+^argument | 1^
+^argument | 2^
+^argument | x^     ; ordered, terminated. the accident taught the feature.
 #+end_example
 
 The default is the on-ramp to the depth, and investigating what actually
@@ -277,15 +307,3 @@ Indue is not trying to be CommonMark. CommonMark is purely presentational with n
 
 - ~#~ as tag comes from social media and is universally understood.
 - ~:~ as function/evaluation is lightweight and familiar from emoji shortcodes, YAML keys, and general programming conventions.
-
-
-* Notes for the Split
-
-Material that arrived during design and has not yet been placed:
-
-- Application design from the reference implementation: cycling keys, magic
-  windows, dropdowns as pinned windows, and control styling. This is real design
-  work but it is not grammar, and it should go in an application document rather
-  than here.
-- The terminology boundary between codex, cauldron, and class is not settled, and
-  all three appear in more than one specification.
