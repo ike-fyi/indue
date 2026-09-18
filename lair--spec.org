@@ -49,8 +49,8 @@ independently of Indue.
 * Public/Private Visibility
 
 Indue distinguishes between *content* (text, blocks, list items, headings),
-*entities* (sigils, signets, stations, sources), and *configuration*
-(codexes, schema declarations, satchel-hosted spells). These three things
+*entities* (tags, signets, waypoints, ledgers), and *configuration*
+(indued elements, schema declarations, satchel-hosted spells). These three things
 have different default visibility, and understanding the rules is
 essential for working across multiple files.
 
@@ -62,20 +62,20 @@ The complete visibility model in four rules:
    inline content live in the file that contains them. Content does not
    leave its file unless something explicitly references it (e.g., via
    ~:embed~ or ~:popover~ from another file).
-2. *Entities are public by default.* Sigils (~#name~), signets (~@name~),
-   stations (~^name~), and sources (~&name&~) declared anywhere in
+2. *Entities are public by default.* Tags (~#tag~), signets (~@signet~),
+   waypoints (~^waypoint~), and ledgers (~&ledger&~) declared anywhere in
    a file automatically join the lair's *public layer* and become
    resolvable from every other file in the same lair. Names need to be
    findable for the language to be useful, so this is the default with no
    opt-in required.
-3. *Configuration is private by default.* Codex definitions
+3. *Configuration is private by default.* Indued element definitions
    (~<#project> ... :~), schema declarations (~:step[a)]~), satchels, and
    any other configuration-shaped spell are file-local unless promoted
-   with a beacon (~!~). The beacon prefix on a cauldron or satchel
+   with a beacon (~!~). The beacon prefix on an indued element or satchel
    promotes it to the lair's public layer.
 4. *Within a lair, the public layer is shared by all files.* Folder
    structure inside a lair is purely organizational, it does not create
-   scope boundaries. A public entity or beacon-promoted codex is visible
+   scope boundaries. A public entity or beacon-promoted indued element is visible
    to every file in the lair regardless of where each lives in the
    directory tree.
 
@@ -93,8 +93,8 @@ The four rules together, in one file:
 
 ~^alpha~ and ~#project~ join the public layer with no opt-in (rule 2), so
 another file can write ~@alpha~ and resolve it. The body text stays in this
-file (rule 1). The ~project~ codex styles nothing outside this file, while
-the beaconed ~client~ codex reaches every file in the lair (rule 3), no
+file (rule 1). The ~project~ indued element styles nothing outside this file, while
+the beaconed ~client~ indued element reaches every file in the lair (rule 3), no
 matter which folder they sit in (rule 4).
 
 ** What this means in practice
@@ -105,17 +105,17 @@ projects, places, etc., does not need to think about scope at all. Any
 one desk, not separate desks. The lair is the desk.
 
 A user wanting controlled lair-wide styling places one beacon satchel ,
-typically at the top of a config file, and writes their codexes there.
+typically at the top of a config file, and writes their indued elements there.
 Every file in the lair inherits the styling. No imports, no per-file
 declarations, no plumbing.
 
-A user with a private working note can write any codex they want without
-~!~ and trust that the codex affects only that file. Local overrides
+A user with a private working note can write any indued element they want without
+~!~ and trust that the indued element affects only that file. Local overrides
 stay local automatically.
 
 ** What beacons do (and don't) do
 
-Beacons govern *codex* visibility. They do not affect:
+Beacons govern *indued element* visibility. They do not affect:
 
 - *Entities*. These are lair-public regardless of beacon, because
   entities are names and names need to be resolvable.
@@ -126,7 +126,7 @@ Beacons govern *codex* visibility. They do not affect:
   has no public/private distinction; it is local rendering, not a
   declaration.
 
-The mental model: beacons promote /declarations/. A cauldron is a
+The mental model: beacons promote /declarations/. An indued element is a
 declaration ("here is how project should behave"). A spell invocation
 is not a declaration ("here is one bold word"). Names are
 declarations-of-existence, and they are public unconditionally.
@@ -139,8 +139,8 @@ import/export, described in the lairs section.
 
 ** Indue declares logical scope; the OS enforces security
 
-Indue's visibility model is *logical*, not enforced. Marking a codex with
-~!~ tells Indue tools that the codex is intended to be public. It does
+Indue's visibility model is *logical*, not enforced. Marking an indued element with
+~!~ tells Indue tools that the indued element is intended to be public. It does
 not encrypt anything, does not lock anything, and does not prevent
 someone with file access from reading or modifying it. Anyone who can
 read an Indue file can read everything in it, public or private.
@@ -168,7 +168,7 @@ The three read as what a participant does with what they carry: *indue* is to be
 
 ** The default carries no override
 
-An ~.indue~ file behaves exactly as the visibility rules describe: entities are lair-public, codexes are file-local unless beaconed, and content never leaves. Most files are this, and nothing about them needs deciding.
+An ~.indue~ file behaves exactly as the visibility rules describe: entities are lair-public, indued elements are file-local unless beaconed, and content never leaves. Most files are this, and nothing about them needs deciding.
 
 ** ~.avow~: everything published
 
@@ -185,15 +185,15 @@ The canonical use is a *spell pack*: a file whose entire purpose is to offer def
 
 ** ~.veil~: nothing published
 
-A ~.veil~ file contributes nothing to the lair. Its entities do not enter the shared namespace, its codexes do not reach other files, and a beacon inside it has nowhere to go.
+A ~.veil~ file contributes nothing to the lair. Its entities do not enter the shared namespace, its indued elements do not reach other files, and a beacon inside it has nowhere to go.
 
-The canonical use is *untethered musing*: drafts, scratch notes, half-formed thoughts. Without this, every ~@name~ in a rambling note becomes a lair-wide signet whether or not that was intended, and the only remedy is a nested silo lair, which is a directory and a marker file for something that should be a property of one file.
+The canonical use is *untethered musing*: drafts, scratch notes, half-formed thoughts. Without this, every ~@signet~ in a rambling note becomes a lair-wide signet whether or not that was intended, and the only remedy is a nested silo lair, which is a directory and a marker file for something that should be a property of one file.
 
 A veiled file is not hidden. It is plainly present, opens normally, and works completely when read directly. What is veiled is its reach.
 
 ** The extension overrides, it does not rewrite
 
-In-file syntax keeps its meaning under both overrides. A beaconed satchel inside a ~.veil~ file is still a beaconed satchel; it simply has nowhere to publish to. An unbeaconed codex inside an ~.avow~ file is still written the way it is written; the extension is what carries it outward.
+In-file syntax keeps its meaning under both overrides. A beaconed satchel inside a ~.veil~ file is still a beaconed satchel; it simply has nowhere to publish to. An unbeaconed indued element inside an ~.avow~ file is still written the way it is written; the extension is what carries it outward.
 
 This matters because renaming restores intent rather than requiring a rewrite. Changing ~drafts.veil~ to ~drafts.indue~ makes its beacons take effect exactly as they were always written.
 
@@ -223,8 +223,8 @@ Neither overrides the other, because they answer different questions. A ~.veil~ 
 
 * Beacons and the Public Layer (~!~)
 
-By default, a codex configures only the file it appears in. The *beacon*
-(~!~) prefix promotes a codex into the lair's *public layer*, the shared
+By default, an indued element configures only the file it appears in. The *beacon*
+(~!~) prefix promotes an indued element into the lair's *public layer*, the shared
 namespace visible to every other file in the same lair.
 
 #+begin_example
@@ -233,22 +233,22 @@ namespace visible to every other file in the same lair.
 !<#project>.bg<#f0f0f0>:         ; lair-public: every file in the lair sees it
 #+end_example
 
-The beacon attaches to the cauldron as a whole. Inline (~!<#project>.bg<#f0f0f0>.card:~)
+The beacon attaches to the indued element as a whole. Inline (~!<#project>.bg<#f0f0f0>.card:~)
 and multiline (~!<#project>~ followed by spell lines and a terminator)
 forms both accept the prefix.
 
-There is no inline form that beacons a single property /inside/ a cauldron.
-A cauldron is the unit of beaconing, its accumulated spells are either
+There is no inline form that beacons a single property /inside/ an indued element.
+An indued element is the unit of beaconing, its accumulated spells are either
 public together or private together. To beacon a single spell as its own
-public unit, write it as its own (small) cauldron with its own beacon, or
+public unit, write it as its own (small) indued element with its own beacon, or
 beacon the satchel that contains it.
 
 ** What beacons promote, and what they don't
 
-Beacons govern *codex* visibility, cauldron definitions, schema
+Beacons govern *indued element* visibility, indued element definitions, schema
 declarations, and configuration-shaped spells. They do not affect:
 
-- *Entities* (sigils, signets, stations, sources), these are lair-public by
+- *Entities* (tags, signets, waypoints, ledgers), these are lair-public by
   default, regardless of where they appear. The beacon is irrelevant to
   them.
 - *Inline content*. Paragraphs, list items, body text. Content is
@@ -256,7 +256,7 @@ declarations, and configuration-shaped spells. They do not affect:
 - *Spell invocations at content sites*. Calling ~:bold:word~ in a file
   has no public/private distinction; it just renders inline.
 
-The mental model: codexes describe /how things behave/, and that's the
+The mental model: indued elements describe /how things behave/, and that's the
 thing whose visibility scope is opt-in. Names (entities) and uses (content,
 invocations) are not subject to the public/private split.
 
@@ -366,7 +366,7 @@ axis only.
 - *silo*. A self-contained workspace. Nothing leaves, nothing enters.
   A journal, a confidential project, an air-gapped notebook.
 - *gallery*. A published entity library. Useful for shared definitions
-  (entity names, codexes, schemas) that should be available to ancestor
+  (entity names, indued elements, schemas) that should be available to ancestor
   lairs but should not pull in ancestor content. See "Galleries as
   entity libraries" below.
 
@@ -417,7 +417,7 @@ discovered.
 ** Galleries as entity libraries
 
 The gallery type is shaped specifically for entity libraries: a lair
-whose job is to define a stable set of public entities and codexes that
+whose job is to define a stable set of public entities and indued elements that
 the rest of the workspace consumes.
 
 Because galleries do not see /in/, their public layer is *hermetic* ,
@@ -444,7 +444,7 @@ project/
     people.indue
     concepts.indue
   config/
-    .lair               ; type: gallery ; lair-wide codexes
+    .lair               ; type: gallery ; lair-wide indued elements
     styling.indue
     schemas.indue
   work/                  ; plain folders inside project's lair, frequently edited
@@ -472,40 +472,40 @@ and ownership is enforced by the kernel.
 
 Lair scope governs the *public layer*. To recap the visibility model:
 
-- *Public entities* (sigils, signets, stations, sources) flow across
+- *Public entities* (tags, signets, waypoints, ledgers) flow across
   lair boundaries according to scope and import/export.
-- *Beacon-promoted codexes* flow the same way.
-- *Private codexes* never flow, regardless of lair type or
-  import/export. A non-beaconed cauldron stays in its file.
+- *Beacon-promoted indued elements* flow the same way.
+- *Private indued elements* never flow, regardless of lair type or
+  import/export. A non-beaconed indued element stays in its file.
 - *Content* never flows ambiently; cross-file content sharing is
   explicit through ~:embed~, ~:link~, ~:popover~, etc.
 
-Lair scope cannot make a private codex public; only the beacon does
+Lair scope cannot make a private indued element public; only the beacon does
 that. Lair scope only governs whether already-public things cross the
 boundary.
 
-** Cross-lair station trails
+** Cross-lair waypoint trails
 
-When the same station name appears in multiple files, the parser links
-them into a trail (see Station trails in *Indue, Language Specification*).
+When the same waypoint name appears in multiple files, the parser links
+them into a trail (see Waypoint trails in *Indue, Language Specification*).
 This trail behavior extends
-across lair boundaries: any station visible in the current scope ,
+across lair boundaries: any waypoint visible in the current scope ,
 whether defined locally, defined in the same lair, or imported from
 another lair, participates in the trail for that name. The trail is
-built over the union of all visible stations, regardless of which file
+built over the union of all visible waypoints, regardless of which file
 or lair they live in.
 
-** Cross-lair sources
+** Cross-lair ledgers
 
-Sources behave differently from stations across files, and the difference matters.
+Ledgers behave differently from waypoints across files, and the difference matters.
 
-Within a document, repeated declarations of a name shadow: the last is the link target, and properties accumulate in document order. Both depend on there being an *order*, which a document has and a set of files does not. Scan order is not a semantic property, and making meaning depend on it would let two applications legitimately disagree about which source wins.
+Within a document, repeated declarations of a name shadow: the last is the link target, and properties accumulate in document order. Both depend on there being an *order*, which a document has and a set of files does not. Scan order is not a semantic property, and making meaning depend on it would let two applications legitimately disagree about which ledger wins.
 
-So shadowing stops at the file boundary. *Two files in a lair declaring the same source name is a collision, and applications should report it rather than silently picking one.*
+So shadowing stops at the file boundary. *Two files in a lair declaring the same ledger name is a collision, and applications should report it rather than silently picking one.*
 
 Because a lair's public surface lives in beaconed satchels, collisions are findable: an application scans those regions and can name both files. This is the practical reason public declarations are restricted there rather than scattered through every block.
 
-Where a name genuinely needs a record in more than one file, one file should hold the source and the others should reference it.
+Where a name genuinely needs a record in more than one file, one file should hold the ledger and the others should reference it.
 
 ** Permission-aware behavior
 
@@ -554,11 +554,11 @@ Specification*.
 *Visibility and lairs*
 - Public/private visibility model: content private, entities public,
   configuration private, beacons promote to public
-- Beacon (~!~): cauldron prefix and satchel prefix forms
+- Beacon (~!~): indued element prefix and satchel prefix forms
 - lair declarations via ~.lair~ files at directory roots
 - Four lair types: ~private~, ~open~, ~silo~, ~gallery~
 - Two-axis underpinning: ~in~ and ~out~ axes
 - Import/export overrides for explicit cross-lair wiring
 - ~.lair~ file keys: ~type~, ~name~, ~about~, ~active~, ~import~, ~export~
-- Cross-lair station trails span all visible stations
+- Cross-lair waypoint trails span all visible waypoints
 - Permission-aware behavior on filesystem failures
