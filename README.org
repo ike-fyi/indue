@@ -504,19 +504,38 @@ Syntax: ~&ledger&~, not rendered, shadows.
 
 Keep the whole record on the last entry unless you are deliberately tracking milestones: a simple renderer shows only that block's properties.
 
-** Versions
+** Coordinates
 
-Syntax: ~|value~ after a name, authored rather than positional.
+Syntax: ~|number~ after a name, authored rather than positional. Shorthand for a
+~version~ property.
 
 #+begin_example
 &goblin|1&
 &goblin|2&
 
-@goblin|1@          ; reach a specific version
+@goblin|1@          ; reach a specific one
 #argument|2#        ; reach a specific waypoint
 #+end_example
 
-Shorthand for a ~version~ property.
+Where coordinates are present, the *highest* resolves, not the last written.
+Where none is present, the last declaration in document order does.
+
+That lets a subject's order differ from the document's. Dash-separated numeric
+forms order correctly, so a date works:
+
+#+begin_example
+&bob|45769&
+:sequence = world-day
+:age      = 57
+
+&bob|45739&         ; a chapter set earlier, written later
+:sequence = world-day
+:age      = 27
+#+end_example
+
+~@bob~ reaches the higher coordinate either way. What the number counts is up to
+you: a property can say so, under any name you like, and resolution never reads
+it.
 
 ** Waypoints and ledgers compared
 
@@ -672,6 +691,43 @@ The spell form is more explicit and reads in sentence order:
 #+end_example
 
 Nothing resolves, nothing renders. A reference with no value is silent.
+
+* A Record in Use
+
+Marks, properties, and embeds compose into something a plain document usually
+cannot do. Declare a record:
+
+#+begin_example
+&alice&
+:role  = Engineer
+:team  = Platform
+:email = alice@example.com
+#+end_example
+
+Mention it anywhere, in ordinary prose. The mention resolves to that record, so
+every one of them is a way back to it:
+
+#+begin_example
+Talk to @alice about the deployment.
+Ask @alice to review the migration plan.
+#+end_example
+
+Read a value back out, in the middle of a sentence:
+
+#+begin_example
+Deployment questions go to @alice, who is <@alice.role> on the
+<@alice.team> team.
+#+end_example
+
+Nothing was declared in advance. There is no schema, no front matter, and no
+separate database; the file is still plain text a person can read. But an
+application has enough to list every mention of Alice, show her record on
+hover, answer a query for everyone whose ~team~ is Platform, and keep the
+prose correct when her role changes, because the prose asked rather than
+repeating.
+
+That is the difference between a document that *mentions* things and one that
+*knows* about them.
 
 * Comments
 
