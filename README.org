@@ -4,7 +4,7 @@
 
 * About
 
-Indue is a plain-text programmable markup language inspired by Org-mode, Typst, CSS, and Markdown, aimed at giving personal knowledge management apps one consistent syntax for the features they all need.
+Indue is a plain-text markup language inspired by Org-mode, Typst, CSS, and Markdown, aimed at giving personal knowledge management apps one consistent syntax for the features they all need.
 
 Indue combines a lot of common devices like property drawers, attributes, functions, supertags, etc into a single device called a spell that has a flexible format.
 
@@ -13,7 +13,7 @@ A spell can:
 - *embed* content like styled text, media, or references (queries, transclusions, etc)
 - *store* property data on a block, by either adding or modifying existing properties (task state, scheduling, priority, etc)
 
-Power users will likely use a larger variety of spells using the full spell format, but for speed and familiarity, there are shorthand aliases called glamours to make the most common text styling spells work like many users are already used to from other markups.
+Power users will likely use a larger variety of spells using the full spell format, but for speed and familiarity, there are shorthand aliases called sigils to make the most common text styling spells work like many users are already used to from other markups.
 
 Below is the practical reference: what each construct is and how to write it. For rationale and the reasoning behind these choices, see *Indue, Design Philosophy*.
 
@@ -31,7 +31,7 @@ Below is the practical reference: what each construct is and how to write it. Fo
 
 * Structure
 
-** Sockets
+** List items
 
 Syntax: ~-~ unordered, ~+~ ordered, at line start followed by a space.
 
@@ -47,7 +47,7 @@ Nesting is by indentation. Tabs recommended.
 
 ** Headings
 
-Syntax: ~=~ followed by a space, at line start or after a socket.
+Syntax: ~=~ followed by a space, at line start or after a list item.
 
 A *standalone* heading sits at line start, and its level comes from the count:
 
@@ -57,7 +57,7 @@ A *standalone* heading sits at line start, and its level comes from the count:
 === Heading 3
 #+end_example
 
-Inside a list, a heading after a socket promotes that item. Level comes from list
+Inside a list, a heading after a list item promotes that item. Level comes from list
 depth, so a single ~=~ is enough and repeating the mark is unnecessary:
 
 #+begin_example
@@ -111,7 +111,7 @@ block*. That is a fact recorded about the block rather than a third state, and i
 is how a table, a code block, and a standalone quote are all represented: the
 block is material, and the spell it holds is ~:table~, ~:code~, or ~:quote~.
 
-A block begins at a socket, at a heading, or at the first line after a blank
+A block begins at a list item, at a heading, or at the first line after a blank
 line. It continues through every following non-blank line that does not itself
 begin a block. A blank line ends the block and is not part of it. A heading does
 not continue: a heading block is its own line, and prose beneath it is a separate
@@ -121,13 +121,13 @@ block that the heading owns.
 = Project Alpha            ; heading: a block of one line
 The line beneath it        ; a separate block, owned by the heading
 
-- Buy stock                ; socket: a block begins
-  before the market opens  ; no socket: same block, second line
-- Call the vet             ; socket: a new block begins
+- Buy stock                ; list item: a block begins
+  before the market opens  ; no list item: same block, second line
+- Call the vet             ; list item: a new block begins
 #+end_example
 
 So a newline alone is not a boundary. Leading whitespace on a continuation line
-is cosmetic and stripped. An application writes a socket or a blank line where
+is cosmetic and stripped. An application writes a list item or a blank line where
 the writer pressed ~Enter~, and a plain newline where they pressed ~Shift+Enter~.
 
 Line breaks inside a block are preserved in rendering, never collapsed to a
@@ -135,7 +135,7 @@ space. Prose meant to flow is written on one source line.
 
 * Text
 
-** Glamours
+** Sigils
 
 | Write       | Effect        | Spell      |
 |-------------+---------------+------------|
@@ -180,20 +180,20 @@ Without a bracket, only the first mark applies: ~*/word~ is bold applied to ~/wo
 
 ** Position
 
-A glamour opens only at a *glamour position*: at line start, after whitespace, or after a closing bracket. A mark glued to the right of a preceding character is ordinary text.
+A sigil opens only at a *sigil position*: at line start, after whitespace, or after a closing bracket. A mark glued to the right of a preceding character is ordinary text.
 
 - ~and/or~, ~3/15~, ~src/main.rs~, ~50%~ are unaffected: the mark follows a character.
-- Glamours are inline. A mark alone at end of line opens nothing.
+- Sigils are inline. A mark alone at end of line opens nothing.
 - A lone mark, opening and closing nothing, is an untargeted spell taking its
   scope *only in first position* in that scope. Anywhere else it is literal.
 - A paired closer must be glued to the right of its content, on the same line.
 - For regions across lines, use a shell.
 
-The one relaxation is a bracket: a glamour followed immediately by ~[~, ~{~, or ~<~ opens wherever it sits, because prose never produces those shapes.
+The one relaxation is a bracket: a sigil followed immediately by ~[~, ~{~, or ~<~ opens wherever it sits, because prose never produces those shapes.
 
 ** Mid-word
 
-A glamour or wall followed immediately by a container is an opener anywhere.
+A sigil or wall followed immediately by a container is an opener anywhere.
 
 #+begin_example
 abso*[lutely]
@@ -206,7 +206,7 @@ line-start, or closing-bracket position. Mid-word, put the target in a container
 
 ** Escaping
 
-Syntax: ~\~ before a character renders it literally. Works on glamour marks and
+Syntax: ~\~ before a character renders it literally. Works on sigil marks and
 on container marks.
 
 #+begin_example
@@ -221,7 +221,7 @@ ordinary text.
 
 ** The three states
 
-| Write | State  | Goety     |
+| Write | State  | Borrowed form      |
 |-------+--------+-----------|
 | ~:o~    | open   | ~[]~ or ~[ ]~ |
 | ~:>~    | active | ~[>]~       |
@@ -235,7 +235,7 @@ ordinary text.
 
 The set is closed. Applications must not add a fourth.
 
-Goety forms work only at the start of a *material* block, after any socket and
+Borrowed forms work only at the start of a *material* block, after any list item and
 its space.
 
 Reasons a task is not moving are tags, not states:
@@ -272,7 +272,7 @@ No user-defined spell may contain ~>~ in its name.
 
 ** Cycles
 
-Syntax: ~:cycle[name]<:a :b :c>~
+Syntax: ~:cycle[cycle]<:a :b :c>~
 
 #+begin_example
 :cycle[org]<:todo :doing :done>
@@ -387,9 +387,9 @@ mark reaches it.
 
 | Mark      | Name     | Commonly  | Links                                              |
 |-----------+----------+-----------+----------------------------------------------------|
-| ~#work~     | sigil    | a tag     | to the first waypoint of that name                 |
+| ~#work~     | tag      | a label   | to the first waypoint of that name                 |
 | ~@alice~    | signet   | a mention | to the last ledger of that name                    |
-| ~^intro~    | waypoint | a stop    | from a sigil or the previous waypoint, on to the next |
+| ~^intro~    | waypoint | a stop    | from a tag or the previous waypoint, on to the next |
 | ~&alice&~   | ledger   | a record  | from any signet; an endpoint, so nothing leaves it |
 
 Two of these are links in different senses. A waypoint is a *multi-hop* link: it
@@ -404,7 +404,7 @@ Either can be read at a point along it.
 
 ** What a waypoint reaches
 
-- From a sigil of the same name, landing on the first waypoint.
+- From a tag of the same name, landing on the first waypoint.
 - Back to the waypoint before it on the trail.
 - On to the next waypoint, or round to the first where the trail cycles.
 - Nowhere, where the trail is terminated with ~| x^~.
@@ -436,11 +436,11 @@ Three forms each:
 #[machine learning] ; bracketed, for multi-word
 #+end_example
 
-A bare ~#~ at line start sigils the whole line.
+A bare ~#~ at line start tags the whole line.
 
 ** Waypoints
 
-Syntax: ~^name~, visible, may repeat.
+Syntax: ~^waypoint~, visible, may repeat.
 
 Repeated waypoints form a *trail*, cycling in document order. Ordering and termination:
 
@@ -462,14 +462,12 @@ Several waypoints on one block are aliases resolving to one identity.
 
 ** Ledgers
 
-Syntax: ~&name&~, not rendered, shadows.
+Syntax: ~&ledger&~, not rendered, shadows.
 
 #+begin_example
 &alice&
-:info[
-role  | Engineer
-email | alice@example.com
-]
+:role  = Engineer
+:email = alice@example.com
 #+end_example
 
 - Linking goes to the *last* entry.
@@ -505,40 +503,145 @@ Both on one block:
 
 #+begin_example
 ^&[alice]
-:info[role | Engineer]
+:role = Engineer
 #+end_example
 
-* Metadata
+* Properties
 
-Syntax: ~:info[pairs]~ — pipes separate key from value, newlines separate pairs.
+Two forms. At the start of a line, a spell takes its value after ~=~, and the
+newline closes it:
 
 #+begin_example
-:info[
-role       | Engineer
-homepage   | https://alice.example
-charter    | ^project-charter
-joined     | 2024-03-01
-level      | 4
-]
+&alice&
+:role     = Engineer
+:homepage = https://alice.example
+:charter  = ^project-charter
+:joined   = 2024-03-01
+:level    = 4
 #+end_example
 
-- Whitespace around pipes is trimmed; columns may be aligned.
-- Values recognised by shape: URL, waypoint, ledger, date, number, text.
-- Cast at the point of use; inert if the cast fails.
-- Keys share one namespace with spell-written properties: ~:due<...>~ and ~:info[due | ...]~ both set ~due~.
+Stacked like that they read as a property drawer, but there is no drawer: each
+line is an ordinary spell, and the block it sits in owns them all.
 
-Read one value with a dot:
+Mid-line, a spell takes its value in a container as usual, because there the
+rest of the line is prose:
 
 #+begin_example
-Their role is &alice.role.
-&goblin|1&.hp
+Alice is a :role<Engineer> on the platform team.
 #+end_example
 
-Dotted access works on ledgers only.
+** Any name works
+
+A spell with no known name still sets a property named for itself. Nothing is
+lost and nothing warns:
+
+#+begin_example
+:calories = 420
+:mood     = restless
+:starred                   ; no value, so true
+#+end_example
+
+That is what makes the two forms one namespace: ~:due<2026-04-15>~ and
+~:due = 2026-04-15~ set the same property, and so does anything else you invent.
+
+** Several values
+
+~|~ separates values, so nothing needs quoting:
+
+#+begin_example
+:tags   = fighter | veteran | one-eyed
+:radius = 3|4|4|3
+:font   = Helvetica Neue | Arial
+#+end_example
+
+** Modifying instead of replacing
+
+| Operator | Effect      |
+|----------+-------------|
+| ~=~        | replace     |
+| ~+=~       | add to      |
+| ~-=~       | remove from |
+
+#+begin_example
+:hp    += 15
+:gold  -= 20
+:tags  += veteran
+:hp     = -5               ; assigns negative five, not a subtraction
+#+end_example
+
+The operator belongs to the key, which is what keeps ~-=~ and a negative value
+apart. On a ledger, where entries accumulate in document order, these make the
+running total yours to control:
+
+#+begin_example
+&day&
+:calories += 420           ; breakfast
+
+&day&
+:calories += 810           ; lunch
+#+end_example
+
+** Values are read by shape
+
+URL, waypoint, ledger, date, number, text. Cast at the point of use, and inert
+if the cast fails, so ~:bg = #project~ sets nothing rather than erroring.
+
+** Reading one back
+
+#+begin_example
+<@alice.role>              ; embeds the value
+Their role is <@alice.role>.
+#+end_example
+
+A reference with no such key embeds nothing.
+
+* Embeds and Links
+
+A container with something in it and no chain after it is an *embed*. The value
+is read by shape:
+
+| Value              | Embeds as                       |
+|--------------------+---------------------------------|
+| text               | the text                        |
+| an entity          | its rendered name               |
+| a property (~a.b~)   | that property's value           |
+| a media path       | the media                       |
+| a URL              | a hyperlink showing the address |
+
+#+begin_example
+<@bob>                     ; Bob's name
+<@bob.weapon>              ; the value of Bob's weapon property
+<diagram.png>              ; the image
+<https://example.com>      ; a link
+#+end_example
+
+A second value makes the first a label for the second, which is Indue's link:
+
+#+begin_example
+<the docs|https://example.com>
+<Bob's sheet|@bob>
+#+end_example
+
+A bonded chain makes it a target instead, because a target with a chain is being
+acted on rather than read:
+
+#+begin_example
+<@bob>                     ; embeds Bob's name
+<@bob>.bold                ; targets Bob, styling every rendered mention
+#+end_example
+
+The spell form is more explicit and reads in sentence order:
+
+#+begin_example
+[the docs].link<https://example.com>
+[the docs].link<https://example.com>.bold
+#+end_example
+
+Nothing resolves, nothing renders. A reference with no value is silent.
 
 * Comments
 
-A comment is a *whisper*. Syntax: ~;~ to end of line.
+Syntax: ~;~ to end of line.
 
 #+begin_example
 Some text.   ; a note to yourself
@@ -551,26 +654,27 @@ Repetition is convention, not parsed. All levels comment to end of line.
 
 Never renders. Inside a scroll, ~;~ is a literal semicolon; elsewhere ~\;~ escapes one.
 
-* Goety
+* Borrowed Forms
 
 Borrowed shapes, matched whole, not derived from the grammar. This is the complete list.
 
-| Write          | Same as              |
-|----------------+----------------------|
-| ~[label](url)~   | ~:link[url]:{label}~   |
-| ~[]~ / ~[ ]~       | ~:task<open>~          |
-| ~[>]~            | ~:task<active>~        |
-| ~[x]~            | ~:task<closed>~        |
+| Write               | Same as              |
+|---------------------+----------------------|
+| ~[[endpoint|label]]~  | ~<label|endpoint>~     |
+| ~[]~ / ~[ ]~            | ~:task<open>~          |
+| ~[>]~                 | ~:task<active>~        |
+| ~[x]~                 | ~:task<closed>~        |
 
 The checkbox forms map to the three lifecycle values *directly*, never through
 the aliases ~:o~ and ~:x~, so they mean the same thing whether or not those
 definitions are present.
 
-Checkbox forms work only at the start of a *material* block, after any socket
+Checkbox forms work only at the start of a *material* block, after any list item
 and its space.
 
-~:link[url]:label~ is exact only for a single-word label, since the grab rule
-stops at whitespace. A conduit carries any label.
+The wiki form puts the *endpoint first*, following the convention of the systems
+it comes from. Indue's own form is label-first, so pasted wiki content works
+untouched and the two are not interchangeable.
 
 * Containers
 
@@ -597,10 +701,9 @@ kinds is free.
 
 ** Scrolls are unparsed
 
-*Unparsed* means no Indue syntax inside: no glamours, no spells, no entities. It
+*Unparsed* means no Indue syntax inside: no sigils, no spells, no entities. It
 does not mean opaque. The receiving spell may interpret the text however it
-likes, which is how ~:info~ reads pipes and newlines, ~:repeat~ reads a pattern,
-and ~:query~ reads SQL. What such a spell reads is always marked explicitly, so
+likes, which is how ~:repeat~ reads a pattern and ~:query~ reads SQL. What such a spell reads is always marked explicitly, so
 content never decides whether it is an argument.
 
 A scroll is always one bracket pair, and brackets inside it are literal.
@@ -611,16 +714,39 @@ A scroll is always one bracket pair, and brackets inside it are literal.
 
 ** Vessel values
 
-| Kind            | Example                  |
-|-----------------+--------------------------|
-| literal         | ~2~, ~50%~, ~#f0f0f0~, ~2cm~ |
-| reference       | ~^wp~, ~#tag~, ~@person~     |
-| keyword         | ~red~, ~center~            |
-| spell name      | ~:bold~ in ~:strip<:bold>~   |
-| quoted string   | ~"a b"~                    |
-| scroll          | ~[a b]~                    |
+Each value is typed by shape, matching the *whole* value:
 
-Space-separated. Commas are accepted and treated as whitespace.
+| The whole value          | Is           |
+|--------------------------+--------------|
+| a scroll ~[a b]~           | literal text |
+| ~#tag~, ~@person~, ~^wp~, ~&rec~ | a reference  |
+| ~:bold~                    | a spell name |
+| ~2026-04-07~               | a date       |
+| ~2~, ~50%~, ~2cm~, ~#f0f0f0~   | a number     |
+| anything else            | a string     |
+
+A string is literal. Nothing inside it fires: no sigils, no entities, no spells.
+So ~:font<Helvetica *Neue*>~ keeps its asterisks.
+
+A partial resemblance falls through to string, since the match is against the
+whole value. ~#123 Main Street~ is a string, not a tag and some text.
+
+Bare words like ~red~ or ~center~ parse as strings. Whether one is a keyword is
+the receiving spell's business, decided when it runs, which is why an unknown
+keyword does nothing rather than erroring.
+
+Use a scroll to force something back to text: ~:caption<[#project]>~ is the
+literal text, not a tag.
+
+Space-separated, and commas are treated as whitespace. Where any value contains
+a space, separate them with ~|~ instead and nothing needs quoting:
+
+#+begin_example
+:mix<red 50%>              ; space-separated: no value has a space
+:font<Helvetica Neue | Arial>   ; pipe-separated: the first one does
+#+end_example
+
+A vessel holding a pipe is pipe-separated; one without is space-separated.
 
 * Spells
 
@@ -705,13 +831,27 @@ Aiming answers one question: what does this act on? Four answers are bounded by
 something already on the page. The fifth, a shell, is open-ended, which is the
 only reason it needs a closer.
 
-| Form        | Target is                          |
-|-------------+------------------------------------|
-| ~:spell:word~ | the glued word (grab rule)         |
-| ~.<ref>~      | the construct's target             |
-| ~@<ref>~      | that slot's target alone           |
-| none        | the enclosing scope, entire        |
-| ~:spell::~    | a region, until closed (see Shells) |
+| Form         | Target is                           |
+|--------------+-------------------------------------|
+| ~:spell:word~  | the glued word (grab rule)          |
+| ~.#tag~        | that entity, no container needed    |
+| ~.<ref>~       | the construct's target              |
+| ~@<ref>~       | that slot's target alone            |
+| none         | the enclosing scope, entire         |
+| ~:spell::~     | a region, until closed (see Shells) |
+
+*** An entity needs no container
+
+An entity carries its own mark, so it can stand in a slot directly:
+
+#+begin_example
+#project.card              ; target first
+:card.#project             ; the same thing
+&bob&.card                 ; a ledger renders nothing but can still be targeted
+#+end_example
+
+A bare mark targets *that form*. Reaching every form of a name still needs the
+unmarked container, ~<project>~.
 
 *** No target
 
@@ -780,7 +920,7 @@ The colon run says how far. It is one dial, not three constructs:
 | ~::~       | a shell: a region, bounded by its scope      |
 | ~:::~      | a hypershell: a region that crosses outward  |
 
-Syntax: a spell chain or glamour run, then a colon run. Closed by a matching run.
+Syntax: a spell chain or sigil run, then a colon run. Closed by a matching run.
 
 #+begin_example
 :span-bg<red>:: ... ::span-bg
@@ -793,7 +933,7 @@ Syntax: a spell chain or glamour run, then a colon run. Closed by a matching run
 | Closer     | Effect                                              |
 |------------+-----------------------------------------------------|
 | ~::~         | closes *all* open shells of that length             |
-| ~::name~     | stops that effect only, in the innermost shell      |
+| ~::spell~     | stops that effect only, in the innermost shell      |
 
 A shell closes when it has no active effects left. Closer length must match
 opener length.
@@ -807,7 +947,7 @@ Both here.
 
 *** Auto-close
 
-- Opened at a socket's block-start position: closes when structure outdents past that depth.
+- Opened at a list item's block-start position: closes when structure outdents past that depth.
 - Any open shell closes at end of document.
 
 *** Overlap
@@ -874,7 +1014,7 @@ Same construct, three ways to write it.
 #+begin_example
 :bold.{this text}          ; cast shape: spell first
 {this text}.bold           ; offering shape: target first
-*this text*                ; glamour: shorthand for the common case
+*this text*                ; sigil: shorthand for the common case
 #+end_example
 
 Cast and offering shapes are both valid and neither is preferred. Position
@@ -885,28 +1025,28 @@ carries no meaning, so interleaving is legal but not written in practice:
 :{target1}.<target2>.spell1.spell2:
 #+end_example
 
-*** How a glamour maps to a spell
+*** How a sigil maps to a spell
 
-| Glamour            | Spell            |
+| Sigil            | Spell            |
 |--------------------+------------------|
 | ~*word~ (grab rule)  | ~:bold:word~       |
 | ~*several words*~    | ~:bold.{several words}~ |
 | ~*[explicit]~        | ~:bold.[explicit]~ |
 | ~*~ alone, first in scope | ~:bold~ untargeted |
 
-*** What a glamour cannot do
+*** What a sigil cannot do
 
-- Carry an argument: there is no glamour form of ~:color<red>~.
+- Carry an argument: there is no sigil form of ~:color<red>~.
 - Chain: use a spell, or stack marks with a bracket.
 - Control reach: ~:deep~ and ~:shallow~ have no marks.
 - Open anywhere: a lone mark is a spell only in first position in its scope.
-- Be extended: the set is closed, and a class defines a spell rather than a mark.
+- Be extended: the set is closed, and a compound spell is a spell rather than a mark.
 
 * Configuration
 
-** Classes
+** Compound spells
 
-Syntax: ~<:name>~ followed by a chain.
+Syntax: ~<:spell>~ followed by a chain.
 
 #+begin_example
 <:smart-tips>
@@ -925,8 +1065,8 @@ Used like any spell:
 }.smart-tips
 #+end_example
 
-- ~<name>~ selects the entity ~name~; ~<:name>~ defines the spell ~name~.
-- The body carries no construct target; sub-spell targets (~@~) are how a class reaches its internal parts.
+- ~<entity>~ selects that entity; ~<:spell>~ defines that spell.
+- The body carries no construct target; sub-spell targets (~@~) are how a compound spell reaches its internal parts.
 - A class may embed content *before* its target, never after.
 
 ** Targeting entities
@@ -940,7 +1080,7 @@ Syntax: ~<selector>~ followed by a chain.
 #+end_example
 
 Type selectors: ~<=>~ headings, ~<->~ unordered items, ~<+>~ ordered items,
-~<^>~ blocks, ~<#>~ sigils, ~<@>~ signets, ~<*>~ the bold glamour.
+~<^>~ blocks, ~<#>~ tags, ~<@>~ signets, ~<*>~ the bold sigil.
 
 A bare marker is the type selector and sets that type's default forward from its
 position. A marker with a name (~<#project>~) is more specific and overrides one
@@ -1098,6 +1238,6 @@ matter, supertags, and stylesheet rules.
 - Native syntax for dynamic content
 - Scaffolding for a multi-document ecosystem
 - Dash mode, so an outline survives chat clients, email, and forms that destroy indentation
-- One namespace across ~#name~, ~@name~, and ~^name~
+- One namespace across ~#tag~, ~@signet~, and ~^waypoint~
 - Line breaks preserved with no hard-break construct to learn
 - Unknown spells degrade predictably, so a newer document still reads in an older tool
