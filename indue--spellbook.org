@@ -130,7 +130,8 @@ Spells whose names already announce a tier never take the prefix. ~:bg~ is block
 
 * Blocks
 
-A *block* is a container: a paragraph, a list item, a heading and what it owns.
+A *block* is a container: a paragraph, a list item, or a heading. A block spell
+lands on the block itself and, by default, reaches the blocks it owns; see Reach.
 
 | Spell                        | Effect                     |
 |------------------------------+----------------------------|
@@ -275,7 +276,7 @@ A chip needs only a colour: its shape is what makes it a chip, so the shape is t
 
 ** Recipes
 
-Everything else that might look like a preset is written as a class definition in the document or a spell pack. These are worth showing, because they are the common shapes, but shipping them as spells would only mean everyone overriding them.
+Everything else that might look like a preset is written as a compound-spell definition in the document or a spell pack. These are worth showing, because they are the common shapes, but shipping them as spells would only mean everyone overriding them.
 
 *** A card
 
@@ -357,7 +358,7 @@ It can span several blocks.
 
 A conduit target is rich and nests, so a quote can contain another quote. A scroll target is an unparsed leaf.
 
-Appearance is not part of the construct. Indentation is only one convention among several: a left rule, italics, smaller type, or a tinted background are all common, and some treatments do not indent at all. Presentation is therefore a codex decision:
+Appearance is not part of the construct. Indentation is only one convention among several: a left rule, italics, smaller type, or a tinted background are all common, and some treatments do not indent at all. Presentation is therefore an indued element decision:
 
 #+begin_example
 <:quote>.margin<2>.border-color<#888>:
@@ -393,11 +394,11 @@ This is also why language shortcuts are user-defined rather than built in. Defin
 <:rust>.code<rust>:        ; now :rust[...] is a Rust code block
 #+end_example
 
-A file of such definitions, beaconed into a Lair, is a spell pack: a shared vocabulary any document in that Lair can use.
+A file of such definitions, beaconed into a lair, is a spell pack: a shared vocabulary any document in that lair can use.
 
-*** The backtick glamour
+*** The backtick sigil
 
-~`~ is a glamour for ~:code~, and follows every glamour rule (see Glamours in the language specification):
+~`~ is a sigil for ~:code~, and follows every sigil rule (see Sigils in the language specification):
 
 #+begin_example
 Run `cargo build to compile.        ; grab rule, one word
@@ -426,6 +427,70 @@ absolutely anything, including :: and ]
 #+end_example
 
 The last is a *hypershell*: its delimiter is length-matched, so no content can close it early. Code is where that matters most, since ~::~ is common in C++, Rust, PHP, and Ruby paths, and a bare ~::~ inside an ordinary shell would close every open shell in the document.
+
+** Literal
+
+~:l~ renders its target as the source that produced it, rather than as what that
+source means. It is how Indue syntax is written about in Indue.
+
+| Spell            | Effect                                      |
+|------------------+---------------------------------------------|
+| ~:l~               | Render the target's own source              |
+
+#+begin_example
+{[sic]}.l                  ; renders [sic]
+{:due<2026-04-15>}.l       ; renders the spell, rather than running it
+{*bold*}.l                 ; renders *bold*
+#+end_example
+
+A conduit target is the usual companion. A conduit holds *live* content, so its
+brackets are delimiters and its contents are ordinary Indue; ~:l~ says to show
+that content as written. A scroll needs no such spell, because a scroll's
+contents were never live.
+
+*** Over a region
+
+~:l~ takes a shell like any other spell, which is the usual form for a block:
+
+#+begin_example
+:l::[sic]::
+
+:l:::
+:bold:: a shell shown as written ::
+:::
+#+end_example
+
+Parsing still happens, so the closer is found by the ordinary rule. Where the
+content itself holds a colon run, lengthen the opener as with any shell, and put
+the closer alone on its line.
+
+*** Nothing inside fires
+
+~:l~ resolves before the contents of its target, so no spell within that target
+takes effect. The content is still parsed, since ~:l~ governs rendering rather
+than parsing, but nothing inside it is evaluated.
+
+Because that is an ordinary property, a nested construct may shadow it and
+become live again:
+
+#+begin_example
+{a literal region, with {this part live}.strip<:l> inside}.l
+#+end_example
+
+~:l~ makes no presentational claim. It does not request monospace and does not
+mark the text as a code sample; use ~:code~ where that is what is meant.
+
+*** What "source" means here
+
+An application must retain enough of the parse to reconstruct what was written.
+Two forms normalise, and are reconstructed in their normalised shape rather than
+exactly as typed:
+
+- A sigil run collapses, so ~{***WOW***}.l~ renders ~*WOW*~.
+- A list marker corrected under a ~:step~ pattern renders as corrected.
+
+An application that keeps raw source spans per node may render both exactly;
+either behaviour is conforming.
 
 ** Maths
 
@@ -466,15 +531,32 @@ Being an embedding spell, ~:link~ with no target generates its own content: the 
 :link<the docs>[https://example.com]        ; identical, order is free
 :link[https://example.com]:label            ; label as a target
 :link[https://example.com]:{the *docs*}     ; rich target, formatting allowed
-:link@<^section>                            ; link to a place by station
+:link@<^section>                            ; link to a place by waypoint
 :link[https://example.com]:<project>        ; every rendered form of project links
 #+end_example
 
 The target forms link *existing* content; the no-target forms generate it. Only the target forms can carry formatting or address an entity.
 
+*** The container form
+
+A container holding a label and an endpoint is the same link without the spell:
+
+#+begin_example
+<the docs|https://example.com>
+<Bob's sheet|@bob>
+#+end_example
+
+That falls out of targeting rather than being a construct of its own: a target
+with no chain embeds, and a second value labels the first (see Generated targets
+in *Indue, Language Specification*). Reach for ~:link~ where the link needs a
+chain, a rich label, or an entity target.
+
+The borrowed wiki form ~[[endpoint|label]]~ puts the endpoint first, following
+the convention it came from. The two orders are not interchangeable.
+
 ** Buttons
 
-A button is a link that renders as a control rather than as inline text. Indue is a markup language, so a button's destination is the same set of things a link can point at: a URL in a scroll, or an entity or station as a target.
+A button is a link that renders as a control rather than as inline text. Indue is a markup language, so a button's destination is the same set of things a link can point at: a URL in a scroll, or an entity or waypoint as a target.
 
 | Spell           | Effect                   |
 |-----------------+--------------------------|
@@ -499,7 +581,7 @@ A button someone uses repeatedly is a class:
 :button[https://example.com]<Sign up>.cta
 #+end_example
 
-A station destination behaves as an arrival point. A source is arrival-only and renders nothing, which is the usual way to mark a landing spot that should not appear in the text.
+A waypoint destination behaves as an arrival point. A ledger is arrival-only and renders nothing, which is the usual way to mark a landing spot that should not appear in the text.
 
 ** Transclusion
 
@@ -510,7 +592,7 @@ A station destination behaves as an arrival point. A source is arrival-only and 
 :embed@<@alice>            ; pull in the entity's content
 #+end_example
 
-Embedded content is live: it reflects the source. It is not a copy.
+Embedded content is live: it reflects the ledger. It is not a copy.
 
 ** Popovers
 
@@ -520,7 +602,7 @@ A popover has two pieces of content, and they sit on opposite sides of the spell
 - The *panel*, which renders off-flow, is an *input*. A conduit carries rich panel content; a scroll carries plain text.
 
 #+begin_example
-:popover{The *full* definition, with a :link[url]:source}:term
+:popover{The *full* definition, with a :link[url]:ledger}:term
 :popover[Plain tooltip text]:term
 :popover@<^wp>             ; panel content comes from the referenced place
 #+end_example
@@ -533,7 +615,7 @@ This section covers the spells that surround the model.
 
 ** The three states, in brief
 
-| State  | Spell           | Alias | Goety |
+| State  | Spell           | Alias | Borrowed form  |
 |--------+-----------------+-------+-------|
 | open   | ~:task<open>~     | ~:o~    | ~[]~    |
 | active | ~:task<active>~   | ~:>~    | ~[>]~   |
@@ -592,7 +674,7 @@ A cycle is a named, ordered list of states: what an application advances through
 
 | Spell                        | Effect                              |
 |------------------------------+-------------------------------------|
-| ~:cycle[name]<:a :b :c>~       | Declare a named, ordered cycle      |
+| ~:cycle[cycle]<:a :b :c>~       | Declare a named, ordered cycle      |
 
 #+begin_example
 :cycle[gtd]<:todo :doing :waiting :shipped>
@@ -636,83 +718,127 @@ Dates, times, repetition, and series bounds are covered in Scheduling and Recurr
 
 * Metadata
 
-~:info~ carries arbitrary key-value data on a block. It is how an entity's record is written: a contact's details, a project's status, a book's publication data.
+Any spell writes a property named for itself, whether or not this book lists it.
+That is the whole mechanism: nothing is declared first, and a block records facts
+as fast as they can be typed.
 
-It is usually paired with a source, which is what a mention navigates to (see Sources in *Indue, Language Specification*). Unless there is a reason to track history, keep the whole record on the *last* source of a name, so a simple renderer arriving there shows all of it.
-
-| Spell         | Effect                          |
-|---------------+---------------------------------|
-| ~:info[pairs]~  | Key-value data on this block    |
-
-The syntax deliberately mirrors a table: *pipes separate a key from its value, newlines separate pairs.* Whitespace around a pipe is trimmed, so columns may be aligned.
+At the start of a line a spell takes its value after ~=~, closed by the newline:
 
 #+begin_example
 &alice&
-:info[
-role       | Engineer
-team       | Platform
-email      | alice@example.com
-full name  | Alice Smith
-]
+:role      = Engineer
+:team      = Platform
+:email     = alice@example.com
+:full-name = Alice Smith
 #+end_example
 
-A single pair fits on one line:
+Stacked that way they read as a property drawer, but no drawer exists. Each line
+is an ordinary spell, and the block owns them all.
+
+It is usually paired with a ledger, which is what a mention navigates to (see
+Ledgers in *Indue, Language Specification*). Unless there is a reason to track
+history, keep the whole record on the *last* ledger of a name, so a simple
+renderer arriving there shows all of it.
+
+Mid-line, a spell takes a container as usual, because there the rest of the line
+is prose:
 
 #+begin_example
-:info[status | draft]
+Alice is a :role<Engineer> on the platform team.
 #+end_example
+
+A key is a spell name, so it is a bare word: hyphenate rather than space it.
 
 ** Values are recognised by shape
 
-Nothing needs declaring, and there is no schema to define first: the point is writing things down quickly rather than modelling them. ~:info~ recognises a few shapes so that values are useful without being typed by hand.
-
-| Shape                       | Read as   |
-|-----------------------------+-----------|
-| ~https://...~, ~mailto:...~     | a URL     |
-| ~^name~                       | a station |
-| ~&name~                       | a source  |
-| ~2026-04-07~                  | a date    |
-| ~42~, ~3.5~                     | a number  |
-| anything else               | text      |
+| Shape                       | Read as    |
+|-----------------------------+------------|
+| ~https://...~, ~mailto:...~     | a URL      |
+| ~^waypoint~                   | a waypoint |
+| ~&ledger~                     | a ledger   |
+| ~2026-04-07~                  | a date     |
+| ~42~, ~3.5~                     | a number   |
+| anything else               | text       |
 
 #+begin_example
-:info[
-homepage | https://alice.example
-charter  | ^project-charter
-manager  | &bob
-joined   | 2024-03-01
-level    | 4
-role     | Staff Engineer
-]
+:homepage = https://alice.example
+:charter  = ^project-charter
+:manager  = &bob
+:joined   = 2024-03-01
+:level    = 4
 #+end_example
 
-Recognised shapes mean a station or source value is a working link rather than a string that looks like one, and a date sorts as a date.
+Recognised shapes mean a waypoint or ledger value is a working link rather than a
+string that looks like one, and a date sorts as a date.
 
-Where a value is used somewhere that needs a different type, it is cast at the point of use. A spell taking a number will try to read the string as one; if it cannot, the spell is inert and nothing happens, which is the ordinary recover-forward behaviour applied to values rather than to syntax.
+Where a value is used somewhere that needs a different type, it is cast at the
+point of use. A spell taking a number will try to read the string as one; if it
+cannot, the spell is inert and nothing happens, which is the ordinary
+recover-forward behaviour applied to values rather than to syntax.
+
+** Several values
+
+~|~ separates values, so nothing needs quoting:
+
+#+begin_example
+:tags   = fighter | veteran | one-eyed
+:font   = Helvetica Neue | Arial
+#+end_example
+
+** Adding and removing
+
+| Operator | Effect      |
+|----------+-------------|
+| ~=~        | replace     |
+| ~+=~       | add to      |
+| ~-=~       | remove from |
+
+#+begin_example
+:hp    += 15
+:gold  -= 20
+:tags  += veteran
+:hp     = -5               ; assigns negative five, not a subtraction
+#+end_example
+
+The operator belongs to the key, which keeps ~-=~ and a negative value apart. On
+a ledger, where entries accumulate in document order, these make the running
+total author-controlled:
+
+#+begin_example
+&day&
+:calories += 420           ; breakfast
+
+&day&
+:calories += 810           ; lunch
+#+end_example
+
+A read returns the balance at that point in the document.
 
 ** Rendering a record
 
-An application should render a source block whose only content is ~:info~ as a properties table. That makes a record readable on arrival with no authoring effort, which matters because a mention navigates to the source.
+An application should render a ledger block whose only content is setters as a
+properties table. That makes a record readable on arrival with no authoring
+effort, which matters because a mention navigates to the ledger.
 
-This is a recommendation rather than a rule. ~:info~ says the content is metadata; how it is presented is a shipped default a document may override, the same as blockquote indentation or closed-task strikeout.
+This is a recommendation rather than a rule: the content says it is metadata,
+and how it is presented is a shipped default a document may override, the same
+as blockquote indentation or closed-task strikeout.
 
-** Why not one spell per key
+** Why arbitrary names are allowed
 
-Arbitrary metadata could be written as ordinary spells (~:role<Engineer>~), and for a handful of well-known keys that reads well. As a general mechanism it does not: every key would have to be defined as a spell before it could be used, which turns jotting down a few facts into a schema exercise.
+Requiring every key to be defined before use would turn jotting down a few facts
+into a schema exercise. Free names take the opposite trade: nothing is declared,
+and the cost is that a typo makes a new property rather than an error.
 
-~:info~ takes the opposite trade. Keys are free text, so nothing needs declaring, and the cost is that a typo is a new key rather than an error.
-
-** A scroll, not a conduit
-
-~:info~ takes a *scroll*, so its contents are unparsed. A value containing ~#~ or ~*~ stays literal rather than becoming a tag or turning bold, which is what metadata wants.
-
-~:table~, by contrast, takes a conduit, because table cells are content and should render their formatting. Same visual syntax, different container, for the two different jobs.
+That is the same bargain metadata has always made, and it is what lets a value
+written for a spell one application understands survive passage through one that
+does not.
 
 * Scheduling and Recurrence
 
-Scheduling is the second reason Indue exists, and unlike most of the catalogue it is specified tightly: two applications must produce the same schedule from the same document, or a shared vault means nothing.
+Scheduling is the second reason Indue exists, and unlike most of the catalogue it is specified tightly: two applications must produce the same schedule from the same document, or a shared lair means nothing.
 
-Scheduling is carried by five separate spells, each on its own axis. Nothing is composite, and no spell means two things.
+Scheduling is carried by six separate axes. Nothing is composite, and no spell serves two axes, though an axis may be served by more than one spell.
 
 | Axis          | Spells                          | Carries                          |
 |---------------+---------------------------------+----------------------------------|
@@ -784,7 +910,7 @@ every 2 weeks
 every 3 months
 #+end_example
 
-Period nouns are ~day~, ~week~, ~month~, ~year~, in singular or plural. There is no ~quarter~: fiscal quarters begin in different months for different organisations, so the word would mean something different in every vault. ~every 3 months~ says it unambiguously and anchors from the task's own date, which is what a quarter actually is.
+Period nouns are ~day~, ~week~, ~month~, ~year~, in singular or plural. There is no ~quarter~: fiscal quarters begin in different months for different organisations, so the word would mean something different in every lair. ~every 3 months~ says it unambiguously and anchors from the task's own date, which is what a quarter actually is.
 
 ~every year~, ~every 1 year~, and ~every 1 years~ all parse. ~every year~ and ~every 2 years~ are the documented forms; the rest are tolerated the way commas are tolerated in vessels.
 
@@ -824,7 +950,7 @@ Months are ~january~ through ~december~, or ~jan~ through ~dec~.
 
 *** Shorthands
 
-Four whole-pattern shorthands are matched before the grammar runs. They are a closed set and take no clauses:
+Six whole-pattern shorthands are matched before the grammar runs. They are a closed set and take no clauses:
 
 | Shorthand  | Equivalent                    |
 |------------+-------------------------------|
@@ -837,14 +963,14 @@ Four whole-pattern shorthands are matched before the grammar runs. They are a cl
 
 *** The anchor
 
-A pattern says how often, never when it starts. The anchor comes from the date spell on the same item (~:on~, ~:due~, or ~:scheduled~). Where a series should start later than its anchor, ~:from~ supplies that date instead.
+A pattern says how often, never when it starts. The anchor comes from the date spell on the same item (~:on~, ~:due~, or ~:scheduled~), and the anchor is an occurrence: the first one, and after a completion the next one.
 
 #+begin_example
 - :o Pay rent :due<2026-04-01> :repeat[monthly]
 - :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
 #+end_example
 
-Where a pattern and an anchor disagree, the pattern wins and the anchor supplies only the starting point. An anchor of ~2026-04-20~ with ~every month on 3rd saturday~ produces third Saturdays, not the 20th of each month.
+Where a pattern does not match its anchor, the pattern takes effect from the following occurrence. An anchor of ~2026-04-20~ with ~every month on 3rd saturday~ produces the 20th, then third Saturdays after it.
 
 *** Completion behaviour
 
@@ -862,7 +988,7 @@ By default a series is anchored: it recurs on schedule regardless of when an occ
 | ~:from<date>~    | The series starts here             |
 | ~:until<date>~    | The series stops here              |
 
-~:from~ is only needed when a series should start later than its anchor. Without ~:until~, a series continues indefinitely.
+~:from~ and ~:until~ clip a series. An occurrence outside the bounds does not happen, the anchor included, so ~:from~ is how a series starts later than the date it is anchored to. Without ~:until~, a series continues indefinitely.
 
 #+begin_example
 - :o Team meeting :on<2026-04-07> :repeat[weekly] :until<2026-12-31>
@@ -882,16 +1008,16 @@ By default a series is anchored: it recurs on schedule regardless of when an occ
 
 ~:completions~ records when a repeating task was actually finished. It is what ~.after<completion>~ reads, and it is *application-maintained*: most applications write it, and a person may keep it by hand.
 
-It sits on the task's own line, or on the line immediately below:
+It sits anywhere in the task's block:
 
 #+begin_example
 - :o Water plants :on<2026-04-07> :repeat[weekly].after<completion>
 :completions[2026-04-07 2026-04-14 2026-04-21]
 #+end_example
 
-The second line is an astral block, so it renders nothing: the dates are visible in the file and absent from the document. Dates go in a scroll rather than a vessel, since the list grows and an application appends to it.
+The second line is part of the task's block. The dates are visible to anyone reading the file; whether they reach the render is an application choice, and a marker on a completed task is more usual than the list itself. Dates go in a scroll rather than a vessel, since the list grows and an application appends to it.
 
-Binding is by adjacency, so no handle is needed. The full rules, including what happens when a log is detached from its task, are in *Indue, Language Specification*.
+Binding is by block membership, so no handle is needed. The full rules, including what happens when a log is detached from its task, are in *Indue, Language Specification*.
 
 ** Worked examples
 
@@ -955,7 +1081,7 @@ Queries are written in SQL:
 #+begin_example
 :query[SELECT block WHERE task = open]
 :query[SELECT text, due WHERE tag = work AND due < +7d ORDER BY due]
-:query[SELECT role FROM source WHERE name = alice]
+:query[SELECT role FROM ledger WHERE name = alice]
 #+end_example
 
 The query is a scroll, unparsed by Indue: the query language owns its own grammar, specified in *Indue Query Syntax*, over the tables in *Indue Reference Schema*.
@@ -986,7 +1112,7 @@ An explicit rendering overrides the default:
 
 ** Reading a single value
 
-Where the need is one property of one entity, a query is more than is called for. Sources support dotted access, which resolves without an engine:
+Where the need is one property of one entity, a query is more than is called for. Ledgers support dotted access, which resolves without an engine:
 
 #+begin_example
 Their role is &alice.role.
@@ -1043,7 +1169,7 @@ colour, always" takes control away.
 
 Applications may define their own spells beyond those in the core spec.
 Custom spells must follow all standard spell syntax rules, they use the
-same ~:name~ prefix, the same vessel/scroll/conduit arguments, and the same
+same ~:spell~ prefix, the same vessel/scroll/conduit arguments, and the same
 bond/chaining behavior.
 
 ** The ~:ext~ namespace (recommended)
@@ -1078,8 +1204,8 @@ overriding core formatting:
 #+end_example
 
 The extension maps CSS selectors to Indue entities: ~.classname~ maps to
-sigil ~#name~, ~#id~ maps to station ~^n~, and CSS properties translate
-to equivalent Indue spell chains. Because sigils, signets, and stations
+tag ~#tag~, ~#id~ maps to waypoint ~^n~, and CSS properties translate
+to equivalent Indue spell chains. Because tags, signets, and waypoints
 have distinct scopes of bestowal in core Indue, ~:ext.css~ rules targeting
 ~#~ entities apply to the block, while rules targeting ~@~ entities apply
 to the inline token, matching the core semantics rather than overriding
@@ -1114,8 +1240,8 @@ rather than disappearing or causing errors.
 
 ** Custom spell discovery
 
-Applications may declare custom spells in the ~.vault~ marker file or in
-a beaconed satchel of a vault-public configuration file, so that other
+Applications may declare custom spells in the ~.lair~ marker file or in
+a beaconed satchel of a lair-public configuration file, so that other
 applications can provide better fallback rendering or migration tools.
 The mechanism is left to applications; the spec only requires that
 unknown spells degrade gracefully per the parse-don't-fail philosophy.
@@ -1152,7 +1278,7 @@ An implementation claiming Indue compatibility must support the spells below. Th
 *Structure*
 - ~:list~ and ~:step~, with depth chains, void ditto, and chain cycling
 - ~:quote~ / ~:q~, a structural container
-- ~:code~, with and without a language, and the ~`~ glamour
+- ~:code~, with and without a language, and the ~`~ sigil
 - ~:math~ / ~:$~
 - ~:table~, with pipe-separated cells in a conduit target
 
@@ -1164,17 +1290,17 @@ An implementation claiming Indue compatibility must support the spells below. Th
 *Tasks*
 - ~:task~ with its three values, and the aliases ~:o~ and ~:x~
 - ~:>~ as a built-in, usable but not referenceable
-- Custom states via ~<:name>.task<state>~, with ~.task~ mandatory
-- ~:cycle[name]<...>~, enumerable and named
+- Custom states via ~<:spell>.task<state>~, with ~.task~ mandatory
+- ~:cycle[cycle]<...>~, enumerable and named
 
 *Queries*
 - ~:query~ taking a SQL query as a scroll, with the grammar specified in *Indue Query Syntax*
 - Result shape determining rendering: value inline, list as a list, matrix as a table
-- Dotted access on sources (~&name.key~) for single-value reads
+- Dotted access on ledgers (~&ledger.key~) for single-value reads
 
 *Metadata*
-- ~:info~ with pipe-separated pairs, newline-separated rows
-- Value shapes recognised: URL, station, source, date, number, text; cast at the point of use
+- Setter form ~:key = value~ at line start; any spell name writes a property; ~+=~ and ~-=~ modify; ~|~ separates values
+- Value shapes recognised: URL, waypoint, ledger, date, number, text; cast at the point of use
 
 *Scheduling*
 - Dates: ~:on~, ~:due~, ~:scheduled~
@@ -1182,7 +1308,7 @@ An implementation claiming Indue compatibility must support the spells below. Th
 - Series bounds: ~:from~, ~:until~
 - Exceptions: ~:skip~
 - ~:repeat~ with the full pattern grammar: ~every <count> <period>~, ~on <ordinal> <day>~, ~of <month>~, in that order, each clause optional; the shorthand set; and ~.after<completion>~
-- ~:completions~, application-maintained, bound by adjacency
+- ~:completions~, application-maintained, bound to its block
 - Deterministic export of every pattern to a single RRULE
 
 *Application preferences*
