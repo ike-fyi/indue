@@ -18,19 +18,19 @@ Indue files are plain text. They are readable and writable in any editor without
 
 Indue is specified across five companion documents. Each is complete on its own terms and can be read and implemented without the others open; cross-references between them are recommendations, not dependencies.
 
-| Document                              | Covers                                              |
-|---------------------------------------+-----------------------------------------------------|
-| *Indue, Language Specification* (this) | Syntax, conventions, and the semantic model         |
-| *The Indue Spellbook*                  | Every spell, by category, with its quirks           |
-| *Lair Specification*            | Multi-document collections: visibility, scoping, import and export |
-| *Indue Query Syntax*                   | Finding and reading data, in SQL             |
-| *Indue Reference Schema*               | The tables an AST maps onto, which queries address |
+| Document                               | Covers                                                             |
+|----------------------------------------+--------------------------------------------------------------------|
+| *Indue, Language Specification* (this) | Syntax, conventions, and the semantic model                        |
+| *The Indue Spellbook*                  | Every spell, by category, with its quirks                          |
+| *Lair Specification*                   | Multi-document collections: visibility, scoping, import and export |
+| *Indue Query Syntax*                   | Finding and reading data, in SQL                                   |
+| *Indue Reference Schema*               | The tables an AST maps onto, which queries address                 |
 
-Two further documents are *derived presentations* of the same material and are
-not normative: the *Indue Language Reference*, which states each construct and
-its form without rationale, and the *Indue Cheatsheet*, which covers the
-everyday surface for a new writer. Where either disagrees with a specification,
-the specification governs.
+Three further documents are not normative. The *Indue Language Reference* states
+each construct and its form without rationale, the *Indue Cheatsheet* covers the
+everyday surface for a new writer, and *Indue, Design Philosophy* holds the
+reasoning behind the decisions made here. Where any of them disagrees with a
+specification, the specification governs.
 
 This document is what an implementer builds a parser against: the characters, the structures they form, and the rules that decide what a construct means. It defines the *mechanics* of spells (how they take inputs, where their effects land, how they compose) but not the catalogue of individual spells, which lives in the Spellbook.
 
@@ -42,7 +42,7 @@ Adding a spell is not a breaking change. Unknown spells recover forward by desig
 
 The complete set of confirmed core syntax. Every construct here is defined in full later; this table is for orientation and lookup.
 
-** Sockets (structural markers, line-start)
+** List items (structural markers, line-start)
 
 | Syntax       | Role                                 |
 |--------------+--------------------------------------|
@@ -54,9 +54,9 @@ The complete set of confirmed core syntax. Every construct here is defined in fu
 | ~-+~ / ~--+~     | Dash-mode depth (ordered)            |
 | ~-- =~ / ~--- =~ | Dash-mode heading                    |
 
-** Glamours (inline formatting)
+** Sigils (inline formatting)
 
-Each glamour is shorthand for a spell. A single glamour expands to the spell plus its wall; a pair brackets a rich target. Repeats collapse (~***~ is ~*~), and stacking different marks requires a bracket (~*/[text]~). See Glamours for the full rules.
+Each sigil is shorthand for a spell. A single sigil expands to the spell plus its wall; a pair brackets a rich target. Repeats collapse (~***~ is ~*~), and stacking different marks requires a bracket (~*/[text]~). See Sigils for the full rules.
 
 | Character | Effect        | Spell equivalent |
 |-----------+---------------+------------------|
@@ -66,18 +66,18 @@ Each glamour is shorthand for a spell. A single glamour expands to the spell plu
 | ~%~         | Strikethrough | ~:strike~          |
 | ~`~         | Code          | ~:code~            |
 
-Superscript (~:sup~), subscript (~:sub~), and maths (~:math~, aliased ~:$~) are spells; they have no glamour character.
+Superscript (~:sup~), subscript (~:sub~), and maths (~:math~, aliased ~:$~) are spells; they have no sigil character.
 
-** Sigils, signets, and references
+** Tags, signets, and references
 
 | Syntax         | Role                 | Indue name   |
 |----------------+----------------------+--------------|
-| ~#tag~         | Tag (single word)    | Sigil        |
-| ~#[multi word]~ | Tag (multi-word)    | Sigil        |
-| ~#~            | Tag whole line       | Sigil        |
-| ~@name~        | Entity reference     | Signet       |
-| ~^label~       | Anchor (a named place) | Station   |
-| ~&name&~       | Canonical record       | Source     |
+| ~#tag~         | Tag (single word)    | Tag        |
+| ~#[multi word]~ | Tag (multi-word)    | Tag        |
+| ~#~            | Tag whole line       | Tag        |
+| ~@signet~        | Entity reference     | Signet       |
+| ~^label~       | Anchor (a named place) | Waypoint   |
+| ~&ledger&~       | Canonical record       | Ledger     |
 
 
 ** Spells and containers
@@ -99,25 +99,25 @@ Superscript (~:sup~), subscript (~:sub~), and maths (~:math~, aliased ~:$~) are 
 
 | Syntax | Role                 | Indue name |
 |--------+----------------------+------------|
-| ~\~      | Escape character     | Nick       |
+| ~\~      | Escape character     | Escape       |
 | ~~~      | Hoisted config block | Satchel    |
 | ~!~      | Public marker        | Beacon     |
-| ~;~ / ~;;~ / ~;;;~ | Comment (level by count) | Whisper |
+| ~;~ / ~;;~ / ~;;;~ | Comment (level by count) | Comment |
 
 ** Reserved and available characters
 
 | Character | Status                                 |
 |-----------+----------------------------------------|
 | ~<>~        | Vessel (value argument, and target when marked) |
-| ~^~         | Station (anchors a place; nature comes from the spell) |
+| ~^~         | Waypoint (anchors a place; nature comes from the spell) |
 | ~@~         | Signet in text; target marker in spell world |
-| ~&~         | Source (canonical record)              |
-| ~|~         | Version after a name, trail ordering, ~:info~ pair separator, table cell separator |
-| ~()~        | Available (too common in prose to reserve) |
+| ~&~         | Ledger (canonical record)              |
+| ~|~         | Separates values within a construct: vessel values, table cells, a name and its version |
+| ~()~        | Available: too common in prose to reserve, and nothing claims it |
 | ~>~         | Available in material text; reserved inside spell world, where a vessel closes on it |
 | ~$~         | Free in prose; only ~:$~ is a spell (aliasing ~:math~) |
-| ~`~         | Glamour for ~:code~                       |
-| ~;~         | Comment (Whisper), level by repetition |
+| ~`~         | Sigil for ~:code~                       |
+| ~;~         | Comment (Comment), level by repetition |
 
 *** A character can be spent twice
 
@@ -125,7 +125,7 @@ A character reserved in the material world is not thereby spent in spell world, 
 
 ~@~ is the working example. In material text it is a signet, summoning an entity by name. Inside spell world it marks a bond's target. Those are different jobs, and neither constrains the other, because a signet is never read inside a chain and a target marker is never read in running prose.
 
-This is why "available" in the table above should be read narrowly. It means *available in the material world*, where a character must survive contact with ordinary prose. A glamour character, a socket, or a sigil is unavailable there, since it already carries meaning a reader would trip over, but it remains free as a mechanical device inside spell world, where prose conventions no longer apply and the only constraint is not colliding with spell syntax already in use.
+This is why "available" in the table above should be read narrowly. It means *available in the material world*, where a character must survive contact with ordinary prose. A sigil character, a list-item mark, or a tag is unavailable there, since it already carries meaning a reader would trip over, but it remains free as a mechanical device inside spell world, where prose conventions no longer apply and the only constraint is not colliding with spell syntax already in use.
 
 The practical consequence: when a new mechanism is needed inside spell world, the candidate pool is much larger than the "Available" rows suggest. It includes every character already spent on material-world syntax, provided the new use sits entirely within a spell.
 
@@ -203,9 +203,9 @@ ahead through unbounded content and never backtracks to determine meaning. A
 character may hold several roles (~:~ opens a spell and terminates one); context
 decides which applies.
 
-** Glamours are for frequent writing; spells are for transforms
+** Sigils are for frequent writing; spells are for transforms
 
-A glamour earns its mark only by appearing constantly in everyday writing.
+A sigil earns its mark only by appearing constantly in everyday writing.
 Anything that transforms content into a different form is a spell.
 
 ** Bracket types replace quoting
@@ -283,17 +283,25 @@ how the public layer composes. It does not enforce access control. Filesystem
 permissions, ACLs, encryption, and sandboxing are the OS's domain. Tools should
 be permission-aware but must never duplicate security in markup.
 
-** The nick (~\~)
+** The escape character (~\~)
 
-~\~ is reserved as an escape character. Its primary use is rendering a literal
-glamour character that would otherwise be interpreted as markup:
+~\~ is reserved as an escape character. It renders a sigil mark or a container
+mark that would otherwise be read as markup:
 
 #+begin_example
 The price is 50\% off       ; literal %, not strikethrough
 Use \*asterisks\* literally ; literal *, not bold
+\[sic]                      ; literal brackets
+\{a b\}                     ; literal braces
 #+end_example
 
-~\~ before a non-glamour character renders as a literal backslash.
+Escaping an *opener* is enough. A closing mark with nothing open is ordinary
+text, so ~\[sic]~ needs one backslash rather than two. The second backslash in ~\{a b\}~ is
+needed only because a conduit was opened earlier on that line.
+
+The escape character does not fire inside a scroll, where nothing is syntax to begin with.
+
+~\~ before any other character renders as a literal backslash.
 
 ** Newlines are never destroyed
 
@@ -305,11 +313,11 @@ A newline inside a block is content rather than structure, so tools that reflow
 text change how a document looks and not what it is: block boundaries,
 identifiers, closure rows, spell targets, and query results are unaffected.
 Newlines are load-bearing elsewhere for the same reason, since ~:table~
-separates rows and ~:info~ separates pairs by newline.
+separates rows and a stacked setter separates pairs by newline.
 
 ** Parse, don't fail
 
-Indue parsers never throw errors at the writer. Unclosed glamour delimiters
+Indue parsers never throw errors at the writer. Unclosed sigil delimiters
 apply to the single word they touch, or render as literal text where they touch
 no word. Unknown spell names render their content as plain text. Strict
 validation belongs in the linter and the export pipeline, not in the parser
@@ -318,7 +326,7 @@ running while someone writes notes at midnight.
 ** Recover forward
 
 The absence of a referent is a *first-class state, not an exception*. An
-unresolved signet, an unknown spell, a station with no sibling, and a cauldron
+unresolved signet, an unknown spell, a waypoint with no sibling, and an indued element
 whose entity does not exist yet are all legal and meaningful, and each upgrades
 itself the moment its referent appears.
 
@@ -332,16 +340,16 @@ Indue uses a thematic vocabulary inspired by RPG and medieval conventions to nam
 
 That is deliberate. A colloquial name carries the assumptions of wherever it was borrowed from, and a reader who sees "vault" or "class" will supply the behaviour of the tool they learned it in. A distinct name carries only what this document gives it, which is what a specification needs.
 
-Indue terms are ordinary common nouns in prose, so they are lowercase except where a sentence or a heading begins: a sigil, a station, a scroll, a lair.
+Indue terms are ordinary common nouns in prose, so they are lowercase except where a sentence or a heading begins: a tag, a waypoint, a scroll, a lair.
 
 The core metaphor: plain text is your base character. Indue is the gear system. You equip your text with markup and it gains new abilities. Strip the gear off and the character is still there, still whole.
 
 | Syntax         | Indue name | Common name          |
 |----------------+------------+----------------------|
-| ~-~, ~+~, ~=~        | *Socket*     | Structural marker    |
+| ~-~, ~+~, ~=~        | *List item*  | Structural marker    |
 | Node created   | *Slot*       | Block / node         |
-| ~*~, ~/~, ~_~, ~%~      | *Glamour*    | Inline formatting    |
-| ~#~              | *Sigil*      | Tag                  |
+| ~*~, ~/~, ~_~, ~%~      | *Sigil*    | Inline formatting    |
+| ~#~              | *Tag*      | Tag                  |
 | ~@~              | *Signet*     | Reference / mention  |
 | ~:fn~            | *Spell*      | Function             |
 | ~.~              | *Bond*       | Spell chain operator |
@@ -351,30 +359,30 @@ The core metaphor: plain text is your base character. Indue is the gear system. 
 | ~@<>~            | *Summons*    | Targets one spell in a chain |
 | ~[]~             | *Scroll*     | Unparsed content     |
 | ~{}~             | *Conduit*    | Rich content block   |
-| ~^label~         | *Station*   | Anchor (a named place)       |
-| ~&name&~         | *Source*    | Canonical record for a name  |
-| ~\~              | *Nick*       | Escape character     |
+| ~^label~         | *Waypoint*   | Anchor (a named place)       |
+| ~&ledger&~         | *Ledger*    | Canonical record for a name  |
+| ~\~              | *Escape*       | Escape character     |
 | ~\~~             | *Satchel*    | Hoisted config block |
-| Config block   | *Codex*      | Inherited properties |
+| Element given properties | *Indued element* | Inherited properties |
 | ~.lair~ marker   | *Lair*       | Vault / workspace / collection |
 | ~!~              | *Beacon*     | Public marker        |
-| ~;~ / ~;;~ / ~;;;~ | *Whisper*  | Comment              |
-| ~[label](url)~   | *Goety*      | Borrowed familiar shape |
+| ~;~ / ~;;~ / ~;;;~ | *Comment*  | Comment              |
+| ~[[endpoint|label]]~ | *borrowed form*   | Borrowed familiar shape |
 | ~[]~             | *Void*       | A value-shaped absence   |
 | (positional)     | *Spell block* | A block rendering only one spell's target |
 
-A one-sentence summary of the entire system: sockets create slots; glamours, sigils, signets, and spells equip the content sitting on those slots; bonds chain spells together; shells open paired scopes with independent termination; vessels carry values, and become targets when summoned; scrolls, and conduits carry data between them; and beacons promote private codexes into a lair's public layer. Codexes configure how glamours, sockets, and entities bestow their properties; styling follows rendering, an a spell's nature decides whether it paints a block or a span, and sigils, signets, and stations style their rendered expressions.
+A one-sentence summary of the entire system: list items create slots; sigils, tags, signets, and spells equip the content sitting on those slots; bonds chain spells together; shells open paired scopes with independent termination; vessels carry values, and become targets when summoned; scrolls, and conduits carry data between them; and beacons promote private indued elements into a lair's public layer. Indued elements configure how sigils, list items, and entities bestow their properties; styling follows rendering, an a spell's nature decides whether it paints a block or a span, and tags, signets, and waypoints style their rendered expressions.
 
 * Spells: The Core Mechanic
 
-A *spell* is a named transform. Everything in Indue that changes how content looks or behaves is a spell, including the shorthand forms (glamours) that never spell out a name. Learn this section and the rest of the language is mostly vocabulary.
+A *spell* is a named transform. Everything in Indue that changes how content looks or behaves is a spell, including the shorthand forms (sigils) that never spell out a name. Learn this section and the rest of the language is mostly vocabulary.
 
 ** What spells do
 
 Spells have three kinds of effect, and one spell may have any combination:
 
 1. *Styling*. Changing appearance (~:bold~, ~:span-bg~, ~:card~).
-2. *Data*. Attaching machine-readable meaning (~:due~, ~:x~, ~:info~).
+2. *Data*. Attaching machine-readable meaning (~:due~, ~:x~, ~:weapon = short sword~).
 3. *Embedding*. Producing content at the spell's position (~:link~, ~:table~, ~:query~).
 
 A spell's *name* is letters, digits, and hyphens. Two names may refer to the same spell (~:fg~ and ~:color~ are aliases).
@@ -541,7 +549,7 @@ A leading container opens spell world by itself, so no wall is needed. Written o
 
 The cast shape suits knowing what you want before you write the content: styling a word mid-sentence, applying a known effect.
 
-The offering shape suits having the content already: you wrote the list, and now you want it themed. It is also what makes a class read well at the call site, since the content leads and the name follows.
+The offering shape suits having the content already: you wrote the list, and now you want it themed. It is also what makes a compound spell read well at the call site, since the content leads and the name follows.
 
 Neither is more correct. Most documents use both, in the same paragraph, without anyone noticing.
 
@@ -590,6 +598,26 @@ target wherever it appears, and several accumulate:
 Examples in this specification put construct targets first or last, because
 that reads best, but the rule does not require it.
 
+*** An entity mark may stand in a slot
+
+An entity carries its own mark, so it needs no container to be recognised as a
+target. A bonded entity reference is a construct target directly:
+
+#+begin_example
+#project.card              ; offering shape, no container needed
+:card.#project             ; cast shape, the same thing
+&bob&.card                 ; a ledger renders nothing, but can still be targeted
+#+end_example
+
+A bare mark targets *that form* of the entity, exactly as it does in prose:
+~#project~ reaches the tag form. Reaching every rendered form of a name still
+needs the unmarked container, ~<project>~, because only the container can say
+"the entity, whichever mark it wears."
+
+This is what keeps the ambiguous-looking ~:spell<input>.<target>~ rare in
+practice. Entity targets carry a mark, single-word targets use the grab rule,
+and a bare vessel target is left for the uncommon case of targeting a value.
+
 *** The grab rule: a bare word to the right
 
 A bare, unbracketed word *glued to the right of a spell* is taken as that
@@ -609,7 +637,7 @@ whitespace. Leftward there is no signal at all: ~word:bold~ cannot be
 distinguished from ordinary prose. A bare word can never be bonded either,
 since ~.word~ is indistinguishable from the next spell in the chain.
 
-This one rule is what makes the terse glamour forms possible (see Glamours).
+This one rule is what makes the terse sigil forms possible (see Sigils).
 
 *** Sub-spell targets (~@~)
 
@@ -642,11 +670,11 @@ In the first, ~.bold~ and ~.color<green>~ both act on every signet *and* on Nanc
 :bold.color<green>@<nancy>.<#>:
 #+end_example
 
-Sigils go bold, since ~.<#>~ is the construct target. Nancy goes green if she is in scope. Nancy is not bold, because she is not a sigil.
+Tags go bold, since ~.<#>~ is the construct target. Nancy goes green if she is in scope. Nancy is not bold, because she is not a tag.
 
 *** Where this is actually for
 
-Sub-spell targeting is uncommon in ordinary writing. Its purpose is letting a *compound spell reach its own internal parts*, which is what makes a class a theme rather than a style.
+Sub-spell targeting is uncommon in ordinary writing. Its purpose is letting a *compound spell reach its own internal parts*, which is what makes a compound spell a theme rather than a style.
 
 #+begin_example
 <:smart-tips>
@@ -666,7 +694,7 @@ At the call site that is one word:
 }.smart-tips
 #+end_example
 
-The block is framed and tinted, headings inside it are bold, tags inside it are highlighted. Without ~@~, a class could only set properties on the thing it was applied to, never on what that thing contains.
+The block is framed and tinted, headings inside it are bold, tags inside it are highlighted. Without ~@~, a compound spell could only set properties on the thing it was applied to, never on what that thing contains.
 
 With only one spell in a construct there is nothing to narrow, so the two forms coincide:
 
@@ -686,7 +714,7 @@ Adjacent summons on one spell are additive; the single-vessel form is preferred:
 
 A block spell reaches the block *and everything it owns*, because a block encloses its subtree. A span spell reaches only its own run, because a span encloses nothing.
 
-Those defaults serve the usual case: a card frames a heading and its body, because deep reach follows ownership. Bolding a heading does not bold the paragraphs beneath it, but that is not reach doing the work: a heading block is its own line, and the prose below is a child rather than part of it (see A heading is one line). Where the default is wrong, ~:deep~ and ~:shallow~ set reach explicitly.
+Those defaults serve the usual case: a card frames a heading and its body, because deep reach follows ownership. Bolding a heading does not bold the paragraphs beneath it, but that is not reach doing the work: a heading block is its own line, and the prose below is a child rather than part of it (see Block Boundaries). Where the default is wrong, ~:deep~ and ~:shallow~ set reach explicitly.
 
 #+begin_example
 <=>.bg<red>.radius<8>.shallow:     ; a banner on each heading, not its body
@@ -714,7 +742,7 @@ Colours, sizes, dates, languages, and settings are inputs. Text, blocks, and ref
 | ~:spell:word~  | the glued word, unparsed                         |
 | ~[unparsed]~   | unparsed content, nothing inside is syntax        |
 | ~{rich}~       | rich parsed content (nests)                      |
-| ~<reference>~  | a value or reference (entity, marker, station)  |
+| ~<reference>~  | a value or reference (entity, marker, waypoint)  |
 | none           | the enclosing scope, entire                      |
 
 *** Generated targets: embedding spells
@@ -734,6 +762,44 @@ A target that resolves to text and carries no chain is therefore an embed:
 #+end_example
 
 If the value is not text, nothing embeds, which is what distinguishes values usable as configuration from values usable as content.
+
+**** What a lone target embeds
+
+The value is read by shape, the same way a vessel's arguments are:
+
+| Value                   | Embeds as                                  |
+|-------------------------+--------------------------------------------|
+| text                    | the text                                   |
+| an entity reference     | the entity's rendered name                 |
+| a property read (~a.b~)   | that property's value                      |
+| a media path            | the media                                  |
+| a URL                   | a hyperlink showing the address            |
+
+#+begin_example
+<@bob>                     ; Bob's name
+<@bob.weapon>              ; the value of Bob's weapon property
+<diagram.png>              ; the image
+<https://example.com>      ; a link
+#+end_example
+
+A second value makes the first a label for the second:
+
+#+begin_example
+<the docs|https://example.com>
+<Bob's sheet|@bob>
+#+end_example
+
+Which is Indue's native link, falling out of targeting rather than needing a
+construct. Nothing resolves, nothing renders: a reference with no value is
+silent rather than an error.
+
+A bonded chain makes it a target instead, because a target with a chain is
+being acted on rather than read:
+
+#+begin_example
+<@bob>                     ; embeds Bob's name
+<@bob>.bold                ; targets Bob, styling every rendered mention
+#+end_example
 
 *** No target: the whole scope
 
@@ -762,7 +828,7 @@ A block with no rendered content is *astral*. A spell sitting between blocks occ
 
 Astral is a *state*, not a kind of block. Structurally an astral block is an ordinary block with the ordinary property table; what differs is only how each effect category behaves on it, and that follows from the categories rather than from any rule about astral blocks:
 
-- *Styling* properties are aliases into the enclosing scope's properties. Writing one on an astral block sets the scope's *running default* from that point forward, by the same mechanism as a bare type-selector (see Presets and Defaults). An astral block has no content for reach to act on, so this is its only observable effect:
+- *Styling* properties are aliases into the enclosing scope's properties. Writing one on an astral block sets the scope's *running default* from that point forward, by the same mechanism as a bare type-selector (see Entity Configuration). An astral block has no content for reach to act on, so this is its only observable effect:
 
 #+begin_example
 :serif                     ; astral; serif is the default from here on
@@ -792,7 +858,7 @@ A *spell block* is a block whose only rendered content is the content of one spe
 }]
 #+end_example
 
-The test is about *rendering*, not about how the source is shaped. A construct with arbitrary structure nested inside its target is still a spell block, because the target's content is all that renders:
+The test is about *rendering*, not about how the ledger is shaped. A construct with arbitrary structure nested inside its target is still a spell block, because the target's content is all that renders:
 
 #+begin_example
 :quote.{
@@ -807,9 +873,9 @@ Content that renders *beside* the spell breaks it. Here the code is one part of 
 :code[git status] shows the current state.
 #+end_example
 
-Whitespace inside the block counts as content for this test, even though it renders as nothing distinctive. A trailing space is therefore an escape hatch: it keeps a spell from constituting its block without putting anything visible next to it. Material *outside* the block, a following whisper or a blank line, is not part of the block and does not affect the test.
+Whitespace inside the block counts as content for this test, even though it renders as nothing distinctive. A trailing space is therefore an escape hatch: it keeps a spell from constituting its block without putting anything visible next to it. Material *outside* the block, a following comment or a blank line, is not part of the block and does not affect the test.
 
-An astral spell renders nothing at all, so it is never a spell block. Declarations (cauldrons, satchels) contribute no rendered content either, and are likewise not candidates.
+An astral spell renders nothing at all, so it is never a spell block. Declarations (indued elements, satchels) contribute no rendered content either, and are likewise not candidates.
 
 **** What spell blocks are for
 
@@ -847,21 +913,79 @@ An *input* is data a spell computes with. Inputs are always *glued* to the spell
 
 *** Arguments inside a vessel
 
-Arguments are separated by whitespace, following the same convention as CSS value lists. Each may be:
+Arguments are separated by whitespace, following the same convention as CSS value lists.
 
-- a *literal* recognised by shape (~2~, ~50%~, ~#f0f0f0~, ~2cm~),
-- a *reference* by sigil (~^wp~, ~#tag~, ~@person~),
-- a *keyword* from the spell slot's vocabulary (~red~, ~center~, ~serif~),
-- a *spell name* referenced rather than invoked (~:bold~ in ~:strip<:bold>~),
-- a *quoted string* (~"a b"~ or ~'a b'~, equivalent, single-line),
-- or an *unparsed string scroll* (~[a b]~).
+**** How a value is typed
 
-A value containing spaces must be quoted or scrolled so its whitespace is not read as an argument boundary:
+Each value is typed by shape, and the shape must match the *whole* value. The
+ladder is lexical, so it needs no knowledge of the spell:
+
+| The whole value                     | Is                |
+|-------------------------------------+-------------------|
+| a scroll (~[a b]~)                    | literal text      |
+| begins with ~#~ ~@~ ~^~ ~&~ and names an entity | a reference       |
+| begins with ~:~                       | a spell name      |
+| a date shape (~2026-04-07~)           | a date            |
+| a number, with or without a unit (~2~, ~50%~, ~2cm~, ~#f0f0f0~) | a number  |
+| anything else                       | a string          |
+
+A value that falls to the last row is *a string literal*. Nothing inside it is
+Indue syntax: a sigil does not fire, an entity does not resolve, a spell does not
+run. It is the text as written.
 
 #+begin_example
-:font<"Helvetica Neue" Arial>     ; quoted
-:font<[Helvetica Neue] [Arial]>   ; scrolled, no quotes needed
+:font<Helvetica Neue | Arial>     ; two strings
+:font<Helvetica *Neue*>           ; one string; the asterisks are characters
+:strip<:bold>                     ; a spell name
+:of<^intro>                       ; a reference
+:due<2026-04-07>                  ; a date
+:span-bg<#f0f0f0>                 ; a number, in hexadecimal
 #+end_example
+
+Because the match is against the whole value, a partial resemblance falls
+through to string. ~#123 Main Street~ is not a tag followed by text; a bare tag
+ends at whitespace, so the value as a whole matches nothing above it and is a
+string.
+
+**** Keywords are resolved at use, not at parse
+
+A bare word like ~red~ or ~center~ parses as a string. Whether it is a keyword is
+decided by the spell receiving it, when it runs. That keeps the parser free of
+per-spell vocabularies, and it is why an unknown keyword is inert rather than an
+error: the spell asked for a member of its enum, got a string that is not one,
+and does nothing.
+
+The same holds for every other cast. A spell wanting a number that receives a
+string is inert. This is recover-forward applied to values.
+
+**** A scroll is the escape
+
+Because detection is automatic, a scroll is how a value that *would* be
+recognised is forced back to text:
+
+#+begin_example
+:caption<[#project]>       ; the literal text, not a tag
+:caption<[2026-04-07]>     ; the literal text, not a date
+#+end_example
+
+Outside those cases a scroll is rarely needed in a vessel, because an
+unrecognised value is already literal.
+
+*** Separating values that contain spaces
+
+Where any value in a vessel contains a space, separate the values with ~|~
+instead. A vessel holding a pipe is pipe-separated; one without is
+space-separated. There is no third rule and no quoting:
+
+#+begin_example
+:mix<red 50%>                     ; space-separated: no value has a space
+:font<Helvetica Neue | Arial>     ; pipe-separated: the first value does
+:radius<3|4|4|3>                  ; either works where values are simple
+#+end_example
+
+~|~ separates values inside a construct, which is the same job it does between
+table cells and between a name and its version. A value that must contain a
+literal pipe is scrolled (~[a | b]~).
 
 *** The spec defines slots, not vocabularies
 
@@ -928,12 +1052,12 @@ A conduit input is parsed as rich content. What the spell does with it afterward
 
 *** Scrolls are unparsed, not verbatim
 
-A scroll says one thing: *treat everything inside as text, not as special characters or spells.* Indue's grammar stands down. No spell fires, no glamour fires, no sigil or signet resolves, no bracket is read as a container. Characters that would otherwise be syntax are just characters.
+A scroll says one thing: *treat everything inside as text, not as special characters or spells.* Indue's grammar stands down. No spell fires, no sigil fires, no tag or signet resolves, no bracket is read as a container. Characters that would otherwise be syntax are just characters.
 
 #+begin_example
 :font[Helvetica Neue]      ; the space is part of the name, not an argument break
-:link[https://x.com/a#b]   ; # is a literal character, not a sigil
-^[my long name]            ; a multi-word station name
+:link[https://x.com/a#b]   ; # is a literal character, not a tag
+^[my long name]            ; a multi-word waypoint name
 [*not bold* and #nottag]   ; every mark here is ordinary text
 #+end_example
 
@@ -949,7 +1073,7 @@ Indue splits those. The parsing guarantee is the scroll, available anywhere and 
 | ~:code[...]~    | unparsed       | monospace, and *means* "this is code" |
 | ~:mono[...]~    | unparsed       | monospace, no semantic claim        |
 
-The split is what makes scrolls generally useful. If a scroll implied monospace, it could not carry a font name, a URL, a file path, a station label, or an emoji, all of which need the parser to stand down while looking like ordinary text. Because the guarantee is purely about parsing, a scroll is the general escape hatch: reach for it whenever text contains characters Indue would otherwise claim.
+The split is what makes scrolls generally useful. If a scroll implied monospace, it could not carry a font name, a URL, a file path, a waypoint label, or an emoji, all of which need the parser to stand down while looking like ordinary text. Because the guarantee is purely about parsing, a scroll is the general escape hatch: reach for it whenever text contains characters Indue would otherwise claim.
 
 ** Chains: the bond (~.~)
 
@@ -1004,11 +1128,89 @@ hello :spell
 
 renders as ~hello my dudes~ with the chain applied to "my dudes". Line breaking is purely how the chain is written; it does not change scope. A continuation line begins with ~.~, and this only reads as continuation while a chain is open, so a leading decimal or an ellipsis in ordinary prose is untouched. An unclosed chain terminates at a blank line or the end of its block, so it cannot consume unbounded content.
 
+** The setter form (~:key = value~)
+
+At the start of a line, a spell may take its input after ~=~ rather than in a
+container. The value runs to the end of the line.
+
+#+begin_example
+- Bob the fighter
+  :weapon = short sword
+  :hp = 15
+  :tags = fighter | veteran
+#+end_example
+
+The newline closes it, so the value needs no wall, no container, and no
+quoting. Colons, parentheses, and brackets inside it are ordinary characters,
+because nothing follows the value that needs protecting from it.
+
+The form is recognised *only* at the start of a line, after any list-item mark
+and its space. Mid-line a spell takes its input in a container as usual, since
+there the rest of the line is prose:
+
+#+begin_example
+Bob carries a :weapon<short sword> into the fight.
+#+end_example
+
+Position does for the setter form what the wall does elsewhere. Several setters
+on consecutive lines give a block the appearance of a property drawer, with no
+drawer construct in the grammar.
+
+*** Modifying rather than replacing
+
+A setter may combine with the value already held rather than replacing it.
+
+| Operator | Effect                |
+|----------+-----------------------|
+| ~=~        | replace               |
+| ~+=~       | add to                |
+| ~-=~       | remove from           |
+
+#+begin_example
+:hp += 15                  ; accumulates
+:gold -= 20                ; subtracts
+:tags += veteran           ; gains a member
+:hp = -5                   ; assigns negative five, not a subtraction
+#+end_example
+
+The operator belongs to the key, not the value, which is what keeps ~-=~ and a
+negative number distinct. The operators apply to any combinable value: a number
+accumulates, a list gains or loses a member, text appends.
+
+On a ledger, where entries accumulate in document order, these are what make
+the running balance author-controlled rather than fixed.
+
 ** Fallback rendering
 
 An unrecognised spell degrades to its target. The parser needs no knowledge of the spell to do this: drop the spell, render the target as it would have rendered without it. Content targets render as content, references render as ordinary references, and a spell with no target simply does nothing.
 
 This is why explicit targeting matters beyond disambiguation. With a target slot, "what survives when this fails" has one answer for every spell, including spells the parser has never heard of.
+
+*** An unrecognised spell still writes its property
+
+Degrading to the target is what *renders*. What the spell carried is not
+discarded: a spell writes a property named for itself, and an application that
+does not recognise the name keeps the value anyway.
+
+#+begin_example
+:calories = 420            ; no core spell named calories; the property is set
+:kern<2>                   ; unknown here, meaningful to an application that knows it
+:starred                   ; no input, so the value is true
+#+end_example
+
+This makes the spell namespace and the property namespace one namespace. A
+document may carry any data without a schema, and a value written for a spell
+one application understands survives passage through one that does not.
+
+An unrecognised spell writes a *block property* and never a styling property.
+Styling aliases into the enclosing scope, so an unknown name treated as styling
+could change rendering at a distance; data sits on its block until something
+reads it.
+
+The cost is the same trade metadata has always made here: a misspelled spell
+name is a new property rather than an error. Nothing is lost that was not
+already lost, since the alternative is discarding the value, and a linter can
+still report a name close to a known one.
 
 ** Maths (~:math~, ~:$~)
 
@@ -1019,7 +1221,7 @@ Maths notation is dense with characters Indue also uses (~^~, ~_~, ~*~, ~#~, ~{}
 :$[E = mc^2]               ; :$ is an alias for :math
 #+end_example
 
-~:$~ is an alias, not a glamour: there is no bare ~$...$~ paired form. Ordinary prose uses ~$~ for currency constantly (~$5~), and a scroll gives maths the explicit visual boundary it wants anyway.
+~:$~ is an alias, not a sigil: there is no bare ~$...$~ paired form. Ordinary prose uses ~$~ for currency constantly (~$5~), and a scroll gives maths the explicit visual boundary it wants anyway.
 
 Rendering maths requires a typesetting library, so an application without one is not expected to typeset it. Under parse-don't-fail an unrecognised ~:math~ degrades to its literal content, which stays readable, so the same file works in a task manager and typesets properly in a journal application that implements it.
 
@@ -1075,9 +1277,9 @@ Heading Schema Declarations).
 | ~:fn@<ref>~           | Target of that spell alone                     |
 | ~:fn:: ... ::fn~      | A shell (see Shells)                           |
 
-* Glamours: Shorthand for Spells
+* Sigils: Shorthand for Spells
 
-A *glamour* is a single character that stands in for a spell. Glamours are not a second system: every glamour form expands to a spell form, and every rule from the Spells section applies unchanged. They exist because a handful of operations are written constantly, and a one-character form is worth having for exactly those.
+A *sigil* is a single character that stands in for a spell. Sigils are not a second system: every sigil form expands to a spell form, and every rule from the Spells section applies unchanged. They exist because a handful of operations are written constantly, and a one-character form is worth having for exactly those.
 
 | Character | Spell         |
 |-----------+---------------|
@@ -1087,20 +1289,20 @@ A *glamour* is a single character that stands in for a spell. Glamours are not a
 | ~%~         | ~:strike~       |
 | ~`~         | ~:code~         |
 
-Superscript, subscript, and maths have no glamour; they are the ~:sup~, ~:sub~, and ~:math~ spells, the last with ~:$~ as an alias. They are far less frequent than the five above, and a glamour costs a character that then needs escaping in ordinary prose.
+Superscript, subscript, and maths have no sigil; they are the ~:sup~, ~:sub~, and ~:math~ spells, the last with ~:$~ as an alias. They are far less frequent than the five above, and a sigil costs a character that then needs escaping in ordinary prose.
 
-** How a glamour expands
+** How a sigil expands
 
-Two rules generate every glamour form:
+Two rules generate every sigil form:
 
-- A *single* glamour is the spell plus its wall: ~*~ is ~:bold:~
-- A *pair* of glamours brackets a rich target: the opener is ~:bold.{~ and the closer is ~}:~
+- A *single* sigil is the spell plus its wall: ~*~ is ~:bold:~
+- A *pair* of sigils brackets a rich target: the opener is ~:bold.{~ and the closer is ~}:~
 
 Everything else follows from the targeting rules already given.
 
-** Where a glamour opens
+** Where a sigil opens
 
-A glamour opens only at a *glamour position*: at the start of a line, after whitespace, or after a closing bracket. A mark glued to the right of a preceding character is ordinary text and opens nothing.
+A sigil opens only at a *sigil position*: at the start of a line, after whitespace, or after a closing bracket. A mark glued to the right of a preceding character is ordinary text and opens nothing.
 
 #+begin_example
 and/or                     ; no italic: / follows "d"
@@ -1109,23 +1311,23 @@ src/main.rs                ; no italic
 50% off                    ; no strikethrough: % follows "0"
 #+end_example
 
-This is what keeps five common characters usable in ordinary prose without escaping. Dates, paths, ratios, percentages, and units all glue their mark to a preceding character, so none of them fire, and the nick is needed only where a mark genuinely does sit at a glamour position (~\*minute~).
+This is what keeps five common characters usable in ordinary prose without escaping. Dates, paths, ratios, percentages, and units all glue their mark to a preceding character, so none of them fire, and the escape character is needed only where a mark genuinely does sit at a sigil position (~\*minute~).
 
 The rule is a single lookbehind of one character, so it costs the parser nothing and never needs backtracking.
 
-*The one relaxation is a bracket.* A glamour followed immediately by ~[~, ~{~, or ~<~ is an opener wherever it sits, including mid-word, because prose does not produce those shapes (see Mid-word glamours).
+*The one relaxation is a bracket.* A sigil followed immediately by ~[~, ~{~, or ~<~ is an opener wherever it sits, including mid-word, because prose does not produce those shapes (see Mid-word sigils).
 
-A *closer* has the mirror requirement: a paired glamour's closing mark must be glued to the right of its content, and on the same line. A mark satisfying neither condition opens nothing, closes nothing, and renders as itself.
+A *closer* has the mirror requirement: a paired sigil's closing mark must be glued to the right of its content, and on the same line. A mark satisfying neither condition opens nothing, closes nothing, and renders as itself.
 
 ** Runs collapse
 
-A run of the *same* glamour character means what one means. ~***~ is ~*~, and ~```~ is ~`~.
+A run of the *same* sigil character means what one means. ~***~ is ~*~, and ~```~ is ~`~.
 
 #+begin_example
 ***WOW***                  ; bold, the same as *WOW*
 #+end_example
 
-This is not a special rule for glamours. A glamour sets a property, and setting a property twice is setting it once: ~:bold.bold~ is ~:bold~, exactly as ~:bg<red>.bg<red>~ is red. Repetition is idempotent everywhere in the language, and glamours are no exception.
+This is not a special rule for sigils. A sigil sets a property, and setting a property twice is setting it once: ~:bold.bold~ is ~:bold~, exactly as ~:bg<red>.bg<red>~ is red. Repetition is idempotent everywhere in the language, and sigils are no exception.
 
 The practical effect is that extra marks are available for emphasis without changing meaning. ~***WOW***~ reads as louder than ~*WOW*~ and renders identically.
 
@@ -1141,7 +1343,7 @@ A run stops when the character changes. ~***///word*~ opens with ~***~, which co
 
 This is what keeps run-scanning a single rule: consume one character while it repeats, then stop.
 
-*** Single glamour, bare word (the grab rule)
+*** Single sigil, bare word (the grab rule)
 
 #+begin_example
 This is *bold right here
@@ -1153,7 +1355,7 @@ This is *bold right here
 *word          expands to    :bold:word
 #+end_example
 
-*** Single glamour, container target
+*** Single sigil, container target
 
 #+begin_example
 *[bold words]              ; a literal target
@@ -1169,9 +1371,9 @@ These expand exactly as the wall form would:
 *<ref>         expands to    :bold:<ref>
 #+end_example
 
-*** Paired glamours
+*** Paired sigils
 
-If a matching closer appears on the same line, the glamour spans everything between:
+If a matching closer appears on the same line, the sigil spans everything between:
 
 #+begin_example
 This has *bold words* in it
@@ -1183,9 +1385,9 @@ This has *bold words* in it
 
 The parser scans the current line for a closer. Found one, paired mode. No closer, the grab rule applies instead.
 
-*** A lone glamour is untargeted only in first position
+*** A lone sigil is untargeted only in first position
 
-A glamour mark that opens nothing and closes nothing is a spell with no target, and like any untargeted spell it takes its whole scope. It is read that way *only in first position* in its scope. Anywhere else it is ordinary text.
+A sigil mark that opens nothing and closes nothing is a spell with no target, and like any untargeted spell it takes its whole scope. It is read that way *only in first position* in its scope. Anywhere else it is ordinary text.
 
 #+begin_example
 ,* This whole block is bold
@@ -1193,11 +1395,11 @@ Plain text * and this asterisk is literal.
 5 * 3                      ; literal; nothing opens
 #+end_example
 
-A spell carries a wall and is unambiguous anywhere; a glamour has none, so position does for a glamour what the wall does for a spell. The restriction applies only to the lone form: paired glamours and the grab rule are self-delimiting and are recognised wherever they sit.
+A spell carries a wall and is unambiguous anywhere; a sigil has none, so position does for a sigil what the wall does for a spell. The restriction applies only to the lone form: paired sigils and the grab rule are self-delimiting and are recognised wherever they sit.
 
 ** Stacking requires a bracket
 
-Different glamour characters may be stacked, which is ordinary bond chaining. Stacking *requires a bracket* immediately after the marks:
+Different sigil characters may be stacked, which is ordinary bond chaining. Stacking *requires a bracket* immediately after the marks:
 
 #+begin_example
 */[bold and italic]        expands to    :bold.italic:[bold and italic]
@@ -1214,9 +1416,9 @@ Requiring a bracket removes the question. A run is one character repeated, and i
 
 So ~*/word~ is bold applied to ~/word~, and ~*/[word]~ is bold and italic applied to ~word~.
 
-** Glamours are inline
+** Sigils are inline
 
-A glamour is glued to its content. A glamour character alone at the end of a line opens nothing, because there is nothing glued to it.
+A sigil is glued to its content. A sigil character alone at the end of a line opens nothing, because there is nothing glued to it.
 
 Regions that cross lines are what shells are for:
 
@@ -1224,118 +1426,125 @@ Regions that cross lines are what shells are for:
 *:: this crosses blocks freely ::*
 #+end_example
 
-That is a deliberate division. A glamour that spanned lines would look almost identical to a shell and behave differently at a blank line, and telling them apart by eye would be impossible. Glamours handle words and phrases; shells handle regions.
+That is a deliberate division. A sigil that spanned lines would look almost identical to a shell and behave differently at a blank line, and telling them apart by eye would be impossible. Sigils handle words and phrases; shells handle regions.
 
 ** Nesting
 
-Glamours do not nest by wrapping. Since a run of any glamour character closes an open span, an inner mark ends the span rather than opening a nested one:
+Sigils do not nest by wrapping. Since a run of any sigil character closes an open span, an inner mark ends the span rather than opening a nested one:
 
 #+begin_example
 *_text_*      → bold, ending at the first _
 #+end_example
 
-To combine marks, stack them (~*_[text]~). To include a literal mark inside styled content, use the bracket form (~*[/_text/_]~), where the inner characters are content rather than a glamour position.
+To combine marks, stack them (~*_[text]~). To include a literal mark inside styled content, use the bracket form (~*[/_text/_]~), where the inner characters are content rather than a sigil position.
 
-** Glamours open shells
+** Sigils open shells
 
-A glamour run followed by a colon run opens a shell, exactly as a spell chain does. A shell takes *effects*, and a glamour is shorthand for an effect, so nothing special is needed:
+A sigil run followed by a colon run opens a shell, exactly as a spell chain does. A shell takes *effects*, and a sigil is shorthand for an effect, so nothing special is needed:
 
 #+begin_example
 *:: ... ::*                ; the same as :bold:: ... ::bold
 */:: ... ::*               ; bold and italic, stopping bold
 #+end_example
 
-This is distinct from the *paired* glamour form, which is bounded: ~*text*~ expands to ~:bold.{text}:~, a conduit that ends where it ends. A region needs the colon run.
+This is distinct from the *paired* sigil form, which is bounded: ~*text*~ expands to ~:bold.{text}:~, a conduit that ends where it ends. A region needs the colon run.
 
-** Mid-word glamours
+** Mid-word sigils
 
-A glamour followed immediately by a bracket is always an opener, whatever precedes it. Ordinary prose does not produce ~*[~, ~*{~, or ~*<~, so this is safe and it is what makes mid-word formatting work:
+A sigil followed immediately by a bracket is always an opener, whatever precedes it. Ordinary prose does not produce ~*[~, ~*{~, or ~*<~, so this is safe and it is what makes mid-word formatting work:
 
 #+begin_example
 abso*[FRICKEN]lutely
 #+end_example
 
-The closing bracket ends the scope, and "lutely" resumes as ordinary text. A trailing glamour with no bracket after it, as in "Free*", is untouched: the relaxation only applies when a bracket immediately follows.
+The closing bracket ends the scope, and "lutely" resumes as ordinary text. A trailing sigil with no bracket after it, as in "Free*", is untouched: the relaxation only applies when a bracket immediately follows.
 
-To use a glamour character literally elsewhere, escape it with a nick: ~\*minute~ renders as a literal asterisk.
+To use a sigil character literally elsewhere, escape it with a backslash: ~\*minute~ renders as a literal asterisk.
 
-** Changing what a glamour does
+** Changing what a sigil does
 
-A glamour character is never rendered: ~*~ disappears and only the styled text remains. There is therefore no glyph to configure. What you would want to change is what the *spell* does, and that is ordinary targeting:
+A sigil character is never rendered: ~*~ disappears and only the styled text remains. There is therefore no glyph to configure. What you would want to change is what the *spell* does, and that is ordinary targeting:
 
 #+begin_example
 <:bold>.weight<600>        ; :bold now means semibold, so * does too
 #+end_example
 
-Because a glamour is nothing more than shorthand for its spell, buffing the spell buffs the glamour. No separate configuration mechanism exists or is needed (see No spell is named after a symbol).
+Because a sigil is nothing more than shorthand for its spell, buffing the spell buffs the sigil. No separate configuration mechanism exists or is needed (see No spell is named after a symbol).
 
 ** Why the set is small
 
-A glamour costs a character that can then never be ordinary text without escaping. That price is worth paying only for operations written constantly, which is why the set is five rather than open.
+A sigil costs a character that can then never be ordinary text without escaping. That price is worth paying only for operations written constantly, which is why the set is five rather than open.
 
-Everything rarer uses spell syntax, which is unlimited and needs no glyph budget at all. Superscript and subscript are ~:sup~ and ~:sub~. Maths is ~:math~, with ~:$~ as an alias rather than a glamour: ~$~ stays ordinary text, so prices and variables need no escaping, and only ~:$~ means anything.
+Everything rarer uses spell syntax, which is unlimited and needs no glyph budget at all. Superscript and subscript are ~:sup~ and ~:sub~. Maths is ~:math~, with ~:$~ as an alias rather than a sigil: ~$~ stays ordinary text, so prices and variables need no escaping, and only ~:$~ means anything.
 
-* Goety
+* Borrowed Forms
 
-*Goety* is Indue's borrowed magic: a small closed set of fixed shapes taken from common markup convention, recognised whole, that produce Indue constructs without going through the spell system.
+A *borrowed form* is one of a small closed set of fixed shapes taken from common markup convention, recognised whole, that produce Indue constructs without going through the spell system.
 
-Goety exists for one reason, familiarity. People arriving from other markup already know these shapes, and there is no reason to make them relearn a gesture they already have.
+They exist for one reason, familiarity. People arriving from other markup already know these shapes, and there is no reason to make them relearn a gesture they already have.
 
-** Goety is not glamour
+** A borrowed form is not a sigil
 
-Glamours and goety are both short, but they are not the same kind of thing, and the difference matters.
+Sigils and borrowed forms are both short, but they are not the same kind of thing, and the difference matters.
 
-A *glamour* derives from the system. ~*word~ has a defined expansion into ordinary spell grammar, inherits every targeting rule unchanged, stacks by bond-chaining, and is configured by targeting the spell it stands for. It is the spell system wearing one character instead of five, so when you need more, you write the longer form of the same thing.
+A *sigil* derives from the system. ~*word~ has a defined expansion into ordinary spell grammar, inherits every targeting rule unchanged, stacks by bond-chaining, and is configured by targeting the spell it stands for. It is the spell system wearing one character instead of five, so when you need more, you write the longer form of the same thing.
 
-*Goety* derives from nothing. It has no expansion you could work out from the grammar, it does not compose, it cannot be extended or configured, and its parts carry no independent meaning. It is a lookup-table entry that happens to produce a valid construct.
+A *borrowed form* derives from nothing. It has no expansion you could work out from the grammar, it does not compose, it cannot be extended or configured, and its parts carry no independent meaning. It is a lookup-table entry that happens to produce a valid construct.
 
-That is why the set is closed and why it may break conventions the rest of the language keeps. Goety is a compatibility layer, not a demonstration of how Indue works, and nothing should be inferred from its shapes.
+That is why the set is closed and why it may break conventions the rest of the language keeps. Borrowed forms is a compatibility layer, not a demonstration of how Indue works, and nothing should be inferred from its shapes.
 
 ** The recognised set
 
-| Goety           | Equivalent          | Notes                        |
-|-----------------+---------------------+------------------------------|
-| ~[label](url)~    | ~:link[url]:label~    | Markdown-style link          |
-| ~[]~ / ~[ ]~        | ~:task<open>~         | Open task, block start only  |
-| ~[>]~             | ~:task<active>~       | Active task, block start only |
-| ~[x]~             | ~:task<closed>~       | Closed task, block start only |
+| Borrowed form            | Equivalent           | Notes                         |
+|--------------------------+----------------------+-------------------------------|
+| ~[[endpoint|label]]~       | ~<label|endpoint>~     | Wiki-style link               |
+| ~[]~ / ~[ ]~                 | ~:task<open>~          | Open task, block start only   |
+| ~[>]~                      | ~:task<active>~        | Active task, block start only |
+| ~[x]~                      | ~:task<closed>~        | Closed task, block start only |
 
 #+begin_example
-See [the docs](https://example.com) for details.
+See [[https://example.com|the docs]] for details.
 
 [] Buy groceries
 - [>] Read foundational papers
 + = [x] Ship the beta
 #+end_example
 
-The checkbox forms are recognised only at the start of a material block, after any socket and its space. They are not welded to list items: a heading or a paragraph can carry one, because structure and task semantics are independent (see The Task Model).
+The wiki form takes its *endpoint first*, following the convention of the
+systems it is borrowed from. Indue's own form is label-first (~<label|endpoint>~),
+matching how the link reads in the sentence. That reversal is deliberate: a
+borrowed form behaves as it does where it came from, which is the whole reason
+to recognise it. Pasted wiki content works untouched.
+
+The checkbox forms are recognised only at the start of a material block, after any list-item mark and its space. They are not welded to list items: a heading or a paragraph can carry one, because structure and task semantics are independent (see The Task Model).
 
 ** Why they do not follow the container rules
 
-In ~[label](url)~ the scroll holds rendered text and the vessel holds data, the reverse of Indue's convention. This is not an inconsistency to resolve: the shape is not parsed as a scroll followed by a vessel at all. It is matched as one fixed pattern and never decomposed, so its parts carry no independent meaning.
+In ~[[endpoint|label]]~ the doubled brackets and the internal pipe mean nothing they would mean elsewhere, and the order is the reverse of Indue's own. This is not an inconsistency to resolve: the shape is matched as one fixed pattern and never decomposed, so its parts carry no independent meaning.
 
 Outside a spell, adjacent containers have no meaning of their own, so recognising these shapes creates no ambiguity with ordinary syntax.
 
 The checkbox forms sit in a position where a scroll would otherwise embed its contents. They are matched first, as whole patterns, which is what lets ~[]~ mean an open task at block start and an empty scroll everywhere else.
 
-** Goety may be generous where the core is strict
+** Borrowed forms may be generous where the core is strict
 
-Because goety is a compatibility surface rather than a design statement, it can absorb conventions that are popular but semantically muddier than Indue's own vocabulary.
+Because borrowed is a compatibility surface rather than a design statement, it can absorb conventions that are popular but semantically muddier than Indue's own vocabulary.
 
-~[!]~ for a blocked task is the likely example. The core deliberately has no blocked state, because blocked composes with every lifecycle position and belongs in a tag (see The Task Model). A goety form may still be provided for people who expect it, with the caveat stated where it appears: ~[!]~ occupies the state slot, while ~[x] #blocked~ and ~[>] #blocked~ say more.
+~[!]~ for a blocked task is the likely example. The core deliberately has no blocked state, because blocked composes with every lifecycle position and belongs in a tag (see The Task Model). A borrowed form may still be provided for people who expect it, with the caveat stated where it appears: ~[!]~ occupies the state slot, while ~[x] #blocked~ and ~[>] #blocked~ say more.
 
 ** When to prefer the spell form
 
-The spell form is more capable and should be preferred whenever anything beyond the plain case is needed: a chained effect, a reference target, a styled label, a link to a station rather than a URL.
+The spell form is more capable and should be preferred whenever anything beyond the plain case is needed: a chained effect, a reference target, a styled label, a link to a waypoint rather than a URL.
 
 #+begin_example
-[label](url)                       ; plain case, fine
-:link[url]:label                   ; the same thing, idiomatic
-:link[url].bold:label              ; chained, only the spell form can do this
-:link@<^section>                   ; link to a block by station
+[[url|label]]                      ; pasted from a wiki, fine
+<label|url>                        ; the native form, idiomatic
+[label].link<url>                  ; explicit, reads in sentence order
+[label].link<url>.bold             ; chained, only the spell form can do this
+:link@<^section>                   ; link to a block by waypoint
 #+end_example
 
-Goety is also the least self-describing part of the language. ~:link[url]:label~ can be understood by someone who has never seen Indue, because its parts say what they are; ~[label](url)~ can only be recognised, not worked out. Where a document is meant to survive without the program that wrote it, the spell form is the one that carries its own meaning.
+Borrowed forms are also the least self-describing part of the language. ~[label].link<url>~ can be worked out by someone who has never seen Indue, because its parts say what they are; ~[[url|label]]~ can only be recognised. Where a document is meant to survive without the program that wrote it, the spell form is the one that carries its own meaning.
 
 * The Task Model
 
@@ -1377,7 +1586,7 @@ Three fixed values mean any application can answer "show me everything active" c
 
 Each state has three forms: the full spell, a short alias, and a borrowed shape.
 
-| State  | Spell           | Alias | Goety |
+| State  | Spell           | Alias | Borrowed form  |
 |--------+-----------------+-------+-------|
 | open   | ~:task<open>~     | ~:o~    | ~[]~    |
 | active | ~:task<active>~   | ~:>~    | ~[>]~   |
@@ -1402,9 +1611,9 @@ They are shipped with an application rather than hardcoded in a parser, which is
 
 This is a real limitation rather than an oversight, and it is worth stating plainly: *a spell named with ~>~ can be used but not defined, targeted, or referenced.* ~:>~ is therefore reserved and built in, and no user-defined spell may take a name containing ~>~. Custom active states use ordinary names (~:doing~, ~:wip~), which have none of these problems.
 
-*** The goety forms
+*** The borrowed forms
 
-~[]~, ~[>]~, and ~[x]~ are goety (see Goety), recognised only at the start of a material block, after any socket and its space:
+~[]~, ~[>]~, and ~[x]~ are borrowed (see Borrowed Forms), recognised only at the start of a material block, after any list-item mark and its space:
 
 #+begin_example
 [] Buy groceries
@@ -1414,9 +1623,9 @@ This is a real limitation rather than an oversight, and it is worth stating plai
 
 ~[ ]~ is accepted as a synonym for ~[]~, since writers arriving from other markup will type it. ~[]~ is the documented form: it is one character shorter, more visually distinct from ~[x]~, and needs no cursor work to replace its contents.
 
-Unlike other markup, the checkbox is not welded to a list item. It works at the start of *any* block, so a heading or a paragraph can be a task, and the socket, if there is one, is a separate concern. Structure and task semantics stay independent, as they do everywhere else in the language.
+Unlike other markup, the checkbox is not welded to a list item. It works at the start of *any* block, so a heading or a paragraph can be a task, and the list item, if there is one, is a separate concern. Structure and task semantics stay independent, as they do everywhere else in the language.
 
-The goety forms map to the three values directly, not through the aliases. Their meaning does not depend on any definition being present.
+The borrowed forms map to the three values directly, not through the aliases. Their meaning does not depend on any definition being present.
 
 ** Block tasks and span tasks
 
@@ -1571,11 +1780,11 @@ The dates are visible to anyone reading the file. Whether they reach the render 
 
 *** Why the block rather than a name
 
-~:completions~ binds to the block it sits on. It could instead have named its task through a station, which would survive reordering, but that would tax the writer with supplying a handle for something they never asked for. Adjacency sets it up for free.
+~:completions~ binds to the block it sits on. It could instead have named its task through a waypoint, which would survive reordering, but that would tax the writer with supplying a handle for something they never asked for. Adjacency sets it up for free.
 
 A second ~:completions~ in the same block shadows the first, like any repeated property write.
 
-A blank line or a new socket between them ends the block and detaches the log, and the schedule stops advancing. This is deliberate: the failure is visible rather than silent. An application that maintains the log should keep the two together, and may reattach or regenerate a detached one.
+A blank line or a new list item between them ends the block and detaches the log, and the schedule stops advancing. This is deliberate: the failure is visible rather than silent. An application that maintains the log should keep the two together, and may reattach or regenerate a detached one.
 
 *** Authored and maintained state
 
@@ -1593,7 +1802,7 @@ Indue is where a schedule is written and read; RRULE is how it travels. Applicat
 
 A shell applies effects over an open-ended *region* rather than a bounded container. It is the primitive for effects that span content, and for effects that overlap.
 
-A shell is opened by a spell chain or a glamour run ending in a *colon run*, and closed by a matching run:
+A shell is opened by a spell chain or a sigil run ending in a *colon run*, and closed by a matching run:
 
 #+begin_example
 :span-bg<red>:: ... region ... ::span-bg
@@ -1613,9 +1822,9 @@ Everything here is bold, italic, and highlighted.
 
 That matters for closing, which operates on individual effects rather than on the shell as a whole.
 
-** Glamours open shells
+** Sigils open shells
 
-A glamour run may open a shell, since a glamour is shorthand for a spell and a shell takes effects rather than names:
+A sigil run may open a shell, since a sigil is shorthand for a spell and a shell takes effects rather than names:
 
 #+begin_example
 *::                        ; the same as :bold::
@@ -1625,7 +1834,7 @@ A glamour run may open a shell, since a glamour is shorthand for a spell and a s
 
 The run collapses as it does anywhere else, so ~***::~ and ~*::~ are the same.
 
-Symbol spells work the same way. ~:>~ is a spell name rather than a glamour, so it opens and closes like any other:
+Symbol spells work the same way. ~:>~ is a spell name rather than a sigil, so it opens and closes like any other:
 
 #+begin_example
 :>:: ... region ... ::>
@@ -1635,7 +1844,7 @@ Symbol spells work the same way. ~:>~ is a spell name rather than a glamour, so 
 
 A shell spans arbitrary blocks, running from its open until it is closed, crossing paragraphs, lists, and other structure freely. This is what makes shells, rather than bounded containers, the way to apply an effect to a whole section.
 
-A shell opened at a socket's block-start position auto-closes when structure outdents to or past that socket's depth: its subtree has ended. This lets an effect span exactly one item's subtree with no closer to write.
+A shell opened at a list item's block-start position auto-closes when structure outdents to or past that list item's depth: its subtree has ended. This lets an effect span exactly one item's subtree with no closer to write.
 
 Any shell still open at end-of-document auto-closes there.
 
@@ -1685,7 +1894,7 @@ A closer naming an effect that is not in force, or a length that no open shell u
 
 *** The colon forms never collide
 
-~:name::~ has the run *after* a spell and opens. ~::name~ has the run *before* a name and closes that effect. ~::~ alone closes everything of its length. Position and attachment disambiguate them locally, with no lookahead.
+~:spell::~ has the run *after* a spell and opens. ~::spell~ has the run *before* a name and closes that effect. ~::~ alone closes everything of its length. Position and attachment disambiguate them locally, with no lookahead.
 
 ** Overlap
 
@@ -1749,25 +1958,25 @@ What they cost is the *compact* close-everything: since a closer must be alone o
 | A region over parsed content            | ~::~ shell               |
 | A region over content Indue must not read | ~:::~ hypershell       |
 | A bounded span, not a region            | A container target     |
-| One word                                | A glamour or the grab rule |
+| One word                                | A sigil or the grab rule |
 
-* Sigils: Tags
+* Tags: Category Marks
 
-Sigils (tags) use ~#~, the universal tagging character:
+Tags (tags) use ~#~, the universal tagging character:
 
 #+begin_example
 - Buy groceries #errand #personal
 - Read about #[machine learning] approaches
 #+end_example
 
-- Single-word sigil: ~#errand~
-- Multi-word sigil: ~#[machine learning]~ (a scroll, so no closing ~#~ is needed)
-- Explicitly bounded sigil: ~#work#~, which ends the name before the next word, exactly as ~^name^~ does for a station
-- Whole-line sigil: ~#~ at line start sigils the entire line
+- Single-word tag: ~#errand~
+- Multi-word tag: ~#[machine learning]~ (a scroll, so no closing ~#~ is needed)
+- Explicitly bounded tag: ~#work#~, which ends the name before the next word, exactly as ~^waypoint^~ does for a waypoint
+- Whole-line tag: ~#~ at line start tags the entire line
 
-A sigil marks a tag or category. Semantically, it identifies the block it appears within as belonging to that category, much like a Markdown hashtag. A block tagged ~#meeting~ is "about" meetings; a list item tagged ~#errand~ is an errand.
+A tag marks a tag or category. Semantically, it identifies the block it appears within as belonging to that category, much like a Markdown hashtag. A block tagged ~#meeting~ is "about" meetings; a list item tagged ~#errand~ is an errand.
 
-Sigils and signets share a single entity namespace (a codex defined for ~alice~ covers ~#alice~, ~@alice~, and ~^alice~ identically). The sigil form (~#~ vs. ~@~ vs. ~^~) communicates *intent* (tag vs. mention vs. anchor), not behavior. The spell's nature decides block or span (~#~/~@~/~^~ style their rendered expression). See the role matrix in Stations.
+Tags and signets share a single entity namespace (an indued element defined for ~alice~ covers ~#alice~, ~@alice~, and ~^alice~ identically). The tag form (~#~ vs. ~@~ vs. ~^~) communicates *intent* (tag vs. mention vs. anchor), not behavior. The spell's nature decides block or span (~#~/~@~/~^~ style their rendered expression). See the role matrix in Waypoints.
 
 * Signets: Entity References
 
@@ -1778,15 +1987,15 @@ Signets (entity references) use ~@~:
 See @intro for background.
 #+end_example
 
-Signets can refer to people, documents, stations, or any named object in the system. Like sigils, they may or may not resolve to a specific target. A signet without a matching station is still valid and carries meaning.
+Signets can refer to people, documents, waypoints, or any named object in the system. Like tags, they may or may not resolve to a specific target. A signet without a matching waypoint is still valid and carries meaning.
 
-Sigils and signets share an entity namespace; a codex on ~alice~ covers all forms. The sigil form (~#~ vs. ~@~ vs. ~^~) communicates intent (tag vs. mention vs. anchor). Styling follows rendering: multiple signets on a line each style their own rendered mention, leaving the block neutral. See the role matrix in Stations.
+Tags and signets share an entity namespace; an indued element on ~alice~ covers all forms. The tag form (~#~ vs. ~@~ vs. ~^~) communicates intent (tag vs. mention vs. anchor). Styling follows rendering: multiple signets on a line each style their own rendered mention, leaving the block neutral. See the role matrix in Waypoints.
 
-* Stations: Named Places
+* Waypoints: Named Places
 
-A station marks a place in a document so it can be navigated to, referred to, and configured. It comes in two forms that differ only in whether the anchor itself renders.
+A waypoint marks a place in a document so it can be navigated to, referred to, and configured. It comes in two forms that differ only in whether the anchor itself renders.
 
-** Stations (~^name~)
+** Waypoints (~^waypoint~)
 
 A ~^~ glued to a name anchors a *span*. A block may hold many, one per span you want to anchor:
 
@@ -1795,42 +2004,42 @@ A ~^~ glued to a name anchors a *span*. A block may hold many, one per span you 
 See @intro for background.
 #+end_example
 
-A station is an *entry and an endpoint*: you can navigate from it and arrive at it. That bidirectionality is why chaining stations forms a trail (below). Styling a visible station styles its rendered span. Its name participates in the shared namespace and can carry a codex.
+A waypoint is an *entry and an endpoint*: you can navigate from it and arrive at it. That bidirectionality is why chaining waypoints forms a trail (below). Styling a visible waypoint styles its rendered span. Its name participates in the shared namespace and can carry an indued element.
 
-A ~^~ glued to a name is a station; a ~^~ with surrounding space is literal.
+A ~^~ glued to a name is a waypoint; a ~^~ with surrounding space is literal.
 
-** A station names a place, not a tier
+** A waypoint names a place, not a tier
 
-A station resolves to *a place in the document*. It does not decide whether an effect lands on the text there or on the block containing it, the *spell* decides that, because every spell has a fixed nature (see Span and block natures in the Spellbook).
+A waypoint resolves to *a place in the document*. It does not decide whether an effect lands on the text there or on the block containing it, the *spell* decides that, because every spell has a fixed nature (see Span and block natures in the Spellbook).
 
 #+begin_example
 :bold@<^intro>             ; :bold is span-natural, so the anchored text goes bold
 :card@<^intro>             ; :card is block-natural, so that block becomes a card
 #+end_example
 
-Both target the same station. Neither is ambiguous, because neither spell has two possible readings to choose between. This is why Indue needs no separate block-handle construct: one reference kind is enough when nature lives on the spell.
+Both target the same waypoint. Neither is ambiguous, because neither spell has two possible readings to choose between. This is why Indue needs no separate block-handle construct: one reference kind is enough when nature lives on the spell.
 
-*** Stations are always visible
+*** Waypoints are always visible
 
-A station renders its anchor. There is no hidden form, because an invisible named handle is what a *source* is (see Sources). The two divide cleanly: a station is a visible place you go to, a source is an unrendered name you look things up by.
+A waypoint renders its anchor. There is no hidden form, because an invisible named handle is what a *ledger* is (see Ledgers). The two divide cleanly: a waypoint is a visible place you go to, a ledger is an unrendered name you look things up by.
 
 A block may carry both, and often will:
 
 #+begin_example
 ^alice Alice Chen
 &alice&
-:info[role | Engineer]
+:role = Engineer
 #+end_example
 
-*** Multiple stations on one block
+*** Multiple waypoints on one block
 
-A block may carry more than one station. They are *aliases* resolving to one identity; effects addressed through any alias accumulate and resolve under the standard last-write-wins cascade.
+A block may carry more than one waypoint. They are *aliases* resolving to one identity; effects addressed through any alias accumulate and resolve under the standard last-write-wins cascade.
 
-Machine-generated identifiers are not stations. An application needing to address a block writes a *source*, which renders nothing and therefore does not clutter the text (see Sources).
+Machine-generated identifiers are not waypoints. An application needing to address a block writes a *ledger*, which renders nothing and therefore does not clutter the text (see Ledgers).
 
-*** Closing the anchor (~^name^~)
+*** Closing the anchor (~^waypoint^~)
 
-A station may optionally be closed with a trailing ~^~, which bounds the anchored span explicitly rather than letting it run to the end of the word. Multi-word names use a scroll, exactly as sigils do:
+A waypoint may optionally be closed with a trailing ~^~, which bounds the anchored span explicitly rather than letting it run to the end of the word. Multi-word names use a scroll, exactly as tags do:
 
 #+begin_example
 ^intro^                    ; explicitly bounded
@@ -1839,7 +2048,7 @@ A station may optionally be closed with a trailing ~^~, which bounds the anchore
 
 ** Shared namespace and role matrix
 
-~#~ (sigil), ~@~ (signet), ~^~ (station), ~&~ (source), and bare names all resolve into *one shared namespace*, so they find each other.
+~#~ (tag), ~@~ (signet), ~^~ (waypoint), ~&~ (ledger), and bare names all resolve into *one shared namespace*, so they find each other.
 
 They share resolution but differ in *role*:
 
@@ -1847,33 +2056,31 @@ They share resolution but differ in *role*:
 |--------+----------+----------+--------------------------------|
 | ~#~      | yes      | no       | the rendered tag               |
 | ~@~      | yes      | no       | the rendered mention           |
-| ~^name~  | yes      | yes      | span or block, by spell nature |
-| ~&name&~ | no       | yes      | nothing; it is not rendered    |
+| ~^waypoint~  | yes      | yes      | span or block, by spell nature |
+| ~&ledger&~ | no       | yes      | nothing; it is not rendered    |
 
 - ~#~ and ~@~ are *entry only*. They render specially and are clickable, and where a name has no endpoint they navigate nowhere.
-- ~^name~ is *entry and endpoint*, which is what makes trails possible.
-- ~&name&~ is *endpoint only*, and it is the one endpoint that does not render. See Sources.
+- ~^waypoint~ is *entry and endpoint*, which is what makes trails possible.
+- ~&ledger&~ is *endpoint only*, and it is the one endpoint that does not render. See Ledgers.
 
 A *bare name* is the entity union selector, matching every rendered form (~#~, ~@~, ~^~) of that name. It is meaningful in selector and target position, not in free prose (a bare word in prose is just a word).
 
-* Sources: Canonical Records
+* Ledgers: Canonical Records
 
-A *source* is the one place a name's facts live. It is written ~&name&~, and unlike every other entity it does not accumulate references: repeated declarations *shadow*, so a name has exactly one source, and following a mention of that name has exactly one destination.
+A *ledger* is the one place a name's facts live. It is written ~&ledger&~, and unlike every other entity it does not accumulate references: repeated declarations *shadow*, so a name has exactly one ledger, and following a mention of that name has exactly one destination.
 
 #+begin_example
 &alice&
-:info[
-role   | Engineer
-team   | Platform
-email  | alice@example.com
-]
+:role  = Engineer
+:team  = Platform
+:email = alice@example.com
 #+end_example
 
 ** Not rendered
 
-A source names a block without rendering anything itself. The block may hold visible content, and often should, but the name is a handle rather than a mark.
+A ledger names a block without rendering anything itself. The block may hold visible content, and often should, but the name is a handle rather than a mark.
 
-That makes a source the natural home for a machine-generated block identifier. An application needing to address a block writes a source with a generated name, and nothing appears in the document:
+That makes a ledger the natural home for a machine-generated block identifier. An application needing to address a block writes a ledger with a generated name, and nothing appears in the document:
 
 #+begin_example
 &n3b7c2&
@@ -1889,18 +2096,14 @@ Where a key appears more than once, the values form a history rather than overwr
 
 #+begin_example
 &goblin|1&
-:info[
-hp    | 12
-mood  | hostile
-]
+:hp   = 12
+:mood = hostile
 
 ... the fight happens ...
 
 &goblin|2&
-:info[
-hp    | 4
-mood  | fleeing
-]
+:hp   = 4
+:mood = fleeing
 #+end_example
 
 ~hp~ now has a history of two values, and a read returns 4. This is what lets a document track an entity's state as it changes, rather than only its final state.
@@ -1912,36 +2115,36 @@ The value after a pipe is the *version*, and it is authored rather than derived 
 #+begin_example
 &goblin|2&
 &goblin&
-:info[version | 2]
+:version = 2
 #+end_example
 
 Numbers are the obvious choice because they order, but any value works, and a date is often more useful for a journal.
 
 A version is a stable handle. Inserting another declaration renumbers nothing, because nothing was ever numbered by position.
 
-*** Keep the whole record on the last source
+*** Keep the whole record on the last ledger
 
 Accumulation is a power feature, and it depends on the reader's application implementing it. A simple renderer that follows a mention shows *that block's* properties, not a merge of every declaration.
 
-So unless there is a reason to track milestones, *put every property on the last source*, even where earlier ones repeat them. The destination is then complete in any implementation, and accumulation adds history rather than being required for correctness.
+So unless there is a reason to track milestones, *put every property on the last ledger*, even where earlier ones repeat them. The destination is then complete in any implementation, and accumulation adds history rather than being required for correctness.
 
 ** How the three marks resolve
 
-Sigils, signets, and stations share one namespace, and a source joins it. Each mark lands where its own meaning points:
+Tags, signets, and waypoints share one namespace, and a ledger joins it. Each mark lands where its own meaning points:
 
 | Mark      | Means      | Goes to                            |
 |-----------+------------+------------------------------------|
-| ~#name~     | categorise | the station: the named place       |
-| ~@name~     | mention    | the source: the canonical record   |
-| ~^name~     | anchor     | that marked spot, and its trail    |
+| ~#tag~     | categorise | the waypoint: the named place       |
+| ~@signet~     | mention    | the ledger: the canonical record   |
+| ~^waypoint~     | anchor     | that marked spot, and its trail    |
 
 None of these is a fallback for another. A mention goes to the record because that is what mentioning a thing and following it means: you wanted to know about it. A tag goes to the place because a category is somewhere you gather things.
 
 A ~|value~ after any mark reaches a specific one, which is how a duplicate is disambiguated after the fact:
 
 #+begin_example
-@goblin|1                  ; the first source, not the latest
-#argument|2                ; the second station on that trail
+@goblin|1@                 ; the first ledger, not the latest
+#argument|2#               ; the second waypoint on that trail
 #+end_example
 
 *** One name is one thing
@@ -1950,28 +2153,28 @@ Sharing a namespace is deliberate. In a personal knowledge base, the same name a
 
 Separate namespaces would put the work in the wrong place. Linking a tag to its record would need declaring, which is effort spent on the common case to serve a rare one. Shared by default puts the ceremony on the exception: if you genuinely need two unrelated things called ~alpha~, name them differently.
 
-It is also what lets the marks compose. A tag reaching a station that lists mentions pointing at blocks works because all of them mean the same name.
+It is also what lets the marks compose. A tag reaching a waypoint that lists mentions pointing at blocks works because all of them mean the same name.
 
-** Stations and sources
+** Waypoints and ledgers
 
 The two are the same shape, a named place you can reach, and they differ in three ways that follow from what each is for.
 
-| | Station ~^~ | Source ~&~ |
+| | Waypoint ~^~ | Ledger ~&~ |
 |---+---------+--------|
 | Duplicates | cycle, forming a trail | accumulate into one record |
 | Rendering | visible | not rendered |
 | For | going | knowing |
 
-A station is where you *go*: it marks a span, it renders, and repeating it gives you a route. A source is where you *find out*: it names a block, it renders nothing itself, and repeating it builds a record.
+A waypoint is where you *go*: it marks a span, it renders, and repeating it gives you a route. A ledger is where you *find out*: it names a block, it renders nothing itself, and repeating it builds a record.
 
-Neither errors on accidental duplication. Repeat a station and you get a trail you did not ask for but can use; repeat a source and you get merged properties with the latest winning. Both degrade into something sensible, which is what lets them be power features without being hazards.
+Neither errors on accidental duplication. Repeat a waypoint and you get a trail you did not ask for but can use; repeat a ledger and you get merged properties with the latest winning. Both degrade into something sensible, which is what lets them be power features without being hazards.
 
 A block may be both:
 
 #+begin_example
 ^alice Alice Chen
 &alice&
-:info[role | Engineer]
+:role = Engineer
 #+end_example
 
 Here ~^alice~ marks the name visibly, ~&alice~ makes that block the canonical record, and both resolve to the same place from their own marks.
@@ -1980,13 +2183,13 @@ Here ~^alice~ marks the name visibly, ~&alice~ makes that block the canonical re
 
 Every occurrence of ~#alice~ is discoverable by reading the document, so a list of them is *derivable*. An application builds it by scanning; nothing needs writing down, and nothing can go stale.
 
-Facts that cannot be derived are the ones that belong in a source. An identifier, an email, a curated list of links: these exist only because someone wrote them, and if they are not in the document they are not portable.
+Facts that cannot be derived are the ones that belong in a ledger. An identifier, an email, a curated list of links: these exist only because someone wrote them, and if they are not in the document they are not portable.
 
-That is the test for what a source should hold: *could an application compute this from the text?* If yes, let it. If no, write it down.
+That is the test for what a ledger should hold: *could an application compute this from the text?* If yes, let it. If no, write it down.
 
 *** Applications may keep their own index
 
-An application is free to maintain its own entity index rather than using sources, and doing so does not affect document validity. The text still parses, the marks still resolve, and another application reading the same file sees the same content.
+An application is free to maintain its own entity index rather than using ledgers, and doing so does not affect document validity. The text still parses, the marks still resolve, and another application reading the same file sees the same content.
 
 What is lost is portability of the derived data. Records held in an application's database rather than in the document are unavailable to anything else reading the lair. That may be a reasonable trade for a hosted service; it should be a decision rather than an oversight.
 
@@ -1998,18 +2201,18 @@ That is what makes the query language part of the format rather than part of one
 
 *** Resolution must not require an index
 
-Following ~@name~ must not depend on an application having built an index. It is a scan for the last ~&name&~, which a rendering-only application can do.
+Following ~@signet~ must not depend on an application having built an index. It is a scan for the last ~&ledger&~, which a rendering-only application can do.
 
 This is what keeps the format implementable at the small end: a simple application can produce a working wiki, with linking and records, before it has any query engine at all. Backlinks, ranking, and graph views are enhancements layered on top, never prerequisites for the base navigation.
 
-* Comments: Whispers
+* Comments: Comments
 
-A *whisper* is a comment, text that lives in the source but never reaches the render. Whispers use the semicolon ~;~. Everything from the semicolon to the end of the line is a comment and is stripped before the body is parsed.
+A *comment* is a comment, text that lives in the ledger but never reaches the render. Comments use the semicolon ~;~. Everything from the semicolon to the end of the line is a comment and is stripped before the body is parsed.
 
 #+begin_example
-- Buy groceries          ; trailing whisper, ignored on render
-; this whole line is a whisper
-:bold:word               ; whispers are fine after spells too
+- Buy groceries          ; trailing comment, ignored on render
+; this whole line is a comment
+:bold:word               ; comments are fine after spells too
 #+end_example
 
 ** Graduated levels (Lisp-style)
@@ -2018,10 +2221,10 @@ Like the rest of Indue, the meaning scales with the count of the marker. This mi
 
 | Marker  | Convention      | Typical use                                  |
 |---------+-----------------+----------------------------------------------|
-| ~;~       | Inline whisper  | Trailing note on a line of content          |
-| ~;;~      | Block whisper   | Standalone note describing the lines below  |
-| ~;;;~     | Section whisper | Heading-level note for a region of the file |
-| ~;;;;~    | File whisper     | Top-of-file banner, license, or metadata    |
+| ~;~       | Inline comment  | Trailing note on a line of content          |
+| ~;;~      | Block comment   | Standalone note describing the lines below  |
+| ~;;;~     | Section comment | Heading-level note for a region of the file |
+| ~;;;;~    | File comment     | Top-of-file banner, license, or metadata    |
 
 #+begin_example
 ;;;; project-config.indue
@@ -2036,34 +2239,34 @@ Like the rest of Indue, the meaning scales with the count of the marker. This mi
 <project> .bg<#f0f0f0>.card :
 #+end_example
 
-The graduated levels are a *convention*, not a parser rule. To the tokenizer, ~;~, ~;;~, ~;;;~, and ~;;;;~ are identical: each comments out the remainder of the line. Tools (formatters, folders, outline views) may treat the higher levels as structural markers, aligning block whispers to the indentation of the code beneath them or surfacing section whispers in a navigation pane, exactly as Lisp editors do. The single character keeps the rule trivial; the repetition is free expressivity for the writer.
+The graduated levels are a *convention*, not a parser rule. To the tokenizer, ~;~, ~;;~, ~;;;~, and ~;;;;~ are identical: each comments out the remainder of the line. Tools (formatters, folders, outline views) may treat the higher levels as structural markers, aligning block comments to the indentation of the code beneath them or surfacing section comments in a navigation pane, exactly as Lisp editors do. The single character keeps the rule trivial; the repetition is free expressivity for the writer.
 
 ** Scope and literal contexts
 
-A whisper is recognized in body text and inside conduits ~{}~ (rich, parsed content). It is *not* recognized inside scrolls ~[]~, which are literal, a semicolon inside a scroll is a literal semicolon, never a comment. This matters for content like code, URLs, and raw data:
+A comment is recognized in body text and inside conduits ~{}~ (rich, parsed content). It is *not* recognized inside scrolls ~[]~, which are literal, a semicolon inside a scroll is a literal semicolon, never a comment. This matters for content like code, URLs, and raw data:
 
 #+begin_example
 :code<rust>[let x = 5; ; the ; inside the scroll is literal Rust]
-:link[https://example.com/path;param]:{label} ; only THIS ; is a whisper
+:link[https://example.com/path;param]:{label} ; only THIS ; is a comment
 #+end_example
 
-In the first line the semicolon belonging to the Rust statement survives because it sits inside a scroll; the trailing whisper after the closing bracket is stripped. In the second, the matrix-parameter semicolon inside the URL scroll is preserved while the trailing whisper is removed.
+In the first line the semicolon belonging to the Rust statement survives because it sits inside a scroll; the trailing comment after the closing bracket is stripped. In the second, the matrix-parameter semicolon inside the URL scroll is preserved while the trailing comment is removed.
 
 ** Escaping a literal semicolon
 
-Outside a scroll, use the nick (~\~) to write a literal semicolon that should not start a comment:
+Outside a scroll, use the escape character (~\~) to write a literal semicolon that should not start a comment:
 
 #+begin_example
-The ratio is 3\;1 in plain prose.   ; renders "3;1", then a real whisper
+The ratio is 3\;1 in plain prose.   ; renders "3;1", then a real comment
 #+end_example
 
-** Whispers and parse-don't-fail
+** Comments and parse-don't-fail
 
-Whispers are removed in a lexical pass before the socket, glamour, and entity layers run. There is no such thing as an unterminated whisper, the end of the line always closes it, so the no-errors philosophy is preserved trivially. A whisper never spans lines; multi-line notes are simply multiple whisper lines.
+Comments are removed in a lexical pass before the list item, sigil, and entity layers run. There is no such thing as an unterminated comment, the end of the line always closes it, so the no-errors philosophy is preserved trivially. A comment never spans lines; multi-line notes are simply multiple comment lines.
 
 * Block Boundaries
 
-A block begins at a socket, at a heading, or at the first line after a blank
+A block begins at a list item, at a heading, or at the first line after a blank
 line. It continues through every following *non-blank* line that does not itself
 begin a block. A blank line ends the block and is not part of it. A heading does
 not continue: a heading block is its own line, and prose beneath it is a separate
@@ -2075,19 +2278,19 @@ That is the whole rule, and it needs one line of lookbehind.
 = Project Alpha            ; heading: a block of one line
 The line beneath it        ; a separate block, owned by the heading
 
-- Buy stock                ; socket: a block begins
-  before the market opens  ; no socket: same block, second line
-- Call the vet             ; socket: a new block begins
+- Buy stock                ; list item: a block begins
+  before the market opens  ; no list item: same block, second line
+- Call the vet             ; list item: a new block begins
 
 The first paragraph                 ; after a blank line: a block begins
 runs across three
-source lines.                       ; no socket, no blank line: same block
+source lines.                       ; no list item, no blank line: same block
 
 The second paragraph.               ; blank line: a new block begins
 #+end_example
 
 Leading whitespace on a continuation line is cosmetic and is stripped, so a
-continuation may be aligned under its socket for readability without affecting
+continuation may be aligned under its list-item mark for readability without affecting
 the parse. That is the same alignment an outliner writes when a bullet wraps.
 
 Line breaks within a block are *preserved in rendering*. Two source lines in one
@@ -2116,11 +2319,11 @@ neither yields an ordinary material block that happens to contain a line break.
 Writers arrive expecting the behaviour of Word, Logseq, Roam, and Notion, where
 ~Enter~ starts a new item and ~Shift+Enter~ adds a line to the current one. Indue
 expresses that distinction with no invisible characters, because the boundary is
-the *socket* rather than the newline:
+the *list item* rather than the newline:
 
 | Gesture           | Written                                     |
 |-------------------+---------------------------------------------|
-| ~Enter~ in a list   | a newline and a socket at the current depth |
+| ~Enter~ in a list   | a newline and a list item at the current depth |
 | ~Enter~ in prose    | a blank line                                |
 | ~Shift+Enter~       | a plain newline                             |
 
@@ -2148,7 +2351,7 @@ Nesting is determined by physical indentation (tabs or spaces). The parser norma
 - Another Level 1 item
 #+end_example
 
-Ownership rule: any line indented strictly deeper than a socket belongs to that socket. The exact number of spaces does not matter as long as it is deeper than the parent (Option C).
+Ownership rule: any line indented strictly deeper than a list item belongs to that list item. The exact number of spaces does not matter as long as it is deeper than the parent (Option C).
 
 ** Dash-mode
 
@@ -2166,11 +2369,11 @@ Dash-mode rules:
 
 - Count of leading dashes determines depth.
 - Final character determines type: ~-~ for unordered, ~+~ for ordered.
-- Non-socket lines (no leading dashes) belong to the most recent socket above them. Period.
+- Lines with no list-item mark belong to the most recent list item above them. Period.
 - Leading whitespace on content lines is cosmetic and stripped by the parser.
 - A blank line ends the list.
-- Trailing child content is not supported. To return to a parent level, create a new socket with fewer dashes.
-- Empty sockets are real empty items, not invisible or magic.
+- Trailing child content is not supported. To return to a parent level, create a new list item with fewer dashes.
+- Empty list items are real empty items, not invisible or magic.
 
 The same content in both modes:
 
@@ -2192,7 +2395,7 @@ Within a single list, one mode must be used consistently. Dash-mode and indented
 
 * Heading Promotion
 
-Any list item in either mode can be promoted to a heading by appending ~= ~ (equals space) after the socket characters. The ~=~ is separated from the socket by a space.
+Any list item in either mode can be promoted to a heading by appending ~= ~ (equals space) after the list-item mark. The ~=~ is separated from the list item by a space.
 
 #+begin_example
 Indented:                    Dash-mode:
@@ -2256,7 +2459,7 @@ Multiple ~=~ symbols are how a standalone heading states its level. A standalone
 
 Indue separates physical structure from meaning structure. Folding controls what is visible. The heading outline controls how meaning is organized.
 
-A note on slot types. Sockets create slots (the blocks that hold content), and there are two kinds: heading slots and list slots. Heading slots are foldable and participate in the table of contents. List slots fold based on physical nesting, not heading level. The distinction matters because the same content can sit in either kind of slot depending on the socket that introduced it.
+A note on slot types. List items create slots (the blocks that hold content), and there are two kinds: heading slots and list slots. Heading slots are foldable and participate in the table of contents. List slots fold based on physical nesting, not heading level. The distinction matters because the same content can sit in either kind of slot depending on the list item that introduced it.
 
 ** Standalone heading folding (legacy/document behavior)
 
@@ -2333,19 +2536,19 @@ Using a schema declaration, list markers can be made invisible:
   Final thoughts.
 #+end_example
 
-Folds naturally from list structure. ToC comes from heading promotions. The source looks like a conventional document but has full outliner capabilities.
+Folds naturally from list structure. ToC comes from heading promotions. The ledger looks like a conventional document but has full outliner capabilities.
 
 * Content Ownership
 
 ** The core rule
 
-Content belongs to the most recent socket above it. There is no trailing child content, you cannot "return" to a parent level with content. To place content at a parent level, create a new socket at that level.
+Content belongs to the most recent list item above it. There is no trailing child content, you cannot "return" to a parent level with content. To place content at a parent level, create a new list item at that level.
 
 This rule applies in both indented mode and dash-mode. It eliminates an entire class of ambiguity that plagues Markdown, CommonMark, and Org-mode implementations.
 
 ** The ~:of<>~ escape hatch
 
-In rare cases where content genuinely needs to attach to an ancestor, the ~:of~ spell explicitly reattaches content to a named station:
+In rare cases where content genuinely needs to attach to an ancestor, the ~:of~ spell explicitly reattaches content to a named waypoint:
 
 #+begin_example
 - = Project Alpha ^alpha
@@ -2355,7 +2558,7 @@ In rare cases where content genuinely needs to attach to an ancestor, the ~:of~ 
   :of@<^alpha> This thought belongs to Project Alpha
 #+end_example
 
-This is rare, explicit, and uses existing spell/station syntax. No new concepts required.
+This is rare, explicit, and uses existing spell/waypoint syntax. No new concepts required.
 
 ** Multiline content shortcuts
 
@@ -2467,7 +2670,7 @@ A void ~[]~ makes markers invisible, which is how prose-style documents keep out
 
 ** Scoping
 
-Both are shells, so a declaration applies until it closes. A shell opened at a socket's block-start position auto-closes when structure outdents past that socket's depth (see Shells), so a declaration at the top of a list covers that list's whole subtree with no explicit close. Opening a new declaration of the same kind deeper in the tree makes it innermost; when its subtree ends, the outer declaration is in effect again:
+Both are shells, so a declaration applies until it closes. A shell opened at a list item's block-start position auto-closes when structure outdents past that list item's depth (see Shells), so a declaration at the top of a list covers that list's whole subtree with no explicit close. Opening a new declaration of the same kind deeper in the tree makes it innermost; when its subtree ends, the outer declaration is in effect again:
 
 #+begin_example
 :step[I.].list<*>::
@@ -2487,7 +2690,7 @@ Because the first value applies at the declaration's own depth, the same declara
 
 ** User-typed markers
 
-Where a stepping pattern is in effect, markers may also be typed directly, which keeps the source readable:
+Where a stepping pattern is in effect, markers may also be typed directly, which keeps the ledger readable:
 
 #+begin_example
 :step[a)]::
@@ -2517,9 +2720,9 @@ Inline, the same thing on one line:
 <#project>.bg<#f0f0f0>.card:
 #+end_example
 
-The chain follows the multiline-chain rules from the Spells section: a line beginning with ~.~ continues the chain, and the wall ~:~ terminates it. This layout is called a *cauldron* when it is used this way, but it is the same grammar as any inline spell, not a construct with its own delimiters.
+The chain follows the multiline-chain rules from the Spells section: a line beginning with ~.~ continues the chain, and the wall ~:~ terminates it. Written this way it is still the same grammar as any inline spell, not a construct with its own delimiters.
 
-A configuration chain of this kind is a *declaration*, not content. It lives between blocks and contributes nothing to the rendered body, the same as a whisper.
+A configuration chain of this kind is a *declaration*, not content. It lives between blocks and contributes nothing to the rendered body, the same as a comment.
 
 ** What the target can be
 
@@ -2530,30 +2733,30 @@ Everything a configuration chain can target is a set (a set of one is not specia
 | ~<project>~     | every rendered form of the entity ~project~ (~#~/~@~/~^~) |
 | ~<#project>~    | only the ~#project~ tag form                           |
 | ~<@project>~    | only the ~@project~ mention form                       |
-| ~<^project>~    | only the ~^project~ station form                      |
-| ~<&project>~    | only the ~&project&~ source form                      |
-| ~<#>~           | every sigil                                          |
+| ~<^project>~    | only the ~^project~ waypoint form                      |
+| ~<&project>~    | only the ~&project&~ ledger form                      |
+| ~<#>~           | every tag                                          |
 | ~<@>~           | every signet                                         |
 | ~<=>~           | every heading (a type/marker target)                 |
-| ~<*>~           | the ~*~ glamour (configure what bold does)             |
-| ~<:name>~       | *defines the spell (class) ~:name~*                    |
+| ~<*>~           | the ~*~ sigil (configure what bold does)             |
+| ~<:spell>~       | *defines the compound spell ~:spell~*                    |
 
 *** Type targets
 
-A marker in the target selects a category: ~<=>~ all headings, ~<==>~ level-2 headings, ~<->~ unordered items, ~<#tag>~ a specific sigil. Granularity is marker plus optional depth plus optional name, and no further: no descendant or sibling combinators. Familiar word aliases (~h2~ for ~==~, etc.) are a fixed, spec-level synonym table resolving to the canonical marker; they are aliases, not a parallel selector language.
+A marker in the target selects a category: ~<=>~ all headings, ~<==>~ level-2 headings, ~<->~ unordered items, ~<#tag>~ a specific tag. Granularity is marker plus optional depth plus optional name, and no further: no descendant or sibling combinators. Familiar word aliases (~h2~ for ~==~, etc.) are a fixed, spec-level synonym table resolving to the canonical marker; they are aliases, not a parallel selector language.
 
 *** Nature decides the tier
 
 A chain lands on the tier its spells belong to, not on whatever the target happens to render as:
 
 - ~#~, ~@~, and visible ~^~ style their rendered expression (the tag, the mention, the span).
-- A source renders nothing, but what an effect lands on is still decided by the spell's nature, not by the reference.
+- A ledger renders nothing, but what an effect lands on is still decided by the spell's nature, not by the reference.
 
 To style a block, use a block-natural spell; to style an inline expression, use a span-natural one. The target says *where*; the spell says *what kind of thing* is painted.
 
-** Defining a class (~<:name>~)
+** Defining a compound spell (~<:spell>~)
 
-A leading ~:~ inside the target means the target is a *spell*: you are defining (or extending) the spell ~:name~. This is consistent with ~:~ meaning "spell" everywhere. It is the reusable-named-style primitive, the CSS class:
+A leading ~:~ inside the target means the target is a *spell*: you are defining (or extending) that spell. This is consistent with ~:~ meaning "spell" everywhere. It is the reusable-named-style primitive, the CSS class:
 
 #+begin_example
 <:card>
@@ -2572,10 +2775,10 @@ A leading ~:~ inside the target means the target is a *spell*: you are defining 
 
 Rules for class definitions:
 
-- The body is a *declaration chain*. It carries no *construct* target, since the target is supplied when the class is applied, but sub-spell targets (~@~) are allowed and are how a class reaches its own internal parts.
+- The body is a *declaration chain*. It carries no *construct* target, since the target is supplied when the compound spell is applied, but sub-spell targets (~@~) are allowed and are how a compound spell reaches its own internal parts.
 - A defined class is a first-class spell everywhere, inline, in chains, as a shell.
 - Defining a name that collides with a built-in spell is rejected or warned, so a user cannot accidentally clobber ~:bold~.
-- ~<name>~ (no colon) selects the *entity* ~name~; ~<:name>~ (colon) defines the *spell* ~name~. The single ~:~ is the whole distinction.
+- ~<entity>~ (no colon) selects that *entity*; ~<:spell>~ (colon) defines that *spell*. The single ~:~ is the whole distinction.
 
 A class need not be elaborate. Pinning one input is a perfectly ordinary use, and often the most useful:
 
@@ -2585,7 +2788,7 @@ A class need not be elaborate. Pinning one input is a perfectly ordinary use, an
 
 *** A class may embed content, before its target
 
-An embedding spell in a class body produces content each time the class is invoked. Since a class body is a chain, and a chain is ordered, the embed renders at its position:
+An embedding spell in a class body produces content each time it is invoked. Since a compound spell body is a chain, and a chain is ordered, the embed renders at its position:
 
 #+begin_example
 <:smart-tips>
@@ -2606,14 +2809,14 @@ The card is framed, the heading is rendered inside it, and the tips follow.
 
 *Content is embedded before the target, never after.* The target arrives at invocation, after everything the definition wrote, so there is no position after it for a definition to occupy.
 
-That is a real limit, and it is the right one. Allowing content after the target would need either *placeholders* naming the target that has not arrived yet, which is formal parameters by another name, or *call-site ordering*, where the same class means different things depending on which shape invoked it and the definition can no longer be read on its own. Both cost more than a footer is worth.
+That is a real limit, and it is the right one. Allowing content after the target would need either *placeholders* naming the target that has not arrived yet, which is formal parameters by another name, or *call-site ordering*, where the same compound spell means different things depending on which shape invoked it and the definition can no longer be read on its own. Both cost more than a footer is worth.
 
 Where content genuinely belongs after, wrap it:
 
 #+begin_example
 :figure.{
 {tips}.smart-tips
-Source: the handbook
+Ledger: the handbook
 }
 #+end_example
 
@@ -2638,12 +2841,12 @@ Indue does not resolve styles by CSS-style specificity, comparing every rule aga
 
 *** Type-selectors set a running default
 
-A bare type-symbol selector, ~<=>~ for headings, ~<^>~ for blocks, ~<#>~ for sigils, ~<*>~ for the bold glamour, and so on, sets that type's *default from its position forward*. A bare marker with no name is the type-selector; a marker with a name (~<#project>~) or a specific station (~<^section>~) is more specific.
+A bare type-symbol selector, ~<=>~ for headings, ~<^>~ for blocks, ~<#>~ for tags, ~<*>~ for the bold sigil, and so on, sets that type's *default from its position forward*. A bare marker with no name is the type-selector; a marker with a name (~<#project>~) or a specific waypoint (~<^section>~) is more specific.
 
 Overriding a default happens two ways, and they behave differently:
 
 - *Change the default* with a later type-selector of the same type. This is *persistent and forward-propagating*: everything after it uses the new default. Setting ~<^>~ to blue, then later to green, means blocks after the second selector are green.
-- *Override one object* with a station target (~<^section>~) or an inline spell at the object. This is *local and non-propagating*: only that object changes; the running default is undisturbed, and the next object returns to whatever default is in effect at its position.
+- *Override one object* with a waypoint target (~<^section>~) or an inline spell at the object. This is *local and non-propagating*: only that object changes; the running default is undisturbed, and the next object returns to whatever default is in effect at its position.
 
 An object's look, when not individually overridden, is the default in effect *at that object's position* in the resolved (post-hoist) parse.
 
@@ -2659,18 +2862,18 @@ Inline config met during the body still overrides the hoisted base from its posi
 
 ** Scope and persistence
 
-Codex effects are applied to the current block and forward. If a codex appears in the middle of a document, blocks above it are not affected.
+An indued element applies to the current block and forward. If one appears in the middle of a document, blocks above it are not affected.
 
 #+begin_example
-- Regular block #project             ; no codex yet, default styling
+- Regular block #project             ; not indued yet, default styling
 
 <project> .bg<#f0f0f0> :
 
-- Styled block #project              ; inherits bg from codex
+- Styled block #project              ; inherits bg from the declaration
 - Another styled block #project      ; also inherits
 #+end_example
 
-A later codex for the same entity overrides the previous one:
+A later indued element for the same entity overrides the previous one:
 
 #+begin_example
 <project> .bg<#f0f0f0> :
@@ -2684,7 +2887,7 @@ A later codex for the same entity overrides the previous one:
 
 ** Beacons and the public layer (~!~)
 
-By default, a codex configures only the file it appears in. The *beacon* (~!~) prefix promotes a codex into a shared *public layer* visible to other files:
+By default, an indued element configures only the file it appears in. The *beacon* (~!~) prefix promotes an indued element into a shared *public layer* visible to other files:
 
 #+begin_example
 <project> .bg<#f0f0f0> :        ; file-local: only this file sees it
@@ -2692,9 +2895,9 @@ By default, a codex configures only the file it appears in. The *beacon* (~!~) p
 !<project> .bg<#f0f0f0> :       ; public: other files in the lair see it
 #+end_example
 
-The beacon attaches to the cauldron as a whole, in both inline and multiline forms, and may also prefix a satchel to publish everything inside it. A cauldron is the unit of beaconing: its accumulated spells are public together or private together.
+The beacon attaches to the indued element as a whole, in both inline and multiline forms, and may also prefix a satchel to publish everything inside it. An indued element is the unit of beaconing: its accumulated spells are public together or private together.
 
-Beacons govern *codex* visibility only. Entities (sigils, signets, stations) are public by default and unaffected by the beacon. Content and spell invocations at content sites are always local and are never exported by it.
+Beacons govern the visibility of indued elements only. Entities (tags, signets, waypoints) are public by default and unaffected by the beacon. Content and spell invocations at content sites are always local and are never exported by it.
 
 This is a *latent compatibility device*. An application that deals in single documents can parse and preserve the beacon without acting on it, nothing in a single file changes meaning because of it. Applications that do implement multi-document collections use it as the promotion mechanism; the full visibility model, lair scoping, and import/export rules are specified in the *Lair Specification*.
 
@@ -2763,10 +2966,10 @@ Because hoisting runs a satchel before the body wherever it sits, a footer satch
 
 1. Applications scan all files in the lair scope.
 2. Satchel contents are hoisted and evaluated before body parsing within each file. Where a file has several satchels, they run in document order, so a later one shadows an earlier one.
-3. The body is then parsed with full knowledge of all codexes.
-4. Inline codexes (not in satchels) override hoisted ones when encountered in document order.
+3. The body is then parsed with full knowledge of all indued elements.
+4. Inline indued elements (not in satchels) override hoisted ones when encountered in document order.
 
-By default, satchel contents are *file-local*, they configure only the file that contains them. To make a satchel's codexes available to the rest of the lair, mark it with a beacon (~!~). See "Beacons and the public layer" below, and the *Lair Specification* for the full visibility model. Application developers should document their lair scanning behavior, including how cross-file public layers are surfaced.
+By default, satchel contents are *file-local*, they configure only the file that contains them. To make a satchel's indued elements available to the rest of the lair, mark it with a beacon (~!~). See "Beacons and the public layer" below, and the *Lair Specification* for the full visibility model. Application developers should document their lair scanning behavior, including how cross-file public layers are surfaced.
 
 *** Beacons on satchels (~!~)
 
@@ -2786,7 +2989,7 @@ A satchel prefixed with ~!~ is a *beacon satchel*, its contents join the lair's 
 
 The leading ~!~ before the opening delimiter promotes the entire satchel to the public layer. Without ~!~, the same satchel would configure only the file it lives in.
 
-Inside any satchel, beaconed or not, individual cauldrons may also carry their own beacon. A non-beacon satchel can still expose specific codexes by beaconing them individually:
+Inside any satchel, beaconed or not, individual indued elements may also carry their own beacon. A non-beacon satchel can still expose specific indued elements by beaconing them individually:
 
 #+begin_example
 ~~~~~~~~~~
@@ -2799,11 +3002,11 @@ Inside any satchel, beaconed or not, individual cauldrons may also carry their o
 ~~~~~~~~~~
 #+end_example
 
-Per-codex beacons inside a beacon satchel are redundant but harmless , the satchel-level beacon already promotes everything inside.
+Per-element beacons inside a beacon satchel are redundant but harmless , the satchel-level beacon already promotes everything inside.
 
-** Codex for stations
+** Induing a waypoint
 
-Place a station above its cauldron to make the definition itself navigable:
+Place a waypoint above its indued element to make the definition itself navigable:
 
 #+begin_example
 ^project
@@ -2812,11 +3015,11 @@ Place a station above its cauldron to make the definition itself navigable:
 .card:
 #+end_example
 
-Now ~@project~ jumps to the codex definition. The codex is its own documentation.
+Now ~@project~ jumps to the definition, which is its own documentation.
 
 ** Interaction with the configuration hierarchy
 
-All cauldrons compose by the specificity order given above:
+All indued elements compose by the specificity order given above:
 
 - *Type/marker selectors* (~<=>~, ~<#>~, ~<*>~), how a category renders.
 - *Entity identity* (~<project>~), shared across every form of one entity.
@@ -2827,14 +3030,14 @@ More specific wins; inline beats named beats type; explicit beats inherited; las
 
 ** Entity namespace and its boundary
 
-Every form of a name, ~#name~, ~@name~, ~^name~, and ~&name&~, resolves in *one shared namespace* (see the role matrix in Stations). A cauldron defined for ~<name>~ applies to every rendered form; the form communicates intent (tag, mention, anchor, block), not scope.
+Every form of a name, ~#tag~, ~@signet~, ~^waypoint~, and ~&ledger&~, resolves in *one shared namespace* (see the role matrix in Waypoints). An indued element defined for ~<entity>~ applies to every rendered form; the form communicates intent (tag, mention, anchor, block), not scope.
 
-The namespace boundary is the *lair*. Names resolve lair-wide: a station or entity named in one file is reachable from a reference in another file of the same lair. Collisions produce a set (set semantics); navigation to a multi-member set is a disambiguation the app surfaces. The unique machine handle is the disambiguator of last resort. Cross-lair resolution happens only through the explicit import/export rules in the *Lair Specification*.
+The namespace boundary is the *lair*. Names resolve lair-wide: a waypoint or entity named in one file is reachable from a reference in another file of the same lair. Collisions produce a set (set semantics); navigation to a multi-member set is a disambiguation the app surfaces. The unique machine handle is the disambiguator of last resort. Cross-lair resolution happens only through the explicit import/export rules in the *Lair Specification*.
 
 ** Open questions for entity configuration
 
-- If a block carries several entities (~#project~ and ~#urgent~), do both cauldrons apply, and in what order? (Likely: in the order the entities appear, last wins on conflict, per the specificity rule.)
-- Should there be an intersection selector, a cauldron that fires only when two entities are both present?
+- If a block carries several entities (~#project~ and ~#urgent~), do both indued elements apply, and in what order? (Likely: in the order the entities appear, last wins on conflict, per the specificity rule.)
+- Should there be an intersection selector, an indued element that fires only when two entities are both present?
 
 * Parser Architecture Notes
 
@@ -2842,7 +3045,7 @@ The namespace boundary is the *lair*. Names resolve lair-wide: a station or enti
 
 Indue is designed to render each line from the state accumulated above it, with the minimum number of passes. Evaluation is three phases:
 
-1. *Build the default property list for every object type.* Before reading the document, initialize the default look of each type (block, heading, list item, sigil, signet, station, each glamour) to its built-in default. This is the starting state the rest of the parse mutates.
+1. *Build the default property list for every object type.* Before reading the document, initialize the default look of each type (block, heading, list item, tag, signet, waypoint, each sigil) to its built-in default. This is the starting state the rest of the parse mutates.
 2. *Stream down and collect hoists.* Read top to bottom; when a hoisted block (a satchel, or config marked for hoisting) is seen, append it to the hoist state. Hoisting moves rather than clones: the block runs once as setup, and its original position is inert on the downward read. Appending preserves document order, so later hoists shadow earlier ones, matching every other cascade in the language (see The default cascade).
 3. *Read top to bottom and render each line as the state shows it.* With the base defaults established, stream the body. Each type-selector reassigns its running default from that point forward; each per-object override applies locally without disturbing the running default; each line is rendered against the state in effect *at that line*. Nothing looks ahead or backtracks, because every value a line needs, defaults, referenced node values (which resolve at parse position), current property state, comes from what has already been read above it.
 
@@ -2852,18 +3055,18 @@ Phases 1 and the setup part of 2 can be folded into the single downward read, so
 
 The formal grammar should be defined in three distinct layers, preceded by a lexical pre-pass:
 
-0. *Whisper pre-pass*: strips comments before the layered grammar runs. On each line, the first unescaped ~;~ that is *not* inside a scroll ~[]~ begins a whisper; the whisper and everything after it on that line is discarded. Semicolons inside scrolls are literal, and a nick-escaped ~\;~ is a literal semicolon. The count of consecutive semicolons (~;~/~;;~/~;;;~/~;;;;~) carries no parser meaning, all whisper levels strip identically; the count is a convention for human readers and optional tooling (folders, outline views) only.
-1. *Socket layer*: identifies list items, heading promotions, and stations. This is line-start based (sockets begin the line). Sockets are parsed first, and spell and glamour parsing follows.
-2. *Glamour layer*: identifies inline formatting (bold, italic, underline, strikethrough). These follow the untargeted, single-word, paired, and bracket rules. Stacking and symmetric nesting rules apply.
-3. *Entity layer*: identifies signets (~@~), spells (~:~), sigils (~#~), stations (~^~), and container content (vessels, scrolls, conduits, target containers). A vessel glued to a spell is an input. ~<>~, ~{}~, and ~[]~ open spell world on sight and are targets; a bare word is a target only when glued directly to a wall. Spell world ends at whitespace outside a container, at an unbonded line break, or at a closing wall. The sigil form communicates intent (tag, mention, anchor) but not scope. A spell's nature decides whether a block or a span is painted; the target only says where.
+0. *Comment pre-pass*: strips comments before the layered grammar runs. On each line, the first unescaped ~;~ that is *not* inside a scroll ~[]~ begins a comment; the comment and everything after it on that line is discarded. Semicolons inside scrolls are literal, and a backslash-escaped ~\;~ is a literal semicolon. The count of consecutive semicolons (~;~/~;;~/~;;;~/~;;;;~) carries no parser meaning, all comment levels strip identically; the count is a convention for human readers and optional tooling (folders, outline views) only.
+1. *List item layer*: identifies list items, heading promotions, and waypoints. This is line-start based (list items begin the line). List items are parsed first, and spell and sigil parsing follows.
+2. *Sigil layer*: identifies inline formatting (bold, italic, underline, strikethrough). These follow the untargeted, single-word, paired, and bracket rules. Stacking and symmetric nesting rules apply.
+3. *Entity layer*: identifies signets (~@~), spells (~:~), tags (~#~), waypoints (~^~), and container content (vessels, scrolls, conduits, target containers). A vessel glued to a spell is an input. ~<>~, ~{}~, and ~[]~ open spell world on sight and are targets; a bare word is a target only when glued directly to a wall. Spell world ends at whitespace outside a container, at an unbonded line break, or at a closing wall. The tag form communicates intent (tag, mention, anchor) but not scope. A spell's nature decides whether a block or a span is painted; the target only says where.
 
-Because scrolls suppress whisper detection, the pre-pass must be scroll-aware rather than a naive line split: it scans for ~;~ while tracking whether it is currently inside an open scroll on that line.
+Because scrolls suppress comment detection, the pre-pass must be scroll-aware rather than a naive line split: it scans for ~;~ while tracking whether it is currently inside an open scroll on that line.
 
-Goety is matched in the entity layer, before container parsing, as fixed whole patterns rather than as compositions of scrolls and vessels. Because adjacent containers carry no meaning outside a spell, these patterns cannot collide with ordinary syntax. The block-start checkbox forms are matched before a leading scroll would be read as an embed, which is what lets ~[]~ mean an open task there and an empty scroll elsewhere.
+Borrowed forms is matched in the entity layer, before container parsing, as fixed whole patterns rather than as compositions of scrolls and vessels. Because adjacent containers carry no meaning outside a spell, these patterns cannot collide with ordinary syntax. The block-start checkbox forms are matched before a leading scroll would be read as an embed, which is what lets ~[]~ mean an open task there and an empty scroll elsewhere.
 
 ** Indentation handling
 
-List nesting and content ownership in indented structures are determined by physical indentation. Both tabs and spaces are accepted; the parser normalizes to indent levels. The specific number of spaces per level does not need to be consistent, only the relative depth matters (Option C: strictly deeper than the parent socket).
+List nesting and content ownership in indented structures are determined by physical indentation. Both tabs and spaces are accepted; the parser normalizes to indent levels. The specific number of spaces per level does not need to be consistent, only the relative depth matters (Option C: strictly deeper than the parent list item).
 
 ** Heading level logic
 
@@ -2871,15 +3074,15 @@ Heading levels are derived from the heading hierarchy, not from list depth. Each
 
 ** Stateful list parsing
 
-A schema declaration (~:step[a)]::~) is an ordinary shell, opened at a socket's block-start position. It pushes onto the same shell stack as any other shell, keyed by which spell opened it. No separate mechanism is needed: the shell auto-closes when structure outdents past the depth at which it opened (see Shells), which pops it from the stack, and the next enclosing declaration of the same kind, if any, is in effect again.
+A schema declaration (~:step[a)]::~) is an ordinary shell, opened at a list item's block-start position. It pushes onto the same shell stack as any other shell, keyed by which spell opened it. No separate mechanism is needed: the shell auto-closes when structure outdents past the depth at which it opened (see Shells), which pops it from the stack, and the next enclosing declaration of the same kind, if any, is in effect again.
 
 ** Block handles in the AST
 
-~^name~ (station) values are stored as a property of the block node, not as a child of the text content. This allows apps to look up ~node.id~ directly without traversing the text.
+~^waypoint~ (waypoint) values are stored as a property of the block node, not as a child of the text content. This allows apps to look up ~node.id~ directly without traversing the text.
 
 ** Error recovery
 
-- Unclosed glamours apply to the single word they touch, or render as literal text if not adjacent to a word.
+- Unclosed sigils apply to the single word they touch, or render as literal text if not adjacent to a word.
 - Unknown spell names render their conduit/scroll content as plain text.
 - The parser never throws errors to the user.
 - Strict validation belongs in the linter and export pipeline.
@@ -2889,16 +3092,16 @@ A schema declaration (~:step[a)]::~) is an ordinary shell, opened at a socket's 
 | Feature         | Typst               | Indue              |
 |-----------------+---------------------+--------------------|
 | Function prefix | ~#~                   | ~:~ (spell)          |
-| Tag syntax      | ~#tag("work")~ (func) | ~#work~ (sigil)      |
+| Tag syntax      | ~#tag("work")~ (func) | ~#work~ (tag)      |
 | Headings        | ~=~ / ~==~ / ~===~        | ~=~ / ~==~ / ~===~       |
 | Bold            | ~*text*~              | ~*text*~ (same)      |
-| Italic          | ~_text_~              | ~/text/~ (glamour)   |
-| Underline       | None built-in       | ~_text_~ (glamour)   |
-| Strikethrough   | None built-in       | ~%text%~ (glamour)   |
+| Italic          | ~_text_~              | ~/text/~ (sigil)   |
+| Underline       | None built-in       | ~_text_~ (sigil)   |
+| Strikethrough   | None built-in       | ~%text%~ (sigil)   |
 | Checkboxes      | None (package/show) | ~:o~ ~:x~ (spell)      |
 | Task states     | Convention          | Native spells      |
 | Lists           | ~-~ / ~+~               | ~-~ / ~+~ (same)       |
-| Labels          | ~^label~              | ~^label~ (station) |
+| Labels          | ~^label~              | ~^label~ (waypoint) |
 | References      | ~@ref~                | ~@ref~ (signet)      |
 | Error handling  | Strict compiler     | Parse, don't fail  |
 
@@ -2906,7 +3109,7 @@ A schema declaration (~:step[a)]::~) is an ordinary shell, opened at a socket's 
 
 - ~=~ headings pass through (same syntax).
 - ~:func<...>~ (spell) becomes ~#func(...)~.
-- ~#tag~ (sigil) becomes ~#tag("tag")~ (via a Typst package).
+- ~#tag~ (tag) becomes ~#tag("tag")~ (via a Typst package).
 - ~:o~ / ~:x~ become ~#todo~ / ~#done~ (via a Typst package).
 - Bold and lists pass through unchanged.
 - ~/italic/~ becomes ~_italic_~.
@@ -2927,57 +3130,57 @@ Indue compliance is binary. An implementation either supports the full semantic 
 The complete semantic foundation. An application claiming Indue compatibility must support all of the following:
 
 *Lexical*
-- Whispers (comments): ~;~ to end of line, stripped in a scroll-aware pre-pass. Literal ~;~ inside scrolls ~[]~ and via the nick (~\;~). Graduated levels (~;~/~;;~/~;;;~/~;;;;~) strip identically; level is a reader/tooling convention, not a parser distinction.
+- Comments (comments): ~;~ to end of line, stripped in a scroll-aware pre-pass. Literal ~;~ inside scrolls ~[]~ and via the escape character (~\;~). Graduated levels (~;~/~;;~/~;;;~/~;;;;~) strip identically; level is a reader/tooling convention, not a parser distinction.
 
 *Structure*
-- Sockets: ~-~ and ~+~ with indentation-based and dash-mode nesting; ~=~ heads a block, standalone at line start with level by count, or promoted by a socket with level from list depth
+- List items: ~-~ and ~+~ with indentation-based and dash-mode nesting; ~=~ heads a block, standalone at line start with level by count, or promoted by a list item with level from list depth
 - Heading promotion: ~- =~ / ~+ =~
 - A heading block ends at its own line; following body prose is an ordinary child of the heading, not part of its content
 - Schema declarations: ~:list~ and ~:step~, with void ditto and cycling depth chains
 - Folding and heading outline
 
-*Glamours*
-- All five (~*~, ~/~, ~_~, ~%~, ~`~) expand to spells: a single glamour is ~:spell:~, a pair is ~:spell.{~ … ~}:~
+*Sigils*
+- All five (~*~, ~/~, ~_~, ~%~, ~`~) expand to spells: a single sigil is ~:spell:~, a pair is ~:spell.{~ … ~}:~
 - Untargeted, grab-rule, paired, and bracket forms
 - An untargeted spell takes its entire enclosing scope, not the part following it; position within the scope is not significant
 - A styling property sets the enclosing scope's running default from its position forward; this is distinct from reach, which is entire within the spell's own node
-- A lone glamour mark is untargeted only in first position in its scope; elsewhere it is literal text
+- A lone sigil mark is untargeted only in first position in its scope; elsewhere it is literal text
 - Runs of one repeated character collapse to one; a run stops when the character changes
 - Stacking different marks requires a bracket immediately after the run
-- A block begins at a socket, a heading, or the first line after a blank line, and continues through every non-blank line that does not itself begin a block; a blank line ends the block and is not part of it
+- A block begins at a list item, a heading, or the first line after a blank line, and continues through every non-blank line that does not itself begin a block; a blank line ends the block and is not part of it
 - Line breaks inside a block are preserved in rendering and are never collapsed to spaces
-- Glamours are glued and inline; regions across lines are shells
-- A glamour opens only at a glamour position (line start, after whitespace, or after a closing bracket), except where a container immediately follows the run
+- Sigils are glued and inline; regions across lines are shells
+- A sigil opens only at a sigil position (line start, after whitespace, or after a closing bracket), except where a container immediately follows the run
 
-*Goety*
-- The closed set: ~[label](url)~ and ~[]~ / ~[ ]~ / ~[>]~ / ~[x]~ at block start, each matched as a fixed whole pattern
+*Borrowed forms*
+- The closed set: ~[[endpoint|label]]~ and ~[]~ / ~[ ]~ / ~[>]~ / ~[x]~ at block start, each matched as a fixed whole pattern
 - Block-start checkbox forms map directly to the three lifecycle values, not through the alias spells
 
 *Entities*
-- Sources: ~&name&~, shadowing for resolution, properties accumulating across declarations, repeated keys forming a history with latest-wins on read
+- Ledgers: ~&ledger&~, shadowing for resolution, properties accumulating across declarations, repeated keys forming a history with latest-wins on read
 - ~|version~ as authored shorthand for a ~version~ property, and as a selector on any mark
-- Shared namespace: ~#~ goes to the station, ~@~ to the source, ~^~ to the marked spot
+- Shared namespace: ~#~ goes to the waypoint, ~@~ to the ledger, ~^~ to the marked spot
 - Signet resolution must not depend on an application-built index
-- Sigils: ~#tag~ (including multi-word and whole-line)
+- Tags: ~#tag~ (including multi-word and whole-line)
 - Signets: ~@ref~
-- Stations: ~^name~ with trails (undefined, portals, defined, terminated), aliases, last-write-wins; always visible
-- Cauldron matching matrix: entity name × sigil form (~<name>~, ~<#name>~, ~<@name>~, ~<^name>~, ~<^name>~, ~<#>~, ~<@>~, ~<=>~, and ~<:class>~ definitions)
+- Waypoints: ~^waypoint~ with trails (undefined, portals, defined, terminated), aliases, last-write-wins; always visible
+- Indued-element matching matrix: entity name × tag form (~<entity>~, ~<#tag>~, ~<@signet>~, ~<^waypoint>~, ~<^waypoint>~, ~<#>~, ~<@>~, ~<=>~, and ~<:class>~ definitions)
 - Bestowal tier is decided by the spell's nature, never by the target: ~#~, ~@~, and a visible ~^~ style their own rendered expression, and a block-natural spell paints the block that holds it
-- Entity codex cascade: form-only → identity → form-specific → inline
+- Entity indued element cascade: form-only → identity → form-specific → inline
 
 *Spell system*
 - Bond: ~.~ chaining
-- Shell: a colon run opening a region of effects, opened by a spell chain or a glamour run
+- Shell: a colon run opening a region of effects, opened by a spell chain or a sigil run
 - Closer length must match opener length; a bare closer closes all shells of that length; a glued closer stops one effect in the innermost shell where it is active
 - A shell closes when it has no active effects left
-- Structural auto-close when opened at a socket's leading position, and auto-close at end of document
+- Structural auto-close when opened at a list item's leading position, and auto-close at end of document
 - Hypershells: a run of three or more, length-matched, with the closer alone on its own line, for content Indue must not read
 - Spell world: entered by ~:~ or by a container (~<>~, ~{}~, ~[]~); parentheses ~()~ never open it
 - Spell world ends at whitespace outside a container, at a line break with no glued bond following, or at a closing wall ~:~
 - Vessel ~<>~: value arguments when glued, targets when bonded; ~@~ narrows a target to one spell
 - Reach: block spells deep, span spells shallow, with ~:deep~ and ~:shallow~ to set either tier explicitly
 - The grab rule: a bare word glued to the right of a spell is its target; this is the only undelimited target position
-- ~:strip~ resets inherited properties; ~:strip<:name>~ narrows to one
+- ~:strip~ resets inherited properties; ~:strip<:spell>~ narrows to one
 - Target roles are lexical: a container glued to a spell name is an input, a bonded container is a construct target, and an ~@~-marked container confines that slot's direct effect; a bare word target uses the grab rule
 - A marked slot narrows what it does, not what reaches its target; the target is still covered by the construct's own targets if it falls within them
 - Spell slots: the unit between bonds, each carrying its own spell, inputs, and optional target
@@ -2991,9 +3194,15 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - Astral blocks: a spell with no material content to grip passes its effects to the enclosing scope; between blocks that is the document
 - Trailing whitespace elision for spells with no target and no embedding effect
 - Inputs: at most one of each kind, vessel ~<>~ plus either scroll ~[]~ or conduit ~{}~, identified by bracket rather than position so order is free; two containers of the same kind are invalid
-- Multiline chain form (the cauldron layout)
+- Multiline chain form
+- Setter form ~:key = value~ at line start, closed by the newline, value uninterpreted
+- Modifying operators ~+=~ and ~-=~, belonging to the key so a negative value stays distinct
+- Values containing spaces are separated by ~|~; a vessel holding a pipe is pipe-separated, one without is space-separated
+- An unrecognised spell writes a block property named for itself, never a styling property; no input means ~true~
+- An entity mark may stand in a target slot without a container, and targets that form
+- A lone target embeds by value shape; a second value makes the first its label
 - Maths: ~:math[...]~ with ~:$~ as an alias
-- Nick: ~\~ escaping
+- Escape: ~\~ escaping
 - Parse-don't-fail error recovery
 
 *Task model*
@@ -3002,14 +3211,14 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - Queries return each task separately, rendering span text or flattened block text
 - The alias spells ~:o~ and ~:x~, shipped as definitions and not redefinable
 - ~:>~ reserved and built in; no user-defined spell may take a name containing ~>~, since a vessel closes on it
-- Custom states via ~<:name>.task<state>~, with ~.task~ mandatory so unknown vocabulary still resolves to a lifecycle position
-- ~:cycle[name]<:a :b :c>~: named, ordered, enumerable; last declaration wins for both the cycle and for a state's membership
+- Custom states via ~<:spell>.task<state>~, with ~.task~ mandatory so unknown vocabulary still resolves to a lifecycle position
+- ~:cycle[cycle]<:a :b :c>~: named, ordered, enumerable; last declaration wins for both the cycle and for a state's membership
 - Filtering by lifecycle state, resolving custom states through their declared ~.task~ value
 
 *Scheduling model*
 - Six separate axes: date, time of day, repetition, series bounds, exceptions, completion; no spell carries two
 - One schedule per block: scheduling spells set block properties and shadow
-- ~:completions~ binds by adjacency, on the task's line or the line below; application-maintained
+- ~:completions~ binds to the block it sits in; application-maintained
 - Recurrence patterns are a closed grammar with a fixed clause order, not natural-language parsing
 - A pattern carries no date; the anchor comes from the date spell on the same item and is itself an occurrence
 - Every pattern maps to exactly one RRULE; export is deterministic and import is not
@@ -3017,12 +3226,12 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 *Queries*
 - ~:query~ takes a SQL query as a scroll, unparsed; the grammar belongs to the query language
 - A query resolves *as if the whole lair had been parsed*. Indexing and caching are free, provided results are identical to a full parse
-- Node identifiers are deterministic for a given input, and are not stable across edits; durable identity comes from sources
+- Node identifiers are deterministic for a given input, and are not stable across edits; durable identity comes from ledgers
 
 *Entity configuration*
-- Cauldron layout: target-first multiline chains, entity targets, type targets, and ~<:name>~ class definitions
+- Target-first multiline chains: entity targets, type targets, and ~<:spell>~ class definitions
 - Satchel: hoisted configuration, file-local by default; several in one file run in document order, so a later one shadows an earlier one
-- Beacon (~!~): parsed and preserved as a cauldron or satchel prefix
+- Beacon (~!~): parsed and preserved as an indued element or satchel prefix
 
 *Specified in the companion documents*
 
@@ -3044,13 +3253,13 @@ A *spell block* is a defined position (see Spells), but there is no selector syn
 
 ** Term/definition lists
 
-~/~ is used for italic, so Typst's ~/ term: definition~ is not available. The leading candidate is a spell like ~:def<term>{definition}~. A bare delimiter character is harder to find now that ~;~ has been claimed for whispers and ~&~ for sources, leaving ~()~ as the only substantial unreserved punctuation and one deliberately kept for prose; a spell form avoids consuming scarce single-character real estate.
+~/~ is used for italic, so Typst's ~/ term: definition~ is not available. The leading candidate is a spell like ~:def<term>{definition}~. A bare delimiter character is harder to find now that ~;~ has been claimed for comments and ~&~ for ledgers, leaving ~()~ as the only substantial unreserved punctuation and one deliberately kept for prose; a spell form avoids consuming scarce single-character real estate.
 
 ** Document-level metadata and frontmatter
 
-How should *document-level* metadata (title, author, date) be represented? A YAML-style frontmatter block, a dedicated ~:doc~ spell, a satchel-hosted ~<doc>~ codex, or something else?
+How should *document-level* metadata (title, author, date) be represented? A YAML-style frontmatter block, a dedicated ~:doc~ spell, a satchel-hosted ~<doc>~ indued element, or something else?
 
-Note that *per-entity-instance* metadata (e.g., distinct styling for ~@alice~ versus ~@bob~ when both appear on the same block) is resolved by cauldron targeting: each reference token carries its own codex independently of its neighbors, and the surrounding block stays untouched unless a block-natural spell is used. Only the document level remains undecided.
+Note that *per-entity-instance* metadata (e.g., distinct styling for ~@alice~ versus ~@bob~ when both appear on the same block) is resolved by indued element targeting: each reference token carries its own indued element independently of its neighbors, and the surrounding block stays untouched unless a block-natural spell is used. Only the document level remains undecided.
 
 ** Scripting and logic
 
@@ -3062,13 +3271,13 @@ Currently positional only. Named arguments may be added if needed.
 
 ** Escaping edge cases
 
-The nick (~\~) serves as a general escape character (e.g. ~\*~ for a literal asterisk, ~\#~ for a literal hash, ~\;~ for a literal semicolon that should not begin a whisper). The full set of characters that need escaping in various contexts should be specified precisely. In particular: which characters need escaping inside scrolls (probably none, since scrolls are literal, including ~;~ which is never a whisper there), inside conduits (where ~;~ does begin a whisper), and in plain text at line start vs mid-line.
+The escape character (~\~) serves as a general escape character (e.g. ~\*~ for a literal asterisk, ~\#~ for a literal hash, ~\;~ for a literal semicolon that should not begin a comment). The full set of characters that need escaping in various contexts should be specified precisely. Sigil marks and container marks are settled (see The escape character). What remains: the entity marks ~#~, ~@~, ~^~, and ~&~, the pipe, and ~;~ inside a conduit, where it does begin a comment. A line-start ~#~ tags the whole line and currently has no escape at all.
 
 * Implementation Requirements
 
 Building Indue as a real language requires:
 
-- A formal grammar specification (likely PEG or context-free), defined in three layers: socket, glamour, and entity.
+- A formal grammar specification (likely PEG or context-free), defined in three layers: list item, sigil, and entity.
 - A Rust reference CLI as the canonical implementation.
 - Error handling with clear diagnostics (for the linter/export pipeline; the core parser follows parse-don't-fail).
 - A tree-sitter grammar for editor syntax highlighting and structural queries.
