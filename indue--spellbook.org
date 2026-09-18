@@ -1001,7 +1001,7 @@ By default a series is anchored: it recurs on schedule regardless of when an occ
 
 #+begin_example
 :skip<2026-07-04>
-:skip<2026-12-25 2026-12-26>
+:skip<2026-12-25|2026-12-26>
 #+end_example
 
 ** Completion history
@@ -1012,10 +1012,10 @@ It sits anywhere in the task's block:
 
 #+begin_example
 - :o Water plants :on<2026-04-07> :repeat[weekly].after<completion>
-:completions[2026-04-07 2026-04-14 2026-04-21]
+:completions<2026-04-07|2026-04-14|2026-04-21>
 #+end_example
 
-The second line is part of the task's block. The dates are visible to anyone reading the file; whether they reach the render is an application choice, and a marker on a completed task is more usual than the list itself. Dates go in a scroll rather than a vessel, since the list grows and an application appends to it.
+The second line is part of the task's block. The dates are visible to anyone reading the file; whether they reach the render is an application choice, and a marker on a completed task is more usual than the list itself. Dates are vessel values, separated by ~|~, and an application appends to the list.
 
 Binding is by block membership, so no handle is needed. The full rules, including what happens when a log is detached from its task, are in *Indue, Language Specification*.
 
