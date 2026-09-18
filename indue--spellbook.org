@@ -627,7 +627,7 @@ This section covers the spells that surround the model.
 - :x Fix the sink
 #+end_example
 
-The set is closed. There is no fourth state, and reasons for a task's condition (blocked, waiting, deferred) belong in tags, where they compose with any lifecycle position:
+Those three are the *positions*, and the set of positions is fixed. The vocabulary is not: declare as many named states as suit the work, each saying which position it occupies, and order them in a cycle (see Custom states and Cycles). Reasons for a task's condition (blocked, waiting, deferred) belong in tags, where they compose with any position:
 
 #+begin_example
 - :> Rewrite the parser #blocked #[waiting on review]
