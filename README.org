@@ -523,6 +523,13 @@ newline closes it:
 Stacked like that they read as a property drawer, but there is no drawer: each
 line is an ordinary spell, and the block it sits in owns them all.
 
+A space normally closes a spell. Here it does not, because what follows is ~=~,
+~+=~, or ~-=~ — the one exception, and only at the start of a line. From the
+operator on, the rest of the line behaves as a vessel, so ~:hp = 15~ and
+~:hp<15>~ are the same thing.
+
+Values are trimmed at both ends, which is why the examples can be aligned.
+
 Mid-line, a spell takes its value in a container as usual, because there the
 rest of the line is prose:
 
