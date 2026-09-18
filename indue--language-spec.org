@@ -455,7 +455,7 @@ A line break is the one terminator with cases, because it is where a construct m
 .bold
 .underline:                ; rule 2: bonds continue the chain
 
-:repeat[every week on thursday]
+:repeat<every week on thursday>
 :after<completion>
 :completions<2026-04-07>   ; rule 3: each wall starts a new construct
 #+end_example
@@ -840,7 +840,7 @@ Body text, now serif.
 - *Data* properties are local, as on any block. This is what makes an astral block useful rather than merely invisible: metadata does not need something visible to sit on.
 
 #+begin_example
-- :o Water plants :repeat[weekly].after<completion>
+- :o Water plants :repeat<weekly>.after<completion>
 :completions<2026-04-07|2026-04-14>
 #+end_example
 
@@ -1668,7 +1668,7 @@ A task spell that targets a *block* sets a block property, so it shadows: a bloc
 One block task, no span tasks.
 
 #+begin_example
-- When you get home, [feed the cats].o and [let out the dogs].o :on<2026-08-15> :repeat[daily]
+- When you get home, [feed the cats].o and [let out the dogs].o :on<2026-08-15> :repeat<daily>
 #+end_example
 
 Two span tasks on one block, with one schedule between them. Without span tasks this would need two blocks and a duplicated schedule.
@@ -1756,7 +1756,7 @@ Scheduling is carried by six separate concerns, and no spell carries two of them
 | Completion    | When occurrences were finished   |
 
 #+begin_example
-- :o Team standup :on<2026-04-07>.start<09:00>.end<09:15> :repeat[weekdays] :until<2026-12-31>
+- :o Team standup :on<2026-04-07>.start<09:00>.end<09:15> :repeat<weekdays> :until<2026-12-31>
 #+end_example
 
 Keeping time of day separate from date is what avoids composite date-time formats, and it gives duration for free: a start and an end are two clock times, not a special range type. Keeping *series* bounds separate from *clock* times is why they have their own names, ~:from~ and ~:until~, rather than overloading start and end.
@@ -1766,7 +1766,7 @@ Keeping time of day separate from date is what avoids composite date-time format
 A recurrence pattern is written as a readable string:
 
 #+begin_example
-:repeat[every 2 years on 3rd wednesday of march]
+:repeat<every 2 years on 3rd wednesday of march>
 #+end_example
 
 It looks like English, and that is deliberate: a scheduling rule should be legible to someone opening the file with no application, which ~FREQ=YEARLY;INTERVAL=2;BYMONTH=3;BYDAY=3WE~ is not.
@@ -1780,7 +1780,7 @@ This distinction matters for portability. An open natural-language parser would 
 A pattern carries no date. The date spell on the same item is the anchor, and the anchor is an occurrence: the first one, and after a completion the next one. The pattern says only how to get from one occurrence to the one after it.
 
 #+begin_example
-- :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
+- :o Book club :on<2026-04-20> :repeat<every month on 3rd saturday>
 #+end_example
 
 That produces the 20th, then third Saturdays after it. An anchor is never discarded; where a pattern does not match it, the pattern takes effect from the following occurrence onward, so a mismatch resolves itself after one completion.
@@ -1802,7 +1802,7 @@ Because position is semantically irrelevant under shadowing, scheduling is idiom
 ~:completions~ carries it, anywhere in the task's block:
 
 #+begin_example
-- :o Water plants :on<2026-04-07> :repeat[weekly].after<completion>
+- :o Water plants :on<2026-04-07> :repeat<weekly>.after<completion>
 :completions<2026-04-07|2026-04-14|2026-04-21>
 #+end_example
 
@@ -2109,6 +2109,34 @@ A *ledger* is the one place a name's facts live. It is written ~&ledger&~, and u
 ** Not rendered
 
 A ledger names a block without rendering anything itself. The block may hold visible content, and often should, but the name is a handle rather than a mark.
+
+Two consequences follow, and both matter more than they look. Targeting a ledger
+targets the block it names, so ~&bob&.card~ frames that block. And a reference
+can bring the named block's content elsewhere, while the block carries on
+rendering where it sits:
+
+#+begin_example
+Some text with <@stuffbelow> embedded in it.
+
+&stuffbelow&
+This is reusable prose with :emphasis{interesting} inline semantics.
+:mind = blown
+#+end_example
+
+The content appears in both places, because a ledger hides its mark and not its
+block. Where the definition should exist only for reuse, a satchel supplies the
+hiding: prose inside one never renders, so the ledger is reachable and absent.
+
+#+begin_example
+~~~~~~~~~~
+&aside-3&
+A note that appears only where it is pulled in.
+#+end_example
+
+Content brought inline is a *projection* rather than a copy: the already-parsed
+content renders in a span context, so inline semantics survive and block
+structure does not. A block that owns children, or that holds a list, has no
+span form, and the reference resolves to nothing rather than flattening it.
 
 That makes a ledger the natural home for a machine-generated block identifier. An application needing to address a block writes a ledger with a generated name, and nothing appears in the document:
 
