@@ -457,7 +457,7 @@ A line break is the one terminator with cases, because it is where a construct m
 
 :repeat[every week on thursday]
 :after<completion>
-:completions[2026-04-07]   ; rule 3: each wall starts a new construct
+:completions<2026-04-07>   ; rule 3: each wall starts a new construct
 #+end_example
 
 The third case is worth noticing for how it reads. Stacking constructs on their own lines gives a block a drawer-like appearance, one property per line, without any drawer syntax existing: these are ordinary spells, laid out.
@@ -841,7 +841,7 @@ Body text, now serif.
 
 #+begin_example
 - :o Water plants :repeat[weekly].after<completion>
-:completions[2026-04-07 2026-04-14]
+:completions<2026-04-07|2026-04-14>
 #+end_example
 
 - *Embedding* promotes the block. Content now renders there, so the block is no longer astral. Nothing needs to state this separately: astral is defined by having no rendered content.
@@ -1803,7 +1803,7 @@ Because position is semantically irrelevant under shadowing, scheduling is idiom
 
 #+begin_example
 - :o Water plants :on<2026-04-07> :repeat[weekly].after<completion>
-:completions[2026-04-07 2026-04-14 2026-04-21]
+:completions<2026-04-07|2026-04-14|2026-04-21>
 #+end_example
 
 The dates are visible to anyone reading the file. Whether they reach the render is an application choice, and a marker on a completed task is more usual than the list itself.
@@ -2138,9 +2138,11 @@ Where a key appears more than once, the values form a history rather than overwr
 
 ~hp~ now has a history of two values, and a read returns 4. This is what lets a document track an entity's state as it changes, rather than only its final state.
 
-*** Versions
+*** Coordinates
 
-The value after a pipe is the *version*, and it is authored rather than derived from position. It is shorthand for a ~version~ property, so these are the same:
+The value after a pipe is the ledger's *coordinate*, and it is authored rather
+than derived from position. It is shorthand for a ~version~ property, so these
+are the same:
 
 #+begin_example
 &goblin|2&
@@ -2148,9 +2150,55 @@ The value after a pipe is the *version*, and it is authored rather than derived 
 :version = 2
 #+end_example
 
-Numbers are the obvious choice because they order, but any value works, and a date is often more useful for a journal.
+A coordinate is a number. Dash-separated numeric forms order correctly, so a
+calendar date works without the grammar having to know it is one.
 
-A version is a stable handle. Inserting another declaration renumbers nothing, because nothing was ever numbered by position.
+**** Resolution
+
+Where coordinates are present, the *highest* one resolves, not the last one
+written. Where none is present, the last declaration in document order resolves,
+as before.
+
+That separates a document's order from its subject's order, which matters in two
+places. Records split across files, generated, or scanned in an order the
+filesystem chooses cannot rely on physical position. And a narrative told out of
+sequence can still say what came first:
+
+#+begin_example
+&bob|45769&                ; the present
+:sequence = world-day
+:age      = 57
+
+; …a later chapter, set twenty years earlier…
+
+&bob|45739&
+:sequence = world-day
+:age      = 27
+#+end_example
+
+~@bob~ resolves to the higher coordinate wherever the two declarations sit in the
+file.
+
+**** What the number counts is the author's business
+
+A coordinate orders; it does not mean anything by itself. Where a document wants
+to say what is being counted, an ordinary property does it, and the name is
+whatever suits:
+
+#+begin_example
+&bob|45769&
+:sequence = world-day
+
+&chapter-seven|17&
+:draft = second pass
+#+end_example
+
+Nothing in resolution consults such a property. It is there for readers and for
+applications that want to present the sequence, which is why the language does
+not reserve a name for it.
+
+A coordinate is also a stable handle. Inserting another declaration renumbers
+nothing, because nothing was ever numbered by position.
 
 *** Keep the whole record on the last ledger
 
