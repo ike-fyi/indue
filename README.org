@@ -324,7 +324,7 @@ Six axes. No spell carries two of them, and nothing is composite.
 | Completion    | ~:completions~          |
 
 #+begin_example
-- :o Standup :on<2026-04-07>.start<09:00>.end<09:15> :repeat[weekdays] :until<2026-12-31>
+- :o Standup :on<2026-04-07>.start<09:00>.end<09:15> :repeat<weekdays> :until<2026-12-31>
 #+end_example
 
 Scheduling spells are block properties: one schedule per block, shadowing. Idiomatically written at the end of a block.
@@ -362,11 +362,11 @@ every <count> <period>   on <ordinal> <day>   of <month>
 | ~of~      | a month name, which makes the interval yearly    |
 
 #+begin_example
-:repeat[every 2 weeks]
-:repeat[every month on 1st friday]
-:repeat[every month on last day]
-:repeat[every 2 years on 3rd wednesday of march]
-:repeat[every week on mon wed fri]
+:repeat<every 2 weeks>
+:repeat<every month on 1st friday>
+:repeat<every month on last day>
+:repeat<every 2 years on 3rd wednesday of march>
+:repeat<every week on mon wed fri>
 #+end_example
 
 Shorthands, matched whole: ~daily~, ~weekly~, ~monthly~, ~yearly~, ~weekdays~, ~weekends~.
@@ -380,7 +380,7 @@ A pattern says how often, never when it starts. The date spell on the same item 
 Where a pattern does not match its anchor, the pattern takes effect from the following occurrence.
 
 #+begin_example
-- :o Book club :on<2026-04-20> :repeat[every month on 3rd saturday]
+- :o Book club :on<2026-04-20> :repeat<every month on 3rd saturday>
 #+end_example
 
 Produces the 20th, then third Saturdays after it. The anchor is never discarded. ~:from~ and ~:until~ clip the series, the anchor included.
@@ -388,8 +388,8 @@ Produces the 20th, then third Saturdays after it. The anchor is never discarded.
 ** Completion anchoring
 
 #+begin_example
-:repeat[weekly]                     ; from the schedule
-:repeat[6 weeks].after<completion>  ; from when it was last finished
+:repeat<weekly>                     ; from the schedule
+:repeat<6 weeks>.after<completion>  ; from when it was last finished
 #+end_example
 
 ** Completion history
@@ -397,7 +397,7 @@ Produces the 20th, then third Saturdays after it. The anchor is never discarded.
 Syntax: ~:completions<dates>~, anywhere in the task's block.
 
 #+begin_example
-- :o Water plants :repeat[weekly].after<completion>
+- :o Water plants :repeat<weekly>.after<completion>
 :completions<2026-04-07|2026-04-14>
 #+end_example
 
@@ -489,7 +489,8 @@ Several waypoints on one block are aliases resolving to one identity.
 
 ** Ledgers
 
-Syntax: ~&ledger&~, not rendered, shadows.
+Syntax: ~&ledger&~. The *mark* is not rendered; the block it sits in is. A ledger
+names its block, so the block carries on being ordinary content:
 
 #+begin_example
 &alice&
@@ -497,12 +498,66 @@ Syntax: ~&ledger&~, not rendered, shadows.
 :email = alice@example.com
 #+end_example
 
+Nothing shows there because that block holds no material content, only setters.
+Give it some and it renders like any other block:
+
+#+begin_example
+&bob&
+Bob is a powerful wizard.
+:age = 57
+#+end_example
+
+That paragraph appears in the document, and ~&bob&~ is now a handle for it.
+
+- Targeting a ledger targets the block it names: ~&bob&.card~ frames that block.
 - Linking goes to the *last* entry.
 - Properties *accumulate* across all entries, in document order.
 - Repeated keys form a history; a read returns the latest, which is the running balance.
-- Machine-generated block identifiers are ledgers: ~&n3b7c2&~.
+- Machine-generated block identifiers are ledgers: ~&n3b7c2&~, which is why the
+  mark has to be invisible rather than the block.
 
-Keep the whole record on the last entry unless you are deliberately tracking milestones: a simple renderer shows only that block's properties.
+Keep the whole record on the last entry unless you are deliberately tracking
+milestones: a simple renderer shows only that block's properties.
+
+** Reusing a ledger's content
+
+A ledger names a block, so a reference can bring that block's content somewhere
+else. Declare it once, use it wherever:
+
+#+begin_example
+Some text with <@stuffbelow> embedded in it.
+
+&stuffbelow&
+This is reusable prose with :emphasis{interesting} inline semantics.
+:mind = blown
+#+end_example
+
+The named block still renders where it sits — a ledger hides its mark, not its
+block — so the content appears in both places, with the emphasis intact in each.
+
+*** Hiding the definition
+
+Where the content should exist only for reuse, put the ledger in a satchel.
+Prose inside a satchel never renders, so the definition is available to
+references and absent from the document:
+
+#+begin_example
+Some text with <@aside-3> embedded in it.
+
+~~~~~~~~~~
+&aside-3&
+A note that appears only where it is pulled in.
+#+end_example
+
+Nothing about the reference changes. The only difference is where the ledger
+was written.
+
+*** Projecting into a span
+
+A block's content brought inline is a *projection*: the parsed content is
+rendered in a span context, so inline semantics survive and block structure does
+not. A referenced block that owns children, or that holds a list, has no span
+form; the reference resolves to nothing rather than flattening it.
 
 ** Coordinates
 
@@ -542,7 +597,7 @@ it.
 |            | Waypoint ~^~            | Ledger ~&~              |
 |------------+----------------------+-----------------------|
 | Duplicates | cycle, forming a trail | accumulate into one record |
-| Rendering  | visible              | not rendered          |
+| Rendering  | visible              | the mark is invisible; its block is not |
 | For        | going                | knowing               |
 
 Both on one block:
@@ -937,7 +992,7 @@ An entity carries its own mark, so it can stand in a slot directly:
 #+begin_example
 #project.card              ; target first
 :card.#project             ; the same thing
-&bob&.card                 ; a ledger renders nothing but can still be targeted
+&bob&.card                 ; targets the block the ledger names
 #+end_example
 
 A bare mark targets *that form*. Reaching every form of a name still needs the
