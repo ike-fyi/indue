@@ -1580,9 +1580,9 @@ Borrowed forms are also the least self-describing part of the language. ~[label]
 
 Task management is one of the two reasons Indue exists, and it is the reason the language reaches past formatting into semantics at all. A task's *lifecycle state* is therefore not vocabulary catalogued alongside other spells: it is a guarantee this specification makes, so that a task written in one application means the same thing in every other.
 
-** Three states, fixed
+** Three positions, fixed
 
-~:task~ takes exactly one of three values. The set is closed. There is no fourth idiomatic state, and applications must not add one.
+~:task~ takes exactly one of three values. What is fixed is the set of *lifecycle positions*, not the vocabulary a document uses: any number of named states may be declared, each saying which position it occupies (see Custom states). Fixing the positions is what makes a task portable, since a tool that has never seen a document's vocabulary still knows whether the work is waiting, running, or done.
 
 | Value    | Meaning                                                          |
 |----------+------------------------------------------------------------------|
@@ -3236,7 +3236,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - Parse-don't-fail error recovery
 
 *Task model*
-- ~:task~ with exactly three values: ~open~, ~active~, ~closed~. The set is closed; applications must not add a fourth
+- ~:task~ with exactly three values: ~open~, ~active~, ~closed~; the set of positions is fixed, while named states mapping onto them are unlimited
 - Block tasks shadow; span tasks accumulate and do not determine their block's state
 - Queries return each task separately, rendering span text or flattened block text
 - The alias spells ~:o~ and ~:x~, shipped as definitions and not redefinable
