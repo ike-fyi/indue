@@ -427,7 +427,7 @@ Parentheses are *not* part of spell syntax. They are far too common in ordinary 
 
 Three things close a spell construct:
 
-- *Whitespace* outside a container. Spell names cannot contain spaces, so a space always terminates.
+- *Whitespace* outside a container. Spell names cannot contain spaces, so a space always terminates, with one exception: whitespace does not terminate where the next thing is ~=~, ~+=~, or ~-=~, which opens the setter form (see The setter form).
 - *A line break* outside a container, unless the next line continues the chain.
 - *The closing wall* ~:~, written explicitly.
 
@@ -987,6 +987,20 @@ space-separated. There is no third rule and no quoting:
 table cells and between a name and its version. A value that must contain a
 literal pipe is scrolled (~[a | b]~).
 
+*** Values are trimmed
+
+Leading and trailing whitespace on a value is removed, so values may be padded
+for alignment:
+
+#+begin_example
+:font   = Helvetica Neue | Arial
+:weapon = short sword
+#+end_example
+
+A reader does not count the spaces around a value, and a writer aligning a column
+does not intend them. Where a space at the start or end is meant, a scroll keeps
+it: ~<[ indented ]>~.
+
 *** The spec defines slots, not vocabularies
 
 A spell's *slots* are specified: how many inputs it takes, of what kinds, in
@@ -1140,9 +1154,25 @@ container. The value runs to the end of the line.
   :tags = fighter | veteran
 #+end_example
 
-The newline closes it, so the value needs no wall, no container, and no
-quoting. Colons, parentheses, and brackets inside it are ordinary characters,
-because nothing follows the value that needs protecting from it.
+Whitespace ordinarily closes a spell, so the setter form is the one place it does
+not: a space is held open where the next thing on the line is ~=~, ~+=~, or ~-=~.
+The lookahead is bounded, at most a run of spaces and two characters, and it is
+available only at the start of a line, so prose containing ~= ~ mid-sentence is
+never affected.
+
+Once the operator is reached, *the rest of the line is a vessel*: the operator
+opens it and the newline closes it. Everything a vessel does applies unchanged,
+so ~|~ separates several values, each is typed by the same ladder, and a scroll
+forces a value back to text.
+
+#+begin_example
+:hp = 15                   ; the same construct as :hp<15>
+:tags = fighter | veteran  ; two values
+:caption = [#project]      ; a scroll, so literal text
+#+end_example
+
+Nothing needs quoting and no character inside needs protecting, because nothing
+follows the value that could claim it.
 
 The form is recognised *only* at the start of a line, after any list-item mark
 and its space. Mid-line a spell takes its input in a container as usual, since
@@ -3195,7 +3225,7 @@ The complete semantic foundation. An application claiming Indue compatibility mu
 - Trailing whitespace elision for spells with no target and no embedding effect
 - Inputs: at most one of each kind, vessel ~<>~ plus either scroll ~[]~ or conduit ~{}~, identified by bracket rather than position so order is free; two containers of the same kind are invalid
 - Multiline chain form
-- Setter form ~:key = value~ at line start, closed by the newline, value uninterpreted
+- Setter form ~:key = value~ at line start, closed by the newline; whitespace does not terminate the spell where ~=~, ~+=~, or ~-=~ follows, and ~|~ separates several values within it
 - Modifying operators ~+=~ and ~-=~, belonging to the key so a negative value stays distinct
 - Values containing spaces are separated by ~|~; a vessel holding a pipe is pipe-separated, one without is space-separated
 - An unrecognised spell writes a block property named for itself, never a styling property; no input means ~true~
