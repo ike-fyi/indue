@@ -552,12 +552,24 @@ A note that appears only where it is pulled in.
 Nothing about the reference changes. The only difference is where the ledger
 was written.
 
-*** Projecting into a span
+*** Position decides block or span
 
-A block's content brought inline is a *projection*: the parsed content is
-rendered in a span context, so inline semantics survive and block structure does
-not. A referenced block that owns children, or that holds a list, has no span
-form; the reference resolves to nothing rather than flattening it.
+The same reference does both. Alone in a block it embeds the named block; inside
+a sentence it *projects* that block's content into a span, so inline semantics
+survive and block structure does not.
+
+#+begin_example
+Some text with <@stuffbelow> embedded in it.   ; a span
+
+<@stuffbelow>                                  ; a block
+#+end_example
+
+Nothing extra is written for either. It is the ordinary embed, behaving as the
+position requires.
+
+Only the inline position can fail. A block that owns children, or that holds a
+list, has no span form, so an inline reference to one resolves to nothing. The
+same reference in block position works normally.
 
 ** Coordinates
 
@@ -840,6 +852,26 @@ Each container does one of two jobs, and which one is decided by how it attaches
 
 That single distinction is what makes a long spell readable. A container never
 does both jobs at once.
+
+** Which one to reach for
+
+Input goes in a *vessel*. Values are separated by whitespace, or by ~|~ where any
+of them contains a space, and each is typed by shape, so most inputs need nothing
+more.
+
+Use a *scroll* when the content is literal: it holds a character a vessel would
+claim, its leading or trailing space matters, or it would otherwise be read as a
+reference, a date, or a number.
+
+#+begin_example
+:repeat<every 2 weeks>     ; values
+:font<Helvetica Neue | Arial>
+:caption<[#project]>       ; literal, or it reads as a tag
+:caption<[ spaced ]>       ; literal, keeping the spaces
+:code[fn main() { }]       ; literal, braces and all
+#+end_example
+
+A *conduit* carries rich content meant to be parsed.
 
 A spell takes at most one vessel and one scroll *or* conduit. Order between
 kinds is free.
@@ -1383,6 +1415,6 @@ matter, supertags, and stylesheet rules.
 - Native syntax for dynamic content
 - Scaffolding for a multi-document ecosystem
 - Dash mode, so an outline survives chat clients, email, and forms that destroy indentation
-- One namespace across ~#tag~, ~@signet~, and ~^waypoint~
+- One namespace across ~#tag~, ~@signet~, ~&ledger~ and ~^waypoint~
 - Line breaks preserved with no hard-break construct to learn
 - Unknown spells degrade predictably, so a newer document still reads in an older tool
